@@ -245,4 +245,333 @@ body{display:flex;justify-content:center;align-items:center}
 
 <script>
 // 이미지 데이터 사용 (업로드 파일 기반)
-const BG_DATA = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAewAAANgCAIAAABhpcy9AAAQAElEQVR4Aez9abAkSZLnh6mquXtEvCPPus+urr6P6XMGGAGXu8DMEiRFgNmZ2QVIfqDwIxb8QFDIz9iZJUDw+EARUgQEsYAIREAKFgTIJXZ2umd2Z/qqrqrumr7rrszKyvvOfPnuiHA3U/7MPV68eGdmHd1dPZ2afzdXU1NTU1M73Nz
+const BG_DATA = "data:image/png;base64,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";
+
+// Pixel Monster SVG (Data URI)
+const MONSTER_SVG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='256' height='256'><path fill='%23ff2a2a' d='M6 2h12v2H6zm-2 4h16v2H4zm-2 4h20v6H2zm2 8h16v2H4zm2 2h12v2H6z'/><path fill='%23ffffff' d='M6 8h4v4H6zm8 0h4v4h-4z'/><path fill='%23000000' d='M8 10h2v2H8zm8 0h2v2h-2z'/><path fill='%23ffe600' d='M8 16h8v2H8z'/></svg>";
+
+// DOM 요소
+const scene = document.getElementById("scene");
+const bgContainer = document.getElementById("bgContainer");
+const bgImg = document.getElementById("bg");
+const monsterContainer = document.getElementById("monsterContainer");
+const monsterImg = document.getElementById("monsterImg");
+const swordWrapper = document.getElementById("swordWrapper");
+const slashEffect = document.getElementById("slashEffect");
+
+const monsterHpBar = document.getElementById("monsterHp");
+const playerHpBar = document.getElementById("playerHp");
+const hpText = document.getElementById("hpText");
+
+const flash = document.getElementById("flash");
+const nfcDot = document.getElementById("nfcDot");
+const nfcText = document.getElementById("nfcText");
+
+const messageBox = document.getElementById("message");
+const messageBig = document.getElementById("messageBig");
+const messageSmall = document.getElementById("messageSmall");
+const startOverlay = document.getElementById("startOverlay");
+const startBtn = document.getElementById("startBtn");
+
+// 게임 상태 변수
+let gameStarted = false;
+let isBattlePhase = false;
+let isSlashing = false;
+let isDead = false;
+
+let playerMaxHP = 100, playerHP = 100;
+let monsterMaxHP = 150, monsterHP = 150;
+
+let walkProgress = 0; // 0.2 ~ 1.0 전진 상태
+let walkInterval = null;
+let monsterAttackInterval = null;
+
+// 이미지 초기 로드
+bgImg.src = BG_DATA;
+monsterImg.src = MONSTER_SVG;
+
+// 기기 및 크롬 확인 함수
+function isAndroid() { return /Android/i.test(navigator.userAgent); }
+function isChrome() {
+  const ua = navigator.userAgent;
+  return /Chrome|CriOS/i.test(ua) && !/Edg|OPR|SamsungBrowser|KAKAOTALK/i.test(ua);
+}
+
+// 크롬 안내 및 인텐트 전환
+function checkChromeAndGuide() {
+  if (isChrome()) return true;
+  if (isAndroid()) {
+    const current = location.href.replace(/^https?:\/\//, "");
+    const intentUrl = "intent://" + current + "#Intent;scheme=https;package=com.android.chrome;end";
+    document.getElementById("introText").innerHTML = "이 게임은 <b>Google Chrome</b> 환경에 최적화되어 있습니다.<br><br>Chrome으로 열어주세요.";
+    startBtn.textContent = "Chrome으로 열기";
+    startBtn.onclick = () => { location.href = intentUrl; };
+  } else {
+    document.getElementById("introText").innerHTML = "이 게임은 <b>Google Chrome</b> 권장 모드입니다.";
+  }
+  return false;
+}
+
+// 시작 버튼 이벤트
+startBtn.addEventListener("click", async () => {
+  if (!isChrome() && isAndroid()) {
+    checkChromeAndGuide();
+    return;
+  }
+  
+  startOverlay.classList.add("hidden");
+  initGame();
+  
+  // NFC 상시 활성화 요청
+  initNFC();
+});
+
+// 게임 초기화
+function initGame() {
+  gameStarted = true;
+  isBattlePhase = false;
+  isDead = false;
+  
+  playerHP = playerMaxHP;
+  monsterHP = monsterMaxHP;
+  updateHPUI();
+
+  walkProgress = 0.2;
+  update2D5Perspective();
+  
+  swordWrapper.className = "walking";
+  
+  // 2.5D 전진 애니메이션 개시
+  startWalkingSequence();
+}
+
+// 2.5D 깊이 연출 계산 (배경 대비 몬스터만 빠르게 커짐)
+function update2D5Perspective() {
+  // 배경 스케일: 1.0 -> 1.25 (천천히 커짐)
+  const bgScale = 1.0 + (walkProgress * 0.25);
+  // 배경 상쇄 흔들림
+  const bgShiftX = Math.sin(walkProgress * 20) * 4;
+  bgContainer.style.transform = `scale(${bgScale}) translateX(${bgShiftX}px)`;
+
+  // 몬스터 스케일: 0.2 -> 1.15 (크게 확장되어 다가옴)
+  const monsterScale = walkProgress * 1.15;
+  const monsterY = 42 + (walkProgress * 10); // 전진할수록 약간 아래로 내려와 접근감 극대화
+  monsterContainer.style.transform = `translate(-50%, -50%) scale(${monsterScale})`;
+  monsterContainer.style.top = `${monsterY}%`;
+}
+
+// 몬스터를 향해 앞으로 걸어가는 과정
+function startWalkingSequence() {
+  if (walkInterval) clearInterval(walkInterval);
+  
+  walkInterval = setInterval(() => {
+    if (!gameStarted || isBattlePhase) return;
+    
+    walkProgress += 0.015;
+    update2D5Perspective();
+
+    // 몬스터 바로 앞 도달 시 멈춤 및 전투 돌입
+    if (walkProgress >= 0.95) {
+      clearInterval(walkInterval);
+      startBattlePhase();
+    }
+  }, 50);
+}
+
+// 몬스터 앞 도착 -> 전투 상태 전환
+function startBattlePhase() {
+  isBattlePhase = true;
+  swordWrapper.className = ""; // 걸음 애니메이션 멈춤
+  
+  showMessage("MONSTER ENCOUNTER!", "NFC 태그를 대어 검으로 공격하세요!");
+  setTimeout(hideMessage, 2000);
+
+  // 몬스터 자동 공격 타이머 (플레이어 HP 감쇠)
+  if (monsterAttackInterval) clearInterval(monsterAttackInterval);
+  monsterAttackInterval = setInterval(() => {
+    if (isDead || monsterHP <= 0) return;
+    monsterAttacksPlayer();
+  }, 2200);
+}
+
+// 몬스터의 플레이어 공격 연출
+function monsterAttacksPlayer() {
+  if (isDead) return;
+
+  const dmg = Math.floor(Math.random() * 8) + 10;
+  playerHP = Math.max(0, playerHP - dmg);
+  updateHPUI(true, false);
+
+  // 화면 피격 흔들림 & 붉은 플래시
+  scene.classList.remove("shake-light", "shake-heavy");
+  void scene.offsetWidth;
+  scene.classList.add("shake-light");
+
+  triggerFlash(true);
+
+  // 플레이어 피격 진동
+  if (navigator.vibrate) {
+    navigator.vibrate(150);
+  }
+
+  if (playerHP <= 0) {
+    playerGameOver();
+  }
+}
+
+// NFC 스캔 또는 타격 시 칼 휘두르기 및 몬스터 타격
+function performPlayerSlash() {
+  if (!gameStarted || isDead) return;
+  if (isSlashing) return;
+  
+  isSlashing = true;
+
+  // 검 모션 및 잔상 연출
+  swordWrapper.classList.remove("walking");
+  swordWrapper.classList.add("slashing");
+  slashEffect.classList.remove("active");
+  void slashEffect.offsetWidth;
+  slashEffect.classList.add("active");
+
+  setTimeout(() => {
+    swordWrapper.classList.remove("slashing");
+    isSlashing = false;
+  }, 240);
+
+  // 전투 단계가 아니어도 타격 가능하도록 처리
+  if (!isBattlePhase) {
+    walkProgress = 0.95;
+    update2D5Perspective();
+    startBattlePhase();
+  }
+
+  // 몬스터 피격 처리 (강력한 타격감)
+  applyDamageToMonster();
+}
+
+// 몬스터 피격 & 강력한 타격감 연출
+function applyDamageToMonster() {
+  const dmg = Math.floor(Math.random() * 15) + 30; // 플레이어가 더 강력함
+  monsterHP = Math.max(0, monsterHP - dmg);
+  updateHPUI(false, true);
+
+  // 1. 몬스터 피격 흔들림 & 붉은 깜빡임
+  monsterContainer.classList.remove("hit");
+  void monsterContainer.offsetWidth;
+  monsterContainer.classList.add("hit");
+
+  // 2. 전체 화면 강한 쉐이크
+  scene.classList.remove("shake-heavy", "shake-light");
+  void scene.offsetWidth;
+  scene.classList.add("shake-heavy");
+
+  // 3. 섬광 효과
+  triggerFlash(false);
+
+  // 4. 최고의 강력한 롱 진동 (패턴: 200ms 진동, 50ms 휴식, 300ms 강한 진동)
+  if (navigator.vibrate) {
+    navigator.vibrate([200, 50, 300]);
+  }
+
+  // 몬스터 사망 체크
+  if (monsterHP <= 0) {
+    monsterKilled();
+  }
+}
+
+// 몬스터 처치 및 미션 클리어
+function monsterKilled() {
+  isDead = true;
+  clearInterval(monsterAttackInterval);
+
+  monsterContainer.style.transition = "transform 0.8s ease, filter 0.8s ease";
+  monsterContainer.style.transform = "translate(-50%, -50%) scale(0) rotate(180deg)";
+  monsterContainer.style.filter = "brightness(5)";
+
+  setTimeout(() => {
+    showMessage("MISSION CLEAR!", "축하합니다! NFC 몬스터를 토벌했습니다.");
+  }, 500);
+}
+
+// 플레이어 사망
+function playerGameOver() {
+  isDead = true;
+  clearInterval(monsterAttackInterval);
+  showMessage("GAME OVER", "몬스터에게 패배했습니다. 다시 시도해보세요.");
+}
+
+// HP UI 업데이트 & 깜빡임 연출
+function updateHPUI(playerFlash = false, monsterFlash = false) {
+  const mPct = Math.max(0, (monsterHP / monsterMaxHP) * 100);
+  const pPct = Math.max(0, (playerHP / playerMaxHP) * 100);
+
+  monsterHpBar.style.width = `${mPct}%`;
+  playerHpBar.style.width = `${pPct}%`;
+  hpText.textContent = `${playerHP} / ${playerMaxMaxHP || 100}`;
+
+  if (monsterFlash) {
+    monsterHpBar.classList.add("flash");
+    setTimeout(() => monsterHpBar.classList.remove("flash"), 300);
+  }
+  if (playerFlash) {
+    playerHpBar.classList.add("flash");
+    setTimeout(() => playerHpBar.classList.remove("flash"), 300);
+  }
+}
+
+// 플래시 연출
+function triggerFlash(isRed = false) {
+  flash.className = isRed ? "flash red on" : "flash on";
+  setTimeout(() => { flash.className = ""; }, 150);
+}
+
+// 메시지 토스트
+function showMessage(big, small) {
+  messageBig.textContent = big;
+  messageSmall.textContent = small;
+  messageBox.classList.add("show");
+}
+function hideMessage() {
+  messageBox.classList.remove("show");
+}
+
+// NFC 상시 대기 및 스캔 바인딩
+async function initNFC() {
+  if ('NDEFReader' in window) {
+    try {
+      const ndef = new NDEFReader();
+      await ndef.scan();
+      
+      nfcDot.classList.add("active");
+      nfcText.textContent = "NFC 상시 작동 중";
+
+      ndef.addEventListener("reading", () => {
+        // NFC 태그 감지 시 칼 공격 발동
+        performPlayerSlash();
+      });
+
+      ndef.addEventListener("readingerror", () => {
+        console.warn("NFC 읽기 오류");
+      });
+
+    } catch (error) {
+      console.log("NFC 권한 미승인 또는 지원 불가: " + error);
+      nfcText.textContent = "터치 공격 가능 (NFC 미연결)";
+    }
+  } else {
+    nfcText.textContent = "터치 공격 가능 (NFC 미지원 브라우저)";
+  }
+}
+
+// 테스트 및 NFC 미지원 환경을 위한 화면 터치/클릭 공격 서포트
+scene.addEventListener("pointerdown", (e) => {
+  if (startOverlay.classList.contains("hidden")) {
+    performPlayerSlash();
+  }
+});
+
+// 초기 크롬 체크 실행
+checkChromeAndGuide();
+</script>
+</body>
+</html>
