@@ -1,641 +1,584 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PIXEL ADVENTURE - NFC 전투 게임</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-            font-family: 'Press Start 2P', monospace;
-            overflow: hidden;
-            background: #000;
-            user-select: none;
-        }
-
-        #gameCanvas {
-            display: block;
-            width: 100vw;
-            height: 100vh;
-            image-rendering: pixelated;
-            image-rendering: crisp-edges;
-        }
-
-        .browser-warning {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0, 0, 0, 0.95);
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            z-index: 10000;
-            padding: 20px;
-            text-align: center;
-        }
-
-        .browser-warning.show {
-            display: flex;
-        }
-
-        .browser-warning h2 {
-            font-size: 18px;
-            margin-bottom: 20px;
-            color: #ff6b6b;
-        }
-
-        .browser-warning p {
-            font-size: 12px;
-            line-height: 1.8;
-            margin-bottom: 30px;
-            max-width: 400px;
-        }
-
-        .browser-warning button {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            font-size: 14px;
-            cursor: pointer;
-            border-radius: 5px;
-            font-family: 'Press Start 2P', monospace;
-        }
-
-        .browser-warning button:hover {
-            background: #45a049;
-        }
-
-        .nfc-status {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 10px 15px;
-            border-radius: 5px;
-            font-size: 10px;
-            z-index: 100;
-        }
-
-        .nfc-status.active {
-            background: rgba(76, 175, 80, 0.7);
-        }
-
-        .nfc-status.error {
-            background: rgba(244, 67, 54, 0.7);
-        }
-
-        @keyframes shake {
-            0%, 100% { transform: translate(0, 0); }
-            10%, 30%, 50%, 70%, 90% { transform: translate(-10px, -5px); }
-            20%, 40%, 60%, 80% { transform: translate(10px, 5px); }
-        }
-
-        .shake {
-            animation: shake 0.5s;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0a0710">
+<title>PIXEL ADVENTURE · NFC BATTLE</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+html,body{height:100%;background:#05070b;overflow:hidden;font-family:'Segoe UI','Noto Sans KR',Arial,sans-serif;color:#fff}
+#wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#05070b}
+#stage{position:relative;width:100%;max-width:520px;height:100%;max-height:1000px;overflow:hidden;background:#0a0710;touch-action:manipulation}
+canvas#cv{position:absolute;inset:0;width:100%;height:100%;display:block;image-rendering:pixelated;image-rendering:crisp-edges}
+#vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 100% at 50% 45%,transparent 50%,rgba(0,0,0,.6) 100%);z-index:4}
+#flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:30;mix-blend-mode:screen}
+#flash.red{background:#ff3a3a;mix-blend-mode:multiply}
+.shake{animation:shake .16s linear}
+@keyframes shake{0%,100%{transform:translate(0)}20%{transform:translate(-8px,3px)}40%{transform:translate(7px,-4px)}60%{transform:translate(-5px,3px)}80%{transform:translate(3px,-2px)}}
+.shakeBig{animation:shakeBig .42s ease-out}
+@keyframes shakeBig{0%,100%{transform:translate(0)}10%{transform:translate(-14px,6px)}25%{transform:translate(13px,-7px)}40%{transform:translate(-10px,5px)}55%{transform:translate(9px,-4px)}70%{transform:translate(-6px,3px)}85%{transform:translate(3px,-2px)}}
+#hud{position:absolute;inset:0;z-index:20;pointer-events:none}
+#enemyHud{position:absolute;top:calc(16px + env(safe-area-inset-top));left:6%;width:88%;text-align:center;text-shadow:0 2px 4px #000}
+#enemyHud .name{font:800 13px/1 'Segoe UI','Noto Sans KR',sans-serif;letter-spacing:3px;color:#ffd1d1}
+#enemyHud .lvl{font:700 10px/1 'Segoe UI','Noto Sans KR',sans-serif;letter-spacing:2px;color:#ff9a9a;margin-top:3px;opacity:.9}
+.bar{position:relative;height:12px;margin-top:6px;border:2px solid #fff;background:#2a0a0a;border-radius:6px;overflow:hidden;box-shadow:0 2px 6px #000}
+.bar>i{display:block;height:100%;background:linear-gradient(180deg,#ff6969,#a81414);transition:width .2s ease}
+.bar>blink{position:absolute;inset:0;background:rgba(255,80,80,.6);opacity:0;pointer-events:none}
+.bar.blink blink{animation:barPulse .35s ease}
+@keyframes barPulse{0%{opacity:0}30%{opacity:1}100%{opacity:0}}
+#playerHud{position:absolute;left:6%;bottom:calc(20px + env(safe-area-inset-bottom));width:88%;text-shadow:0 2px 4px #000}
+#playerHud .name{font:800 12px/1 'Segoe UI','Noto Sans KR',sans-serif;letter-spacing:3px;color:#bdf5c8}
+#playerBar{position:relative;height:10px;margin-top:5px;border:2px solid #fff;background:#0a2a14;border-radius:6px;overflow:hidden;box-shadow:0 2px 5px #000}
+#playerBar>i{display:block;height:100%;background:linear-gradient(180deg,#65e77b,#1d9440);transition:width .25s ease}
+#playerBar>blink{position:absolute;inset:0;background:rgba(120,255,140,.7);opacity:0;pointer-events:none}
+#playerBar.blink blink{animation:barPulse .35s ease}
+#nfc{position:absolute;top:calc(16px + env(safe-area-inset-top));right:14px;z-index:25;display:flex;align-items:center;gap:6px;padding:6px 10px;background:rgba(10,8,16,.6);border:1px solid rgba(255,255,255,.2);border-radius:18px;font:700 11px/1 'Segoe UI','Noto Sans KR',sans-serif}
+#nfc .dot{width:8px;height:8px;border-radius:50%;background:#ffd84d;box-shadow:0 0 6px #ffd84d}
+#nfc.on .dot{background:#55e66e;box-shadow:0 0 8px #55e66e}
+#nfc.bad .dot{background:#ff5555;box-shadow:0 0 8px #ff5555}
+#message{position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;text-align:center;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .35s}
+#message.show{opacity:1;pointer-events:auto;cursor:pointer}
+#message .big{font:900 30px/1.2 'Segoe UI','Noto Sans KR',sans-serif;color:#fff;text-shadow:0 0 24px rgba(255,207,110,.7),0 3px 5px #000;letter-spacing:2px}
+#message .big.gold{color:#ffcf6e}
+#message .small{margin-top:14px;font:500 14px/1.55 'Segoe UI','Noto Sans KR',sans-serif;color:#e8dcc8;text-shadow:0 2px 3px #000}
+#message .tap{margin-top:30px;font-size:12px;letter-spacing:2px;color:rgba(255,255,255,.6);animation:blink 1.4s infinite}
+@keyframes blink{50%{opacity:.25}}
+#toast{position:absolute;left:50%;bottom:88px;transform:translateX(-50%) translateY(20px);z-index:40;opacity:0;background:rgba(0,0,0,.82);border:1px solid #aaa;padding:9px 14px;border-radius:10px;font:700 12px/1 'Segoe UI','Noto Sans KR',sans-serif;transition:.22s;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#startOverlay{position:absolute;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px;background:radial-gradient(120% 100% at 50% 0%,rgba(38,24,64,.92),rgba(6,4,12,.97))}
+#startOverlay.hidden{display:none}
+.panel{max-width:380px}
+.panel h1{font:900 28px/1.3 'Segoe UI','Noto Sans KR',sans-serif;margin-bottom:10px;color:#fff;text-shadow:0 0 26px rgba(255,207,110,.35)}
+.panel h1 span{color:#ffcf6e}
+.panel p{font:500 14px/1.6 'Segoe UI','Noto Sans KR',sans-serif;color:#e6d8bf;white-space:pre-wrap}
+.panel .tip{margin-top:18px;padding:12px 14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,207,110,.3);border-radius:10px;color:#ffd98a;font:700 12px/1.5 'Segoe UI','Noto Sans KR',sans-serif}
+#startBtn{margin-top:22px;border:0;border-radius:30px;padding:15px 36px;background:linear-gradient(180deg,#ffcf6e,#a05f14);color:#1c1208;font:800 17px/1 'Segoe UI','Noto Sans KR',sans-serif;cursor:pointer;box-shadow:0 6px 0 #6b3f08,0 10px 20px rgba(0,0,0,.5)}
+#startBtn:active{transform:translateY(2px);box-shadow:0 4px 0 #6b3f08}
+</style>
 </head>
 <body>
-    <div class="browser-warning" id="browserWarning">
-        <h2>⚠️ Chrome 브라우저 권장</h2>
-        <p>
-            이 게임은 NFC 기능을 사용합니다.<br>
-            최적의 경험을 위해 Chrome 브라우저를<br>
-            사용해주세요.
-        </p>
-        <button onclick="openInChrome()">Chrome에서 열기</button>
-        <button onclick="continueAnyway()" style="margin-top: 10px; background: #666;">계속하기</button>
-    </div>
-
-    <div class="nfc-status" id="nfcStatus">NFC 초기화 중...</div>
-
-    <canvas id="gameCanvas"></canvas>
-
-    <script>
-        // 브라우저 체크
-        function isChrome() {
-            const userAgent = navigator.userAgent.toLowerCase();
-            return userAgent.includes('chrome') && !userAgent.includes('edge') && !userAgent.includes('edg');
-        }
-
-        function openInChrome() {
-            const currentUrl = window.location.href;
-            // Android Chrome intent
-            window.location.href = 'googlechrome://navigate?url=' + encodeURIComponent(currentUrl);
-            // iOS 또는 실패 시 안내
-            setTimeout(() => {
-                alert('Chrome 앱이 설치되어 있지 않다면, Play Store에서 다운로드해주세요.');
-            }, 1000);
-        }
-
-        function continueAnyway() {
-            document.getElementById('browserWarning').classList.remove('show');
-            initGame();
-        }
-
-        // 페이지 로드 시 브라우저 체크
-        window.addEventListener('load', () => {
-            if (!isChrome()) {
-                document.getElementById('browserWarning').classList.add('show');
-            } else {
-                initGame();
-            }
-        });
-
-        // 게임 초기화
-        function initGame() {
-            const canvas = document.getElementById('gameCanvas');
-            const ctx = canvas.getContext('2d');
-            const nfcStatus = document.getElementById('nfcStatus');
-
-            // 캔버스 크기 설정
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-
-            // 게임 상태
-            const game = {
-                state: 'approaching', // approaching, combat, victory
-                playerHP: 100,
-                monsterHP: 80,
-                monsterMaxHP: 80,
-                playerMaxHP: 100,
-                distance: 100, // 몬스터까지의 거리 (0에 가까울수록 가까움)
-                walkSpeed: 0.3,
-                swordSwing: 0,
-                swordSwingSpeed: 0,
-                monsterAttackTimer: 0,
-                monsterAttackInterval: 2000, // 2초마다 공격
-                lastMonsterAttack: 0,
-                monsterDamageFlash: 0,
-                playerDamageFlash: 0,
-                hpFlash: 0,
-                monsterHpFlash: 0,
-                backgroundOffset: 0,
-                swordSway: 0,
-                time: 0
-            };
-
-            // NFC 초기화
-            let nfcReader = null;
-
-            async function initNFC() {
-                if ('NDEFReader' in window) {
-                    try {
-                        nfcReader = new NDEFReader();
-                        await nfcReader.scan();
-                        nfcStatus.textContent = 'NFC 활성화됨 ✓';
-                        nfcStatus.classList.add('active');
-
-                        nfcReader.addEventListener('reading', ({ message, serialNumber }) => {
-                            console.log('NFC 태그 감지!', message);
-                            
-                            // chest001 문자 확인
-                            let hasChest001 = false;
-                            for (const record of message.records) {
-                                const textDecoder = new TextDecoder(record.encoding || 'utf-8');
-                                const text = textDecoder.decode(record.data);
-                                console.log('NFC 데이터:', text);
-                                if (text.includes('chest001')) {
-                                    hasChest001 = true;
-                                    break;
-                                }
-                            }
-
-                            if (hasChest001 && game.state === 'combat') {
-                                attackMonster();
-                            }
-                        });
-
-                        // 읽기 에러 처리
-                        nfcReader.addEventListener('readingerror', () => {
-                            console.log('NFC 읽기 실패');
-                        });
-
-                    } catch (error) {
-                        console.error('NFC 초기화 실패:', error);
-                        nfcStatus.textContent = 'NFC 사용 불가';
-                        nfcStatus.classList.add('error');
-                    }
-                } else {
-                    nfcStatus.textContent = 'NFC 미지원 브라우저';
-                    nfcStatus.classList.add('error');
-                }
-            }
-
-            // 즉시 NFC 초기화 시작
-            initNFC();
-
-            // 몬스터 공격 함수
-            function attackMonster() {
-                if (game.monsterHP <= 0) return;
-
-                // 검 휘두르기 애니메이션
-                game.swordSwingSpeed = 0.5;
-
-                // 몬스터 데미지
-                const damage = 15 + Math.floor(Math.random() * 10);
-                game.monsterHP -= damage;
-                game.monsterDamageFlash = 1;
-                game.monsterHpFlash = 1;
-
-                // 강력한 진동 (200ms)
-                if ('vibrate' in navigator) {
-                    navigator.vibrate([200]);
-                }
-
-                // 화면 쉐이크
-                canvas.classList.add('shake');
-                setTimeout(() => canvas.classList.remove('shake'), 500);
-
-                // 승리 체크
-                if (game.monsterHP <= 0) {
-                    game.monsterHP = 0;
-                    game.state = 'victory';
-                }
-            }
-
-            // 플레이어 피격
-            function playerTakeDamage() {
-                const damage = 8 + Math.floor(Math.random() * 5);
-                game.playerHP -= damage;
-                game.playerDamageFlash = 1;
-                game.hpFlash = 1;
-
-                // 중간 진동 (100ms)
-                if ('vibrate' in navigator) {
-                    navigator.vibrate([100]);
-                }
-
-                // 패배 체크
-                if (game.playerHP <= 0) {
-                    game.playerHP = 0;
-                    game.state = 'defeat';
-                }
-            }
-
-            // 배경 그리기
-            function drawBackground() {
-                const offset = game.backgroundOffset;
-                
-                // 하늘 그라데이션
-                const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.6);
-                skyGradient.addColorStop(0, '#87CEEB');
-                skyGradient.addColorStop(1, '#B0E0E6');
-                ctx.fillStyle = skyGradient;
-                ctx.fillRect(0, 0, canvas.width, canvas.height * 0.6);
-
-                // 구름 (간단한 픽셀 스타일)
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-                for (let i = 0; i < 5; i++) {
-                    const x = (i * 200 + offset * 0.1) % canvas.width;
-                    const y = 50 + i * 30;
-                    ctx.beginPath();
-                    ctx.arc(x, y, 30, 0, Math.PI * 2);
-                    ctx.arc(x + 40, y, 35, 0, Math.PI * 2);
-                    ctx.arc(x + 80, y, 30, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-
-                // 들판 그라데이션
-                const fieldGradient = ctx.createLinearGradient(0, canvas.height * 0.6, 0, canvas.height);
-                fieldGradient.addColorStop(0, '#7EC850');
-                fieldGradient.addColorStop(1, '#5A8F35');
-                ctx.fillStyle = fieldGradient;
-                ctx.fillRect(0, canvas.height * 0.6, canvas.width, canvas.height * 0.4);
-
-                // 언덕 실루엣
-                ctx.fillStyle = '#4A7C2F';
-                ctx.beginPath();
-                ctx.moveTo(0, canvas.height * 0.7);
-                for (let x = 0; x < canvas.width; x += 50) {
-                    ctx.lineTo(x, canvas.height * 0.7 + Math.sin((x + offset) * 0.01) * 30);
-                }
-                ctx.lineTo(canvas.width, canvas.height);
-                ctx.lineTo(0, canvas.height);
-                ctx.closePath();
-                ctx.fill();
-            }
-
-            // 몬스터 그리기 (2.5D 스케일링)
-            function drawMonster() {
-                const scale = 1 + (100 - game.distance) / 50; // 거리에 따른 크기 증가
-                const baseSize = 150;
-                const monsterSize = baseSize * scale;
-                const centerX = canvas.width / 2;
-                const centerY = canvas.height / 2 - 100;
-
-                // 데미지 플래시 효과
-                if (game.monsterDamageFlash > 0) {
-                    ctx.globalAlpha = game.monsterDamageFlash;
-                    ctx.fillStyle = 'red';
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    ctx.globalAlpha = 1;
-                    game.monsterDamageFlash -= 0.05;
-                }
-
-                // 몬스터 흔들림
-                const shakeX = game.monsterDamageFlash > 0 ? (Math.random() - 0.5) * 20 : 0;
-                const shakeY = game.monsterDamageFlash > 0 ? (Math.random() - 0.5) * 20 : 0;
-
-                ctx.save();
-                ctx.translate(centerX + shakeX, centerY + shakeY);
-
-                // 몬스터 다리/촉수
-                for (let i = 0; i < 6; i++) {
-                    const angle = (i / 6) * Math.PI * 2;
-                    const legLength = monsterSize * 0.8;
-                    
-                    ctx.strokeStyle = '#5C2E2E';
-                    ctx.lineWidth = monsterSize * 0.08;
-                    ctx.lineCap = 'round';
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(0, 0);
-                    
-                    const wobble = Math.sin(game.time * 0.003 + i) * 20;
-                    const endX = Math.cos(angle) * legLength + wobble;
-                    const endY = Math.sin(angle) * legLength + wobble;
-                    
-                    ctx.quadraticCurveTo(
-                        endX * 0.5,
-                        endY * 0.5 + 30,
-                        endX,
-                        endY
-                    );
-                    ctx.stroke();
-                }
-
-                // 몬스터 몸체 (빨간 원)
-                ctx.fillStyle = '#DC143C';
-                ctx.beginPath();
-                ctx.arc(0, 0, monsterSize * 0.5, 0, Math.PI * 2);
-                ctx.fill();
-
-                // 가시 효과
-                ctx.fillStyle = '#8B0000';
-                for (let i = 0; i < 12; i++) {
-                    const angle = (i / 12) * Math.PI * 2;
-                    ctx.beginPath();
-                    ctx.moveTo(Math.cos(angle) * monsterSize * 0.45, Math.sin(angle) * monsterSize * 0.45);
-                    ctx.lineTo(Math.cos(angle) * monsterSize * 0.55, Math.sin(angle) * monsterSize * 0.55);
-                    ctx.lineTo(Math.cos(angle + 0.1) * monsterSize * 0.45, Math.sin(angle + 0.1) * monsterSize * 0.45);
-                    ctx.fill();
-                }
-
-                // 눈 (밝은 파란색)
-                ctx.fillStyle = '#87CEEB';
-                ctx.beginPath();
-                ctx.arc(0, 0, monsterSize * 0.35, 0, Math.PI * 2);
-                ctx.fill();
-
-                // 동공
-                ctx.fillStyle = '#000';
-                ctx.beginPath();
-                ctx.arc(0, 0, monsterSize * 0.15, 0, Math.PI * 2);
-                ctx.fill();
-
-                // 하이라이트
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-                ctx.beginPath();
-                ctx.arc(-monsterSize * 0.05, -monsterSize * 0.05, monsterSize * 0.08, 0, Math.PI * 2);
-                ctx.fill();
-
-                ctx.restore();
-
-                // 몬스터 HP 바
-                if (game.state === 'combat') {
-                    const barWidth = 300;
-                    const barHeight = 30;
-                    const barX = canvas.width / 2 - barWidth / 2;
-                    const barY = 50;
-
-                    // HP 바 깜빡임
-                    if (game.monsterHpFlash > 0) {
-                        ctx.fillStyle = `rgba(255, 0, 0, ${game.monsterHpFlash})`;
-                        ctx.fillRect(barX - 5, barY - 5, barWidth + 10, barHeight + 10);
-                        game.monsterHpFlash -= 0.03;
-                    }
-
-                    // 배경
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-                    ctx.fillRect(barX, barY, barWidth, barHeight);
-
-                    // HP
-                    const hpPercent = game.monsterHP / game.monsterMaxHP;
-                    ctx.fillStyle = hpPercent > 0.5 ? '#FF4444' : '#FF0000';
-                    ctx.fillRect(barX, barY, barWidth * hpPercent, barHeight);
-
-                    // 테두리
-                    ctx.strokeStyle = '#fff';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(barX, barY, barWidth, barHeight);
-
-                    // 텍스트
-                    ctx.fillStyle = '#fff';
-                    ctx.font = '12px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(`몬스터 HP: ${Math.max(0, game.monsterHP)} / ${game.monsterMaxHP}`, canvas.width / 2, barY + 20);
-                }
-            }
-
-            // 칼 그리기 (1인칭 시점)
-            function drawSword() {
-                const swordX = canvas.width * 0.7 + game.swordSway + Math.sin(game.swordSwing) * 100;
-                const swordY = canvas.height * 0.7;
-                const swordLength = 200;
-                const swordWidth = 30;
-
-                ctx.save();
-                ctx.translate(swordX, swordY);
-                ctx.rotate(Math.sin(game.swordSwing) * 0.5 - 0.3);
-
-                // 칼날 (빛나는 효과)
-                const bladeGradient = ctx.createLinearGradient(0, 0, 0, -swordLength);
-                bladeGradient.addColorStop(0, '#FFD700');
-                bladeGradient.addColorStop(0.5, '#FFF');
-                bladeGradient.addColorStop(1, '#FFFACD');
-                
-                ctx.fillStyle = bladeGradient;
-                ctx.fillRect(-swordWidth / 2, -swordLength, swordWidth, swordLength);
-
-                // 빛 효과
-                ctx.shadowColor = '#FFD700';
-                ctx.shadowBlur = 20;
-                ctx.fillRect(-swordWidth / 2, -swordLength, swordWidth, swordLength);
-                ctx.shadowBlur = 0;
-
-                // 가드
-                ctx.fillStyle = '#B8860B';
-                ctx.fillRect(-swordWidth * 1.5, 0, swordWidth * 3, 15);
-
-                // 보석
-                ctx.fillStyle = '#4169E1';
-                ctx.beginPath();
-                ctx.arc(0, 7, 8, 0, Math.PI * 2);
-                ctx.fill();
-
-                // 손잡이
-                ctx.fillStyle = '#8B4513';
-                ctx.fillRect(-swordWidth / 3, 0, swordWidth / 1.5, 80);
-
-                ctx.restore();
-
-                // 검 휘두르기 업데이트
-                if (game.swordSwingSpeed > 0) {
-                    game.swordSwing += game.swordSwingSpeed;
-                    game.swordSwingSpeed *= 0.92; // 감속
-                    if (game.swordSwingSpeed < 0.01) {
-                        game.swordSwingSpeed = 0;
-                    }
-                }
-
-                // 걷기 애니메이션
-                if (game.state === 'approaching') {
-                    game.swordSway = Math.sin(game.time * 0.003) * 20;
-                }
-            }
-
-            // 플레이어 HP 바
-            function drawPlayerHP() {
-                const barWidth = 300;
-                const barHeight = 30;
-                const barX = canvas.width / 2 - barWidth / 2;
-                const barY = canvas.height - 80;
-
-                // HP 바 깜빡임
-                if (game.hpFlash > 0) {
-                    ctx.fillStyle = `rgba(255, 0, 0, ${game.hpFlash})`;
-                    ctx.fillRect(barX - 5, barY - 5, barWidth + 10, barHeight + 10);
-                    game.hpFlash -= 0.03;
-                }
-
-                // 플레이어 데미지 플래시
-                if (game.playerDamageFlash > 0) {
-                    ctx.globalAlpha = game.playerDamageFlash * 0.3;
-                    ctx.fillStyle = 'red';
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    ctx.globalAlpha = 1;
-                    game.playerDamageFlash -= 0.05;
-                }
-
-                // 배경
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-                ctx.fillRect(barX, barY, barWidth, barHeight);
-
-                // HP
-                const hpPercent = game.playerHP / game.playerMaxHP;
-                ctx.fillStyle = hpPercent > 0.5 ? '#4CAF50' : hpPercent > 0.25 ? '#FFA500' : '#FF0000';
-                ctx.fillRect(barX, barY, barWidth * hpPercent, barHeight);
-
-                // 테두리
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(barX, barY, barWidth, barHeight);
-
-                // 텍스트
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText(`플레이어 HP: ${Math.max(0, game.playerHP)} / ${game.playerMaxHP}`, canvas.width / 2, barY + 20);
-            }
-
-            // 승리 화면
-            function drawVictory() {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                ctx.fillStyle = '#FFD700';
-                ctx.font = 'bold 48px Arial';
-                ctx.textAlign = 'center';
-                ctx.strokeStyle = '#000';
-                ctx.lineWidth = 4;
-                ctx.strokeText('미션 클리어!', canvas.width / 2, canvas.height / 2 - 50);
-                ctx.fillText('미션 클리어!', canvas.width / 2, canvas.height / 2 - 50);
-
-                ctx.fillStyle = '#fff';
-                ctx.font = '24px Arial';
-                ctx.fillText('몬스터를 물리쳤습니다!', canvas.width / 2, canvas.height / 2 + 20);
-
-                // 별 효과
-                for (let i = 0; i < 50; i++) {
-                    const x = Math.random() * canvas.width;
-                    const y = Math.random() * canvas.height;
-                    const size = Math.random() * 3;
-                    ctx.fillStyle = `rgba(255, 215, 0, ${Math.random()})`;
-                    ctx.beginPath();
-                    ctx.arc(x, y, size, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            }
-
-            // 게임 루프
-            function gameLoop(timestamp) {
-                game.time = timestamp;
-
-                // 화면 클리어
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-                // 배경 그리기
-                drawBackground();
-
-                // 게임 상태별 로직
-                if (game.state === 'approaching') {
-                    // 몬스터에게 접근
-                    game.distance -= game.walkSpeed;
-                    game.backgroundOffset += game.walkSpeed * 10;
-
-                    if (game.distance <= 0) {
-                        game.distance = 0;
-                        game.state = 'combat';
-                        game.lastMonsterAttack = timestamp;
-                    }
-
-                    drawMonster();
-                    drawSword();
-                    
-                } else if (game.state === 'combat') {
-                    drawMonster();
-                    drawSword();
-                    drawPlayerHP();
-
-                    // 몬스터 공격
-                    if (timestamp - game.lastMonsterAttack > game.monsterAttackInterval) {
-                        playerTakeDamage();
-                        game.lastMonsterAttack = timestamp;
-                    }
-
-                } else if (game.state === 'victory') {
-                    drawMonster();
-                    drawSword();
-                    drawPlayerHP();
-                    drawVictory();
-                }
-
-                requestAnimationFrame(gameLoop);
-            }
-
-            // 게임 시작
-            gameLoop(0);
-
-            // 리사이즈 처리
-            window.addEventListener('resize', () => {
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight;
-            });
-        }
-    </script>
+<div id="wrap"><div id="stage">
+<canvas id="cv" width="540" height="960"></canvas>
+<div id="vignette"></div>
+<div id="flash"></div>
+<div id="hud">
+  <div id="enemyHud">
+    <div class="name">SKY ABYSS BEAST</div>
+    <div class="lvl">LV.1 · 거대한 빨간 눈</div>
+    <div class="bar" id="enemyBar"><i id="enemyHp"></i><blink></blink></div>
+  </div>
+  <div id="nfc"><span class="dot"></span><span id="nfcText">NFC 대기</span></div>
+  <div id="playerHud">
+    <div class="name">PIXEL KNIGHT · HP</div>
+    <div id="playerBar"><i id="playerHp"></i><blink></blink></div>
+  </div>
+</div>
+<div id="toast"></div>
+<div id="message">
+  <div>
+    <div class="big" id="msgBig"></div>
+    <div class="small" id="msgSmall"></div>
+    <div class="tap">▼ 화면을 터치</div>
+  </div>
+</div>
+<div id="startOverlay">
+  <div class="panel">
+    <h1>PIXEL<br><span>ADVENTURE</span></h1>
+    <p>전방, 하늘에 거대한 눈이 떠 있다.
+끝까지 다가가면 전투가 시작된다.
+
+NFC 태그를 읽으면 검을 휘두른다.
+안드로이드 Chrome에서 실행하세요.</p>
+    <div class="tip">💡 NFC가 없으면 화면을 빠르게 두드려도 공격할 수 있다.</div>
+    <button id="startBtn">모험 시작</button>
+  </div>
+</div>
+</div></div>
+<script>
+"use strict";
+const cv=document.getElementById('cv');
+const ctx=cv.getContext('2d');
+const W=540,H=960,GROUND=620;
+const $=id=>document.getElementById(id);
+
+// ============== state ==============
+const S={
+  phase:'intro', // intro → walking → battle → win → dead
+  z:1.0,           // 1=멀리 0=몬스터 앞
+  zTarget:1.0,
+  walkT:0,
+  walkDur:7.0,
+  walkPhase:0,
+  playerMaxHP:200,
+  playerHP:200,
+  enemyMaxHP:120,
+  enemyHP:120,
+  enemyAttackCD:1.3,
+  enemyAttackT:0,
+  swordSway:0,
+  swordSwing:0,   // 0~1 (공격 모션)
+  flashW:0,
+  flashR:0,
+  shakeBig:0,
+  hitFlash:0,     // 몬스터가 막 hit 받았을 때 0~1
+  winner:false,
+  nfcOK:false,
+  nfcTapT:0,      // last tap cooldown
+  nfcScanInterval:null,
+  time:0,
+};
+
+// ============== util ==============
+function rand(a,b){return a+Math.random()*(b-a)}
+function clamp(v,a,b){return v<a?a:v>b?b:v}
+function lerp(a,b,t){return a+(b-a)*t}
+
+// ============== NFC ==============
+function setNfc(txt,cls){$('nfcText').textContent=txt;
+  const n=$('nfc');n.classList.remove('on','bad');if(cls)n.classList.add(cls)}
+async function startNFC(){
+  if(!('NDEFReader' in window)){
+    setNfc('NFC 미지원(Chrome 권장)','bad');return;
+  }
+  try{
+    const r=new NDEFReader();
+    await r.scan();
+    S.nfcOK=true;
+    setNfc('NFC 대기 중','on');
+    r.onreading=()=>{
+      if(S.phase!=='battle'||S.winner)return;
+      onAttack(`NFC TAG`);
+    };
+    r.onreadingerror=()=>{
+      setNfc('읽기 오류','bad');
+      setTimeout(()=>setNfc('NFC 대기 중','on'),900);
+    };
+  }catch(e){
+    setNfc('NFC 켜기 실패','bad');
+  }
+}
+
+// 터치/탭 공격 폴백 (데모 + iOS)
+function tapAttack(e){
+  // 시작버튼은 통과
+  if(e.target&&e.target.id==='startBtn')return;
+  if(e.target&&e.target.classList&&e.target.classList.contains('tap'))return;
+  const now=S.time;
+  if(now-S.nfcTapT<0.32)return;
+  S.nfcTapT=now;
+  if(S.phase!=='battle'||S.winner)return;
+  onAttack('TAB');
+}
+
+// ============== damage / juice ==============
+function vibrate(p){try{if(navigator.vibrate)navigator.vibrate(p)}catch(e){}}
+function trigPlayerHit(){
+  S.playerHP=Math.max(0,S.playerHP-7);
+  $('playerHp').style.width=(S.playerHP/S.playerMaxHP*100)+'%';
+  $('playerBar').classList.remove('blink');void $('playerBar').offsetWidth;$('playerBar').classList.add('blink');
+  vibrate([120,40,120]);
+  $('flash').className='flash red';
+  $('flash').style.opacity='.55';
+  setTimeout(()=>{$('flash').style.opacity='0';$('flash').className=''},180);
+  trigShake('shakeBig');
+  if(S.playerHP<=0){
+    S.winner=false;S.phase='dead';
+    showResult('YOU DIED','쓰러졌다…\n처음으로 돌아가려면 재시작','#ff7c7c');
+  }
+}
+function trigEnemyHit(amount){
+  S.enemyHP=Math.max(0,S.enemyHP-amount);
+  $('enemyHp').style.width=(S.enemyHP/S.enemyMaxHP*100)+'%';
+  $('enemyBar').classList.remove('blink');void $('enemyBar').offsetWidth;$('enemyBar').classList.add('blink');
+  S.hitFlash=1;
+  // 강한, 긴 진동
+  vibrate([90,30,90,30,180]);
+  $('flash').className='';
+  $('flash').style.background='#fff';$('flash').style.opacity='.7';
+  setTimeout(()=>{$('flash').style.opacity='0';$('flash').style.background=''},140);
+  trigShake('shake');
+  if(S.enemyHP<=0&&!S.winner){
+    S.winner=true;S.phase='win';
+    setTimeout(()=>{
+      showResult('🏆 MISSION CLEAR!','몬스터가 쓰러졌다!\n귀환의 길이 열렸다.','gold');
+    },520);
+  }
+}
+function trigShake(cls){
+  const stage=document.getElementById('stage');
+  stage.classList.remove('shake','shakeBig');void stage.offsetWidth;stage.classList.add(cls);
+}
+function showResult(big,small,cls){
+  const m=$('message');const b=$('msgBig');const s=$('msgSmall');
+  b.textContent=big;b.className='big'+(cls==='gold'?' gold':'');
+  s.textContent=small;m.classList.add('show');
+}
+function hideResult(){$('message').classList.remove('show')}
+function toast(t){const e=$('toast');e.textContent=t;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),1500)}
+
+function onAttack(src){
+  S.swordSwing=1; // 휘두름 시작
+  const dmg=22;
+  trigEnemyHit(dmg);
+}
+
+// ============== scene ==============
+function drawSky(t){
+  const grd=ctx.createLinearGradient(0,0,0,GROUND);
+  grd.addColorStop(0,'#7fb6ea');
+  grd.addColorStop(0.45,'#a7d0ee');
+  grd.addColorStop(1,'#e3f0e0');
+  ctx.fillStyle=grd;ctx.fillRect(0,0,W,GROUND+20);
+  // 구름
+  ctx.fillStyle='#fff';
+  for(let i=0;i<5;i++){
+    const cx=(i*160+(t*8)%160)-40, cy=80+i*22;
+    for(let k=0;k<4;k++){
+      ctx.beginPath();ctx.arc(cx+k*22,cy+k%2*5,20+k*2,0,6.3);ctx.fill();
+    }
+  }
+  // 새
+  ctx.fillStyle='#23272e';
+  for(let i=0;i<4;i++){
+    const bx=(i*120+(t*40)%120)-30, by=60+i*14;
+    ctx.beginPath();ctx.moveTo(bx,by);ctx.quadraticCurveTo(bx+3,by-3,bx+6,by);ctx.quadraticCurveTo(bx+9,by-3,bx+12,by);ctx.stroke();
+  }
+}
+// 배경 시차 산
+function drawMountains(t,z){
+  ctx.fillStyle='#5a6f8a';
+  ctx.beginPath();ctx.moveTo(0,GROUND-2);
+  for(let i=0;i<=9;i++){
+    const x=i*W/9;
+    const y=GROUND-60-30*Math.sin(i*1.9+t*0.5)+20*z;
+    ctx.lineTo(x,y);
+  }
+  ctx.lineTo(W,GROUND-2);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#3f5469';
+  ctx.beginPath();ctx.moveTo(0,GROUND-2);
+  for(let i=0;i<=9;i++){
+    const x=i*W/9;
+    const y=GROUND-100-46*Math.sin(i*2.3+t*0.35+2)+28*z;
+    ctx.lineTo(x,y);
+  }
+  ctx.lineTo(W,GROUND-2);ctx.closePath();ctx.fill();
+}
+// 잔디 언덕 (가장 가까운 parallax)
+function drawHills(t,z){
+  // 잔디 띠
+  ctx.fillStyle='#8cb86a';
+  ctx.beginPath();ctx.moveTo(0,GROUND);
+  for(let i=0;i<=20;i++){
+    const x=i*W/20;
+    const y=GROUND-10-Math.abs(Math.sin(i*0.6+t*1.1))*22*(1-z*0.3);
+    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+  }
+  ctx.lineTo(W,GROUND);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#6a9a4a';
+  ctx.beginPath();ctx.moveTo(0,GROUND);
+  for(let i=0;i<=20;i++){
+    const x=i*W/20;
+    const y=GROUND-22-Math.abs(Math.sin(i*0.8+t*0.9+1))*38*(1-z*0.5);
+    ctx.lineTo(x,y);
+  }
+  ctx.lineTo(W,GROUND);ctx.closePath();ctx.fill();
+}
+// 호수 + 꽃
+function drawDecor(t,z){
+  // 호수
+  ctx.fillStyle='#5aaedb';
+  ctx.beginPath();ctx.ellipse(W*0.27,GROUND+8,80,12,0,0,6.3);ctx.fill();
+  ctx.fillStyle='#7fc6e8';
+  ctx.beginPath();ctx.ellipse(W*0.27,GROUND+4,72,7,0,0,6.3);ctx.fill();
+  // 꽃
+  ctx.fillStyle='#fff4a8';
+  for(let i=0;i<18;i++){
+    const x=(i*33+(t*30)%33),y=GROUND+18+Math.sin(i*0.7)*3;
+    ctx.fillRect(x,y,2,2);ctx.fillRect(x+2,y-1,2,2);
+  }
+}
+// ============== Pixel MONSTER (matches reference) ==============
+// 빨간 둥근 몸통 + 가운데 시안 큰 눈 + 아래로 늘어진 다리/촉수들
+function drawMonster(t,z,hitFlash){
+  // 스케일: z=1(멀리, 작게) ∼ z=0(가까이, 크게)
+  const base=290;            // 가까이 있을 때 크기
+  const s=base*(1.55-z*0.55);// z=1 → 0.6배, z=0 → 1배
+  const cx=W/2, cy=GROUND-180-(1-z)*120;
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.scale(s/180,s/180); // 1.0이면 180배 기준
+  // 그림자
+  ctx.fillStyle='rgba(0,0,0,.18)';
+  ctx.beginPath();ctx.ellipse(0,170,120,16,0,0,6.3);ctx.fill();
+  // 촉수 (다리) - 8개, 좌우 흔들림
+  const arms=9;
+  for(let i=0;i<arms;i++){
+    const ang=-0.2+(i/(arms-1))*0.6+0.3; // 아래쪽 부채꼴
+    const len=110+i*8;
+    const sway=Math.sin(t*2.0+i*1.3)*8;
+    const startX=Math.cos(Math.PI+ang)*70;
+    const startY=Math.sin(Math.PI+ang)*70+10;
+    const endX=startX+Math.cos(Math.PI+ang+sway*0.02)*len;
+    const endY=startY+Math.sin(Math.PI+ang+sway*0.02)*len;
+    // 굵기 변화
+    for(let k=0;k<5;k++){
+      const tt=k/5;
+      const wx=lerp(startX,endX,tt), wy=lerp(startY,endY,tt);
+      const w=10-k*2;
+      ctx.fillStyle=k<2?'#5a0a0a':k<4?'#7a1212':'#9c1818';
+      ctx.beginPath();ctx.arc(wx,wy,w,0,6.3);ctx.fill();
+    }
+  }
+  // 몸통 (둥근 빨간 공, 가시들 포함)
+  // 가시 톱니
+  ctx.fillStyle='#5e0c0c';
+  ctx.beginPath();
+  for(let i=0;i<22;i++){
+    const ang=i/22*Math.PI*2;
+    const r=72+Math.sin(i*1.7+t*1.2)*3;
+    const x=Math.cos(ang)*r,y=Math.sin(ang)*r;
+    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+  }
+  ctx.closePath();ctx.fill();
+  // 본체
+  ctx.fillStyle='#a41616';
+  ctx.beginPath();ctx.arc(0,0,68,0,6.3);ctx.fill();
+  // 색 농담
+  const grd=ctx.createRadialGradient(-22,-22,4,0,0,68);
+  grd.addColorStop(0,'rgba(220,40,40,.85)');
+  grd.addColorStop(1,'rgba(120,12,12,0)');
+  ctx.fillStyle=grd;ctx.beginPath();ctx.arc(0,0,68,0,6.3);ctx.fill();
+  // hit flash
+  if(hitFlash>0){
+    ctx.fillStyle='rgba(255,80,80,'+(hitFlash*0.55).toFixed(2)+')';
+    ctx.beginPath();ctx.arc(0,0,70,0,6.3);ctx.fill();
+  }
+  // 검은 외곽선
+  ctx.strokeStyle='#2a0606';ctx.lineWidth=2.5;
+  ctx.beginPath();ctx.arc(0,0,68,0,6.3);ctx.stroke();
+  // 눈
+  // 흰자(시안)
+  ctx.fillStyle='#0d1a22';
+  ctx.beginPath();ctx.arc(0,-2,40,0,6.3);ctx.fill();
+  ctx.fillStyle='#34cfe6';
+  ctx.beginPath();ctx.arc(0,-2,34,0,6.3);ctx.fill();
+  // 동공
+  ctx.fillStyle='#0a1320';
+  ctx.beginPath();ctx.arc(2,-2,18,0,6.3);ctx.fill();
+  // 하이라이트
+  ctx.fillStyle='#fff';
+  ctx.beginPath();ctx.arc(-7,-9,5,0,6.3);ctx.fill();
+  ctx.beginPath();ctx.arc(7,5,2.2,0,6.3);ctx.fill();
+  // 살짝 깜빡임
+  const blink=t%4<0.18?0.6:1;
+  ctx.fillStyle='rgba(255,255,255,'+(0.0*blink)+')'; // 눈 깜빡임 거의 안 보이게
+  ctx.restore();
+}
+// ============== Sword (1인칭, 흔들림) ==============
+function drawSword(t, swing, sway, dashSpeed){
+  const cx=W/2, cy=H-80;
+  const wobble=Math.sin(t*4.2)*6;
+  ctx.save();
+  ctx.translate(cx,cy);
+  if(swing>0){
+    // 공격 모션: 휘두르기
+    const ang=lerp(-1.2,0.9,swing)+wobble*0.02;
+    ctx.rotate(ang);
+    ctx.translate(0, -Math.abs(Math.sin(swing*Math.PI))*20);
+  } else {
+    ctx.rotate(-0.32 + sway*0.55 + wobble*0.02);
+    ctx.translate(Math.sin(t*3)*dashSpeed*0.05, 0);
+  }
+  // 손
+  ctx.fillStyle='#d8a878';
+  ctx.fillRect(-18,-10,36,30);
+  ctx.fillStyle='#b6885a';
+  ctx.fillRect(-14,18,28,8);
+  // 손잡이
+  ctx.fillStyle='#70431d';
+  ctx.fillRect(-10,22,20,52);
+  ctx.fillStyle='#d59b45';
+  ctx.fillRect(-12,24,24,46);
+  // 가드
+  ctx.fillStyle='#c98c35';
+  ctx.fillRect(-32,16,64,10);
+  ctx.fillStyle='#a06c1c';
+  ctx.fillRect(-32,24,64,4);
+  // 폼멜
+  ctx.fillStyle='#d19a46';
+  ctx.beginPath();ctx.arc(0,80,8,0,6.3);ctx.fill();
+  // 칼날
+  ctx.save();
+  ctx.translate(0,-150);
+  ctx.fillStyle='#fff';
+  ctx.beginPath();
+  ctx.moveTo(-14,0);
+  ctx.lineTo(14,0);
+  ctx.lineTo(5,-260);
+  ctx.lineTo(0,-280);
+  ctx.lineTo(-5,-260);
+  ctx.closePath();ctx.fill();
+  // 칼날 가운데 광택
+  ctx.fillStyle='#eaf9ff';
+  ctx.beginPath();ctx.moveTo(-4,-8);ctx.lineTo(4,-8);ctx.lineTo(0,-270);ctx.closePath();ctx.fill();
+  // 외곽
+  ctx.strokeStyle='#b9d6e0';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(-14,0);ctx.lineTo(0,-280);ctx.lineTo(14,0);ctx.closePath();ctx.stroke();
+  // 발광
+  ctx.shadowColor='#fff';ctx.shadowBlur=28;
+  ctx.fillStyle='rgba(255,255,255,.4)';
+  ctx.fillRect(-2,-260,4,260);
+  ctx.shadowBlur=0;
+  ctx.restore();
+  ctx.restore();
+}
+
+// ============== Floor (지면, 멀어질수록 작게) ==============
+function drawFloor(t,z){
+  // 잔디/흙 그라데이션
+  const grd=ctx.createLinearGradient(0,GROUND,0,H);
+  grd.addColorStop(0,'#a3c977');
+  grd.addColorStop(0.4,'#7fa858');
+  grd.addColorStop(1,'#564a2c');
+  ctx.fillStyle=grd;ctx.fillRect(0,GROUND,W,H-GROUND);
+  // 디딤돌(가까워질수록 작아짐)
+  for(let i=0;i<14;i++){
+    const tt=(i/14);
+    const y=GROUND+tt*(H-GROUND)*0.9;
+    const w=lerp(200,30,tt)*(1-(1-z)*0);
+    ctx.fillStyle=`rgba(0,0,0,${0.06+tt*0.18})`;
+    ctx.fillRect(W/2-w/2+Math.sin(t*2+i)*1,y,w,4);
+  }
+  // 중앙 잔디 길
+  ctx.fillStyle='rgba(245,230,160,.08)';
+  ctx.fillRect(W/2-30,GROUND,60,H-GROUND);
+}
+
+// ============== loop ==============
+function update(dt){
+  S.time+=dt;
+  // walking
+  if(S.phase==='walking'){
+    S.walkPhase+=dt*8;
+    // 칼 흔들림 진폭 (걷는 동안 강하게)
+    S.swordSway=Math.sin(S.walkPhase);
+    // z target 점점 가까워짐
+    S.walkT+=dt;
+    const k=Math.min(1,S.walkT/S.walkDur);
+    // 부드러운 easing
+    const ease=k<0.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
+    S.z=lerp(1.0,0.0,ease);
+    // z가 거의 0이 되면 전투 시작
+    if(S.walkT>=S.walkDur){
+      S.z=0;S.phase='battle';
+      toast('⚔️ 전투 시작!');
+    }
+  } else if(S.phase==='battle'){
+    S.swordSway=Math.sin(S.time*4.8)*0.3;
+    // 몬스터 공격
+    S.enemyAttackT-=dt;
+    if(S.enemyAttackT<=0&&!S.winner){
+      // 시안 눈이 빨갛게 깜빡
+      S.hitFlash=0.5;
+      trigPlayerHit();
+      S.enemyAttackT=S.enemyAttackCD;
+    }
+  } else {
+    S.swordSway=Math.sin(S.time*3.0)*0.2;
+  }
+  // 공격 모션 dec
+  if(S.swordSwing>0){
+    S.swordSwing-=dt*2.0;
+    if(S.swordSwing<0)S.swordSwing=0;
+  }
+  if(S.hitFlash>0)S.hitFlash=Math.max(0,S.hitFlash-dt*2.0);
+}
+function render(){
+  ctx.clearRect(0,0,W,H);
+  const t=S.time;
+  drawSky(t);
+  drawMountains(t,S.z);
+  drawHills(t,S.z);
+  drawFloor(t,S.z);
+  drawDecor(t,S.z);
+  // 몬스터
+  if(S.phase!=='intro'){
+    drawMonster(t, S.z, S.hitFlash);
+  } else {
+    drawMonster(t, 1.0, 0);
+  }
+  // 1인칭 검
+  const swing=S.swordSwing;
+  drawSword(t, swing, S.swordSway, Math.abs(S.swordSway));
+  // z 텍스트
+  if(S.phase==='walking'){
+    drawHint(`APPROACH…  ${Math.round((1-S.z)*100)}%`);
+  } else if(S.phase==='battle'){
+    drawHint(S.winner?'승리…':'전투 중! NFC TAG / 화면 탭으로 공격');
+  } else if(S.phase==='win'){
+    drawHint('MISSION CLEAR');
+  }
+}
+function drawHint(s){
+  ctx.save();
+  ctx.font='800 13px "Segoe UI","Noto Sans KR",sans-serif';
+  ctx.textAlign='center';
+  ctx.fillStyle='rgba(0,0,0,.55)';
+  ctx.fillText(s,W/2+1,GROUND-12+1);
+  ctx.fillStyle='#fff';
+  ctx.fillText(s,W/2,GROUND-12);
+  ctx.restore();
+}
+
+// ============== raf ==============
+let last=0;
+function loop(ts){
+  const dt=Math.min(0.05,(ts-last)/1000)||0.016;
+  last=ts;
+  update(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ============== ui wiring ==============
+$('startBtn').addEventListener('click',async()=>{
+  $('startOverlay').classList.add('hidden');
+  if(S.phase==='intro'){
+    S.phase='walking';
+    S.walkT=0;
+    // 게임 시작 즉시 NFC 요청 (제스처 안에서)
+    await startNFC();
+    toast('🔎 NFC 대기 중 — 태그를 읽으면 공격');
+  }
+});
+document.addEventListener('pointerdown',(e)=>{
+  // 시작 버튼 클릭은 그대로 진행되도록
+  if(S.phase==='intro')return;
+  if($('message').classList.contains('show')){
+    if(S.phase==='win'||S.phase==='dead'){
+      // 재시작
+      hideResult();
+      restart();
+    }
+    return;
+  }
+  tapAttack(e);
+},{passive:false});
+
+function restart(){
+  S.phase='walking';S.z=1.0;S.walkT=0;S.winner=false;
+  S.playerHP=S.playerMaxHP;S.enemyHP=S.enemyMaxHP;
+  $('playerHp').style.width='100%';
+  $('enemyHp').style.width='100%';
+  S.swordSwing=0;S.hitFlash=0;
+}
+
+// 초기 HP 표시
+$('playerHp').style.width='100%';
+$('enemyHp').style.width='100%';
+</script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79"}' crossorigin="anonymous"></script>
 </body>
 </html>
