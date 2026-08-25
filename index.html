@@ -187,20 +187,21 @@ body{
        이전보다 아래로 이동
        참고 이미지처럼 풀밭 위에 서게 함
     */
-    top:43%;
+    top:auto;
+    bottom:24%;
 
-    width:68%;
+    width:58%;
 
     aspect-ratio:1 / 1;
 
     transform:
         translateX(-50%)
-        scale(.18);
+        scale(.14);
 
     transform-origin:
         50% 88%;
 
-    opacity:.22;
+    opacity:.30;
 
     /*
        앞 풀밭보다 위
@@ -461,11 +462,11 @@ body{
 
     z-index:25;
 
-    right:-22%;
-    bottom:-14%;
+    right:-31%;
+    bottom:-18%;
 
-    width:137%;
-    height:123%;
+    width:172%;
+    height:148%;
 
     object-fit:contain;
     object-position:right bottom;
@@ -535,14 +536,16 @@ body{
 
     from{
         transform:
-            rotate(-20deg)
-            translateY(7px);
+            rotate(-18deg)
+            translateY(8px)
+            translateX(2px);
     }
 
     to{
         transform:
-            rotate(14deg)
-            translateY(-7px);
+            rotate(8deg)
+            translateY(-8px)
+            translateX(-5px);
     }
 }
 
@@ -2324,11 +2327,11 @@ function walk(now){
 
     const backScale =
         1 +
-        t * .07;
+        t * .055;
 
 
     const backY =
-        t * 1.5;
+        t * .9;
 
 
     $('backLayer').style.transform =
@@ -2353,15 +2356,15 @@ function walk(now){
 
     const frontScale =
         1.00 +
-        t * .32;
+        t * .24;
 
 
     const frontY =
-        t * 7;
+        t * 4.2;
 
 
     const frontX =
-        -t * 1.5;
+        -t * .8;
 
 
     $('frontLayer').style.transform =
@@ -2387,31 +2390,39 @@ function walk(now){
     ================================================= */
 
     const monsterScale =
-        .18 +
-        t * 1.23;
+        .14 +
+        t * .72;
 
 
     /*
-       top 자체가 이미 43%이므로
-       너무 아래로 많이 이동하지 않음
+       몬스터의 발 위치 자체가
+       먼 지평선에서 앞쪽 풀밭으로 내려오도록 한다.
+
+       멀리 있을 때 : bottom 48%
+       전투 시작 때 : bottom 24%
+
+       그래서 커지기만 하며 공중에 뜨는 느낌이 아니라
+       실제로 풀밭을 따라 앞으로 걸어오는 것처럼 보인다.
     */
 
-    const monsterY =
-        -10 +
-        t * 13;
+    const monsterBottom =
+        48 -
+        t * 24;
 
 
     const monsterX =
-        t * .5;
+        t * .4;
+
+
+    $('monsterWrap').style.bottom =
+        monsterBottom + '%';
 
 
     $('monsterWrap').style.transform =
 
-        'translate(calc(-50% + ' +
+        'translateX(calc(-50% + ' +
         monsterX +
-        '%),' +
-        monsterY +
-        '%) scale(' +
+        '%)) scale(' +
         monsterScale +
         ')';
 
@@ -2420,8 +2431,8 @@ function walk(now){
 
         Math.min(
             1,
-            .22 +
-            t * 1.25
+            .30 +
+            t * 1.15
         );
 
 
@@ -2439,8 +2450,11 @@ function walk(now){
            참고 이미지에 맞춰 고정
         */
 
+        $('monsterWrap').style.bottom =
+            '24%';
+
         $('monsterWrap').style.transform =
-            'translate(-50%,3%) scale(1.41)';
+            'translateX(-50%) scale(.86)';
 
 
         $('monsterWrap').style.opacity =
