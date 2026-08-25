@@ -70,9 +70,10 @@ body{
     overflow:hidden;
 }
 
-/* ==============================
+
+/* =====================================================
    SKY
-============================== */
+===================================================== */
 
 #bg{
     position:absolute;
@@ -82,33 +83,47 @@ body{
     object-fit:cover;
     object-position:center top;
     z-index:1;
+
     transform:scale(1.01);
     transform-origin:center center;
+
     will-change:transform;
 }
 
-/* ==============================
+
+/* =====================================================
    BACK
-============================== */
+===================================================== */
 
 #backLayer{
     position:absolute;
+
     left:-6%;
+
     width:112%;
     height:61%;
+
     bottom:3%;
+
     object-fit:cover;
     object-position:center bottom;
+
     z-index:2;
+
     pointer-events:none;
+
     transform-origin:center bottom;
+
     will-change:transform;
 }
+
 
 #farHaze{
     position:absolute;
     inset:0;
+
     z-index:3;
+
     pointer-events:none;
 
     background:
@@ -122,42 +137,58 @@ body{
         );
 }
 
-/* ==============================
+
+/* =====================================================
    FRONT
-============================== */
+===================================================== */
 
 #frontGroup{
     position:absolute;
+
     left:0;
     right:0;
     bottom:0;
+
     width:100%;
     height:67%;
+
     z-index:5;
+
     transform-origin:50% 92%;
+
     will-change:transform;
 }
 
+
 #frontLayer{
     position:absolute;
+
     left:-13%;
+
     width:126%;
     height:100%;
+
     bottom:-1%;
+
     object-fit:cover;
     object-position:center top;
+
     z-index:1;
+
     pointer-events:none;
 }
 
-/* ==============================
-   MONSTER
-============================== */
+
+/* =====================================================
+   MONSTER SHADOW
+===================================================== */
 
 #monsterShadow{
     position:absolute;
+
     left:50%;
     bottom:14.3%;
+
     width:38%;
     height:5%;
 
@@ -174,17 +205,27 @@ body{
         );
 
     filter:blur(3px);
+
     opacity:.42;
 
     z-index:2;
+
     pointer-events:none;
 }
 
+
+/* =====================================================
+   MONSTER
+===================================================== */
+
 #monsterWrap{
     position:absolute;
+
     left:50%;
     bottom:10.5%;
+
     width:55%;
+
     aspect-ratio:1/1;
 
     transform:
@@ -194,10 +235,18 @@ body{
     transform-origin:50% 91%;
 
     opacity:1;
+
     z-index:3;
 
-    will-change:transform,opacity;
+    will-change:
+        transform,
+        opacity;
 }
+
+
+/* =====================================================
+   MONSTER BREATH
+===================================================== */
 
 #monsterBreath{
     position:absolute;
@@ -213,6 +262,7 @@ body{
 
     will-change:transform;
 }
+
 
 @keyframes monsterBreathing{
 
@@ -230,13 +280,20 @@ body{
     }
 }
 
+
+/* =====================================================
+   MONSTER IMAGE
+===================================================== */
+
 #monster{
     position:absolute;
     inset:0;
+
     width:100%;
     height:100%;
 
     object-fit:contain;
+
     image-rendering:pixelated;
 
     translate:0 10%;
@@ -255,11 +312,13 @@ body{
         opacity;
 }
 
-/* ==============================
+
+/* =====================================================
    MONSTER DEAD
-============================== */
+===================================================== */
 
 #monster.dead{
+
     animation:
         monsterDead
         1.1s
@@ -267,37 +326,59 @@ body{
         forwards;
 }
 
+
 @keyframes monsterDead{
 
     0%{
         opacity:1;
-        transform:translate(0,0) rotate(0) scale(1);
+
+        transform:
+            translate(0,0)
+            rotate(0)
+            scale(1);
     }
 
     18%{
-        transform:translate(-16px,5px) rotate(-5deg) scale(1.04);
+        transform:
+            translate(-16px,5px)
+            rotate(-5deg)
+            scale(1.04);
+
         filter:brightness(3);
     }
 
     35%{
-        transform:translate(18px,-5px) rotate(5deg) scale(1.02);
+        transform:
+            translate(18px,-5px)
+            rotate(5deg)
+            scale(1.02);
+
         filter:brightness(2.3);
     }
 
     60%{
-        transform:translate(-8px,10px) rotate(-3deg) scale(.94);
+        transform:
+            translate(-8px,10px)
+            rotate(-3deg)
+            scale(.94);
+
         opacity:.75;
     }
 
     100%{
-        transform:translate(0,40px) rotate(7deg) scale(.65);
+        transform:
+            translate(0,40px)
+            rotate(7deg)
+            scale(.65);
+
         opacity:0;
     }
 }
 
-/* ==============================
+
+/* =====================================================
    SWORD
-============================== */
+===================================================== */
 
 #sword{
     position:absolute;
@@ -308,6 +389,7 @@ body{
     bottom:var(--sword-bottom);
 
     width:auto;
+
     height:var(--sword-size);
 
     max-width:none;
@@ -327,11 +409,13 @@ body{
     will-change:transform;
 }
 
-/* ==============================
-   WALKING SWORD
-============================== */
+
+/* =====================================================
+   SWORD WALK
+===================================================== */
 
 #sword.walking{
+
     animation:
         swordWalk
         .68s
@@ -339,6 +423,7 @@ body{
         infinite
         alternate;
 }
+
 
 @keyframes swordWalk{
 
@@ -355,12 +440,14 @@ body{
     }
 }
 
-/* ==============================
+
+/* =====================================================
    SLASH
-============================== */
+===================================================== */
 
 #slash{
     position:absolute;
+
     z-index:24;
 
     right:0;
@@ -374,6 +461,7 @@ body{
     pointer-events:none;
 
     background:
+
         radial-gradient(
             ellipse at 70% 55%,
             rgba(255,255,255,.95) 0 2%,
@@ -396,9 +484,10 @@ body{
         opacity;
 }
 
-/* ==============================
+
+/* =====================================================
    HUD
-============================== */
+===================================================== */
 
 #hud{
     position:absolute;
@@ -410,6 +499,7 @@ body{
     top:12px;
 
     display:flex;
+
     gap:8px;
 
     justify-content:space-between;
@@ -418,20 +508,25 @@ body{
         0 2px 3px #000;
 }
 
+
 .unit{
     width:48%;
 }
 
+
 .lab{
     font-size:12px;
     font-weight:900;
+
     margin-bottom:3px;
 }
+
 
 .bar{
     height:14px;
 
     border:2px solid #fff;
+
     border-radius:5px;
 
     background:#220b0b;
@@ -442,10 +537,14 @@ body{
         0 2px 6px #000;
 }
 
+
 .fill{
     height:100%;
-    transition:width .15s linear;
+
+    transition:
+        width .15s linear;
 }
+
 
 #pf{
     background:
@@ -457,6 +556,7 @@ body{
     width:100%;
 }
 
+
 #ef{
     background:
         linear-gradient(
@@ -467,9 +567,10 @@ body{
     width:100%;
 }
 
-/* ==============================
+
+/* =====================================================
    NFC
-============================== */
+===================================================== */
 
 #nfc{
     position:absolute;
@@ -479,9 +580,11 @@ body{
     top:48px;
     left:50%;
 
-    transform:translateX(-50%);
+    transform:
+        translateX(-50%);
 
-    padding:7px 12px;
+    padding:
+        7px 12px;
 
     border-radius:12px;
 
@@ -498,6 +601,7 @@ body{
     white-space:nowrap;
 }
 
+
 #dot{
     display:inline-block;
 
@@ -511,9 +615,10 @@ body{
     margin-right:5px;
 }
 
-/* ==============================
+
+/* =====================================================
    DAMAGE
-============================== */
+===================================================== */
 
 #dmg{
     position:absolute;
@@ -537,9 +642,10 @@ body{
     pointer-events:none;
 }
 
-/* ==============================
+
+/* =====================================================
    RED FLASH
-============================== */
+===================================================== */
 
 #red{
     position:absolute;
@@ -555,9 +661,10 @@ body{
     pointer-events:none;
 }
 
-/* ==============================
+
+/* =====================================================
    START
-============================== */
+===================================================== */
 
 #start{
     position:absolute;
@@ -579,15 +686,18 @@ body{
     text-align:center;
 }
 
+
 #start.hidden{
     display:none;
 }
+
 
 .startBox{
     width:86%;
     max-width:380px;
 
-    padding:20px 16px;
+    padding:
+        20px 16px;
 
     border-radius:18px;
 
@@ -599,8 +709,10 @@ body{
         rgba(255,255,255,.3);
 }
 
+
 .startBox h1{
-    margin:0 0 10px;
+    margin:
+        0 0 10px;
 
     font-size:31px;
 
@@ -612,18 +724,23 @@ body{
         0 3px 4px #6b3500;
 }
 
+
 .startBox p{
     font-size:13px;
+
     line-height:1.6;
+
     color:#eee;
 }
+
 
 #go{
     border:0;
 
     border-radius:11px;
 
-    padding:14px 28px;
+    padding:
+        14px 28px;
 
     font-size:18px;
     font-weight:1000;
@@ -640,9 +757,10 @@ body{
         0 4px 0 #6d2904;
 }
 
-/* ==============================
+
+/* =====================================================
    CHROME
-============================== */
+===================================================== */
 
 #chromeGuide{
     position:absolute;
@@ -661,15 +779,18 @@ body{
         rgba(0,0,0,.78);
 }
 
+
 #chromeGuide.show{
     display:flex;
 }
+
 
 .chromeBox{
     width:100%;
     max-width:360px;
 
-    padding:25px 20px 22px;
+    padding:
+        25px 20px 22px;
 
     border-radius:18px;
 
@@ -687,6 +808,7 @@ body{
     text-align:center;
 }
 
+
 #chromeBtn{
     width:100%;
 
@@ -694,7 +816,8 @@ body{
 
     border-radius:11px;
 
-    padding:14px 10px;
+    padding:
+        14px 10px;
 
     background:
         linear-gradient(
@@ -711,13 +834,17 @@ body{
 </style>
 </head>
 
+
 <body>
 
 <div id="game">
 
+
     <div id="camera">
 
+
         <div id="world">
+
 
             <img
                 id="bg"
@@ -725,15 +852,19 @@ body{
                 alt=""
             >
 
+
             <img
                 id="backLayer"
                 src="https://static.wixstatic.com/media/172435_54aea94be0ae4c5eb4a1f5fa3f56e7ea~mv2.png"
                 alt=""
             >
 
+
             <div id="farHaze"></div>
 
+
             <div id="frontGroup">
+
 
                 <img
                     id="frontLayer"
@@ -741,11 +872,15 @@ body{
                     alt=""
                 >
 
+
                 <div id="monsterShadow"></div>
+
 
                 <div id="monsterWrap">
 
+
                     <div id="monsterBreath">
+
 
                         <img
                             id="monster"
@@ -753,15 +888,21 @@ body{
                             alt=""
                         >
 
+
                     </div>
+
 
                 </div>
 
+
             </div>
+
 
         </div>
 
+
         <div id="slash"></div>
+
 
         <img
             id="sword"
@@ -769,20 +910,35 @@ body{
             alt=""
         >
 
+
     </div>
 
+
+    <!-- HUD -->
 
     <div id="hud">
 
+
         <div class="unit">
 
             <div class="lab">
+
                 HP
-                <span id="pt">100 / 100</span>
+
+                <span id="pt">
+                    100 / 100
+                </span>
+
             </div>
 
+
             <div class="bar">
-                <div class="fill" id="pf"></div>
+
+                <div
+                    class="fill"
+                    id="pf"
+                ></div>
+
             </div>
 
         </div>
@@ -791,18 +947,32 @@ body{
         <div class="unit">
 
             <div class="lab">
+
                 MONSTER HP
-                <span id="et">80 / 80</span>
+
+                <span id="et">
+                    80 / 80
+                </span>
+
             </div>
 
+
             <div class="bar">
-                <div class="fill" id="ef"></div>
+
+                <div
+                    class="fill"
+                    id="ef"
+                ></div>
+
             </div>
 
         </div>
+
 
     </div>
 
+
+    <!-- NFC -->
 
     <div id="nfc">
 
@@ -815,12 +985,19 @@ body{
     </div>
 
 
+    <!-- DAMAGE -->
+
     <div id="dmg">
         -16
     </div>
 
+
+    <!-- RED FLASH -->
+
     <div id="red"></div>
 
+
+    <!-- START -->
 
     <div id="start">
 
@@ -831,7 +1008,7 @@ body{
             </h1>
 
             <p>
-                NFC를 읽으면 2초 동안 연속 공격합니다.<br>
+                NFC 1회 인식 = 검 1회 공격<br>
                 몬스터를 쓰러뜨려도 계속 앞으로 진행합니다.
             </p>
 
@@ -843,6 +1020,8 @@ body{
 
     </div>
 
+
+    <!-- CHROME GUIDE -->
 
     <div id="chromeGuide">
 
@@ -864,6 +1043,7 @@ body{
 
     </div>
 
+
 </div>
 
 
@@ -875,35 +1055,78 @@ body{
 
 const CONFIG = {
 
+    /*
+       몬스터 시작 크기
+    */
     MONSTER_START_SCALE:1.00,
 
+
+    /*
+       몬스터 도착 크기
+    */
     MONSTER_END_SCALE:1.66,
 
+
+    /*
+       몬스터 높이
+    */
     MONSTER_BOTTOM:10.5,
 
+
+    /*
+       처음 몬스터까지 걷는 시간
+    */
     WALK_TIME:8000,
 
+
+    /*
+       앞 풀밭 확대
+    */
     FRONT_END_SCALE:1.30,
 
+
+    /*
+       뒤 배경 확대
+    */
     BACK_END_SCALE:1.065,
 
+
+    /*
+       하늘 확대
+    */
     SKY_END_SCALE:1.022,
 
 
-    /* NFC 코드상 쿨타임 */
+    /*
+       ★ NFC 쿨타임
+
+       요청대로 1ms
+    */
     NFC_COOLDOWN:1,
 
 
-    /* ★ NFC 1번 = 2초 연속공격 */
-    AUTO_ATTACK_TIME:2000,
+    /*
+       몬스터 공격 간격
+    */
+    ENEMY_ATTACK_INTERVAL:1700,
 
 
-    /* ★ 공격 간격 */
-    ATTACK_INTERVAL:330,
+    /*
+       ★ 옆베기 속도
+
+       이전 270ms
+       → 절반인 135ms
+    */
+    HORIZONTAL_SLASH_SPEED:135,
 
 
-    /* 몬스터 공격 간격 */
-    ENEMY_ATTACK_INTERVAL:1700
+    /*
+       ★ 세로베기 속도
+
+       이전 285ms
+       → 약 절반인 142ms
+    */
+    VERTICAL_SLASH_SPEED:142
 };
 
 
@@ -916,6 +1139,7 @@ let started = false;
 let battle = false;
 
 let monsterDead = false;
+
 
 let nfcOn = false;
 
@@ -946,12 +1170,9 @@ let eHP = 80;
 
 
 /*
-   ★ 연속공격 관련
+   0 = 옆베기
+   1 = 세로베기
 */
-
-let autoAttackTimer = null;
-
-let autoAttackStopTimer = null;
 
 let slashType = 0;
 
@@ -988,9 +1209,13 @@ function isKakaoBrowser(){
     const ua =
         navigator.userAgent || '';
 
+
     return(
+
         /KAKAOTALK/i.test(ua) ||
+
         /KakaoTalk/i.test(ua)
+
     );
 }
 
@@ -998,9 +1223,13 @@ function isKakaoBrowser(){
 function isAndroid(){
 
     return(
+
         /Android/i.test(
+
             navigator.userAgent || ''
+
         )
+
     );
 }
 
@@ -1008,29 +1237,44 @@ function isAndroid(){
 function openChrome(){
 
     const clean =
+
         window.location.href.replace(
+
             /^https?:\/\//i,
+
             ''
+
         );
+
 
     window.location.href =
 
         'intent://' +
+
         clean +
+
         '#Intent;' +
+
         'scheme=https;' +
+
         'package=com.android.chrome;' +
+
         'end';
 }
 
 
 if(
+
     isKakaoBrowser() &&
+
     isAndroid()
+
 ){
 
     $('chromeGuide')
+
         .classList
+
         .add('show');
 
 }
@@ -1051,52 +1295,102 @@ function updateHP(){
 
 
     $('ef').style.width =
+
         (
-            eHP / 80 * 100
-        ) + '%';
+            eHP /
+            80 *
+            100
+        ) +
+
+        '%';
 
 
     $('pt').textContent =
-        pHP + ' / 100';
+
+        pHP +
+
+        ' / 100';
 
 
     $('et').textContent =
-        eHP + ' / 80';
+
+        eHP +
+
+        ' / 80';
+
 }
 
 
 /* =====================================================
-   LIGHT CAMERA SHAKE
+   CAMERA SHAKE
 
-   offsetWidth 사용 안 함
+   offsetWidth 사용하지 않음
 ===================================================== */
 
 function shakeCamera(){
 
-    if(cameraAnimation){
+    if(
+        cameraAnimation
+    ){
+
         cameraAnimation.cancel();
+
     }
 
 
     cameraAnimation =
+
         $('camera').animate(
 
             [
-                {transform:'translate(0,0)'},
-                {transform:'translate(-9px,5px)'},
-                {transform:'translate(9px,-5px)'},
-                {transform:'translate(-7px,4px)'},
-                {transform:'translate(6px,-3px)'},
-                {transform:'translate(-3px,2px)'},
-                {transform:'translate(0,0)'}
+
+                {
+                    transform:
+                        'translate(0,0)'
+                },
+
+                {
+                    transform:
+                        'translate(-9px,5px)'
+                },
+
+                {
+                    transform:
+                        'translate(9px,-5px)'
+                },
+
+                {
+                    transform:
+                        'translate(-7px,4px)'
+                },
+
+                {
+                    transform:
+                        'translate(6px,-3px)'
+                },
+
+                {
+                    transform:
+                        'translate(-3px,2px)'
+                },
+
+                {
+                    transform:
+                        'translate(0,0)'
+                }
+
             ],
 
             {
+
                 duration:330,
+
                 easing:'ease-out'
+
             }
 
         );
+
 }
 
 
@@ -1106,26 +1400,45 @@ function shakeCamera(){
 
 function redFlash(){
 
-    if(redAnimation){
+    if(
+        redAnimation
+    ){
+
         redAnimation.cancel();
+
     }
 
 
     redAnimation =
+
         $('red').animate(
 
             [
-                {opacity:.62},
-                {opacity:.28},
-                {opacity:0}
+
+                {
+                    opacity:.62
+                },
+
+                {
+                    opacity:.28
+                },
+
+                {
+                    opacity:0
+                }
+
             ],
 
             {
+
                 duration:300,
+
                 easing:'ease-out'
+
             }
 
         );
+
 }
 
 
@@ -1135,40 +1448,60 @@ function redFlash(){
 
 function damageNumber(){
 
-    if(damageAnimation){
+    if(
+        damageAnimation
+    ){
+
         damageAnimation.cancel();
+
     }
 
 
     damageAnimation =
+
         $('dmg').animate(
 
             [
+
                 {
+
                     opacity:0,
+
                     transform:
                         'translateY(10px) scale(.6)'
+
                 },
 
                 {
+
                     opacity:1,
+
                     transform:
                         'translateY(0) scale(1.3)'
+
                 },
 
                 {
+
                     opacity:0,
+
                     transform:
                         'translateY(-45px) scale(1)'
+
                 }
+
             ],
 
             {
+
                 duration:500,
+
                 easing:'ease-out'
+
             }
 
         );
+
 }
 
 
@@ -1183,194 +1516,278 @@ function strongEnemyVibe(){
     ){
 
         /*
-           몬스터 타격 때만 진동
+           ★ 몬스터가 맞을 때만 진동
         */
 
         navigator.vibrate(
+
             [120,25,100]
+
         );
 
     }
+
 }
 
 
 /* =====================================================
-   MONSTER HIT GRAPHICS
+   MONSTER HIT EFFECT
 ===================================================== */
 
 function monsterHitFX(){
 
-    if(monsterHitAnimation){
+    if(
+        monsterHitAnimation
+    ){
+
         monsterHitAnimation.cancel();
+
     }
 
 
     monsterHitAnimation =
+
         $('monster').animate(
 
             [
+
                 {
+
                     transform:
                         'translate(0,0) rotate(0)',
+
                     filter:
                         'brightness(1)'
+
                 },
 
                 {
+
                     transform:
                         'translate(-13px,4px) rotate(-4deg) scale(1.04)',
+
                     filter:
                         'brightness(3.4) saturate(2.5) drop-shadow(0 0 24px red)'
+
                 },
 
                 {
+
                     transform:
                         'translate(13px,-4px) rotate(4deg) scale(1.04)',
+
                     filter:
                         'brightness(3) saturate(2.2) drop-shadow(0 0 18px red)'
+
                 },
 
                 {
+
                     transform:
                         'translate(-7px,2px) rotate(-2deg)',
+
                     filter:
                         'brightness(1.8)'
+
                 },
 
                 {
+
                     transform:
                         'translate(0,0) rotate(0)',
+
                     filter:
                         'brightness(1)'
+
                 }
+
             ],
 
             {
+
                 duration:310,
+
                 easing:'ease-out'
+
             }
 
         );
+
 }
 
 
 /* =====================================================
    PLAYER HIT
 
-   ★ 진동 없음
+   ★ 플레이어가 맞아도 진동 없음
 ===================================================== */
 
 function playerHit(){
 
     if(
+
         !battle ||
+
         monsterDead ||
+
         pHP <= 0
+
     ){
+
         return;
+
     }
 
 
     /*
-       ★ 몬스터가 공격할 때
-
-       먼저 살짝 뒤로 물러났다가
-       플레이어 쪽으로 확 돌진.
+       기존 몬스터 공격 애니메이션이
+       남아있다면 정리
     */
 
-    if(monsterAttackAnimation){
+    if(
+        monsterAttackAnimation
+    ){
+
         monsterAttackAnimation.cancel();
+
     }
 
 
+    /*
+       ★ 몬스터 공격
+
+       1. 살짝 움츠림
+       2. 플레이어 쪽으로 돌진
+       3. 원래 자리로 복귀
+    */
+
     monsterAttackAnimation =
+
         $('monsterBreath').animate(
 
             [
+
                 {
+
                     transform:
                         'translateY(0) scale(1)'
+
                 },
 
                 {
+
                     offset:.20,
+
                     transform:
                         'translateY(8px) scale(.94)'
+
                 },
 
                 {
+
                     offset:.48,
+
                     transform:
                         'translateY(-32px) scale(1.30)'
+
                 },
 
                 {
+
                     offset:.63,
+
                     transform:
                         'translateY(-38px) scale(1.36)'
+
                 },
 
                 {
+
                     transform:
                         'translateY(0) scale(1)'
+
                 }
+
             ],
 
             {
+
                 duration:520,
+
                 easing:
                     'cubic-bezier(.2,.8,.25,1)'
+
             }
 
         );
 
 
     /*
-       실제 데미지는
-       몬스터가 앞으로 튀어나오는 순간.
+       몬스터가 앞으로 튀어나오는
+       순간에 데미지
     */
 
-    setTimeout(()=>{
+    setTimeout(
 
-        if(
-            !battle ||
-            monsterDead ||
-            pHP <= 0
-        ){
-            return;
-        }
+        ()=>{
 
 
-        pHP =
-            Math.max(
-                0,
-                pHP - 5
-            );
+            if(
+
+                !battle ||
+
+                monsterDead ||
+
+                pHP <= 0
+
+            ){
+
+                return;
+
+            }
 
 
-        updateHP();
+            pHP =
+
+                Math.max(
+
+                    0,
+
+                    pHP - 5
+
+                );
 
 
-        /*
-           ★ 플레이어 피격 진동 없음
-        */
-
-        shakeCamera();
-
-        redFlash();
+            updateHP();
 
 
-        if(
-            pHP <= 0
-        ){
+            /*
+               ★ 플레이어 피격 시
+               진동 없음
+            */
 
-            clearInterval(
-                enemyTimer
-            );
+            shakeCamera();
 
-        }
+            redFlash();
 
-    },230);
+
+            if(
+                pHP <= 0
+            ){
+
+                clearInterval(
+                    enemyTimer
+                );
+
+            }
+
+
+        },
+
+        230
+
+    );
+
 }
 
 
@@ -1381,18 +1798,28 @@ function playerHit(){
 function monsterDamage(){
 
     if(
+
         !battle ||
+
         monsterDead ||
+
         pHP <= 0
+
     ){
+
         return;
+
     }
 
 
     eHP =
+
         Math.max(
+
             0,
+
             eHP - 16
+
         );
 
 
@@ -1400,14 +1827,15 @@ function monsterDamage(){
 
 
     /*
-       ★ 몬스터가 맞을 때만 강한 진동
+       ★ 몬스터가 맞을 때만
+       강한 진동
     */
 
     strongEnemyVibe();
 
 
     /*
-       타격 그래픽
+       타격 효과
     */
 
     monsterHitFX();
@@ -1424,219 +1852,344 @@ function monsterDamage(){
         defeatMonster();
 
     }
+
 }
 
 
 /* =====================================================
    ★ ATTACK 1
-   옆베기
+
+   빠른 옆베기
+
+   기존 270ms
+   → 135ms
 ===================================================== */
 
 function horizontalSlash(){
 
-    if(swordAnimation){
+    if(
+        swordAnimation
+    ){
+
         swordAnimation.cancel();
+
     }
 
 
-    if(slashAnimation){
+    if(
+        slashAnimation
+    ){
+
         slashAnimation.cancel();
+
     }
 
+
+    /*
+       공격하는 동안만
+       walking CSS 애니메이션 제거
+    */
 
     $('sword')
+
         .classList
+
         .remove('walking');
 
 
     swordAnimation =
+
         $('sword').animate(
 
             [
+
                 {
+
                     transform:
                         'rotate(-26deg) translate(0,0)'
+
                 },
 
                 {
+
                     offset:.25,
+
                     transform:
                         'rotate(-48deg) translate(-10px,5px)'
+
                 },
 
                 {
+
                     offset:.58,
+
                     transform:
                         'rotate(58deg) translate(-42px,-32px) scale(1.12)'
+
                 },
 
                 {
+
                     transform:
                         'rotate(-18deg) translate(0,0)'
+
                 }
+
             ],
 
             {
-                duration:270,
+
+                /*
+                   ★ 절반 속도
+                */
+
+                duration:
+                    CONFIG.HORIZONTAL_SLASH_SPEED,
+
                 easing:
                     'cubic-bezier(.12,.9,.2,1)'
+
             }
 
         );
 
 
     slashAnimation =
+
         $('slash').animate(
 
             [
+
                 {
+
                     opacity:0,
+
                     transform:
                         'rotate(-28deg) scale(.55)'
+
                 },
 
                 {
+
                     offset:.25,
+
                     opacity:.95
+
                 },
 
                 {
+
                     opacity:0,
+
                     transform:
                         'rotate(20deg) scale(1.15)'
+
                 }
+
             ],
 
             {
-                duration:270,
+
+                duration:
+                    CONFIG.HORIZONTAL_SLASH_SPEED,
+
                 easing:'ease-out'
+
             }
 
         );
 
 
     swordAnimation.onfinish =
+
         ()=>{
 
-            if(started){
+            if(
+                started
+            ){
 
                 $('sword')
+
                     .classList
+
                     .add('walking');
 
             }
 
         };
+
 }
 
 
 /* =====================================================
    ★ ATTACK 2
-   위 → 아래 세로베기
+
+   빠른 위 → 아래 세로베기
+
+   기존 285ms
+   → 142ms
 ===================================================== */
 
 function verticalSlash(){
 
-    if(swordAnimation){
+    if(
+        swordAnimation
+    ){
+
         swordAnimation.cancel();
+
     }
 
 
-    if(slashAnimation){
+    if(
+        slashAnimation
+    ){
+
         slashAnimation.cancel();
+
     }
 
 
     $('sword')
+
         .classList
+
         .remove('walking');
 
 
     swordAnimation =
+
         $('sword').animate(
 
             [
+
                 {
+
                     transform:
                         'rotate(-18deg) translate(0,0)'
+
                 },
 
                 {
+
                     offset:.25,
+
                     transform:
                         'rotate(-78deg) translate(-28px,-65px) scale(1.05)'
+
                 },
 
                 {
+
                     offset:.60,
+
                     transform:
                         'rotate(18deg) translate(-48px,35px) scale(1.14)'
+
                 },
 
                 {
+
                     transform:
                         'rotate(-18deg) translate(0,0)'
+
                 }
+
             ],
 
             {
-                duration:285,
+
+                /*
+                   ★ 절반 속도
+                */
+
+                duration:
+                    CONFIG.VERTICAL_SLASH_SPEED,
+
                 easing:
                     'cubic-bezier(.15,.85,.22,1)'
+
             }
 
         );
 
 
     slashAnimation =
+
         $('slash').animate(
 
             [
+
                 {
+
                     opacity:0,
+
                     transform:
                         'rotate(-70deg) scale(.5)'
+
                 },
 
                 {
+
                     offset:.28,
+
                     opacity:1
+
                 },
 
                 {
+
                     opacity:0,
+
                     transform:
                         'rotate(-5deg) scale(1.18)'
+
                 }
+
             ],
 
             {
-                duration:285,
+
+                duration:
+                    CONFIG.VERTICAL_SLASH_SPEED,
+
                 easing:'ease-out'
+
             }
 
         );
 
 
     swordAnimation.onfinish =
+
         ()=>{
 
-            if(started){
+            if(
+                started
+            ){
 
                 $('sword')
+
                     .classList
+
                     .add('walking');
 
             }
 
         };
+
 }
 
 
 /* =====================================================
-   SINGLE ATTACK
+   ★ SINGLE ATTACK
 
-   ★ 좌우 / 세로 번갈아
+   NFC 1번 = 공격 딱 1번
+
+   첫 NFC  → 옆베기
+   다음 NFC → 세로베기
+   다음 NFC → 옆베기
+   ...
 ===================================================== */
 
 function attack(){
@@ -1644,7 +2197,9 @@ function attack(){
     if(
         !started
     ){
+
         return;
+
     }
 
 
@@ -1668,111 +2223,30 @@ function attack(){
 
 
     /*
-       몬스터와 싸우는 중에만
-       실제 데미지.
+       몬스터와 실제 전투 중일 때만
+       몬스터 HP 감소
     */
 
     if(
+
         battle &&
+
         !monsterDead
+
     ){
 
         monsterDamage();
 
     }
-}
 
-
-/* =====================================================
-   ★★★★★ NFC AUTO ATTACK ★★★★★
-
-   NFC 1회 읽음
-        ↓
-   즉시 공격
-        ↓
-   330ms마다 공격
-        ↓
-   2초간 지속
-===================================================== */
-
-function startAutoAttack(){
-
-    if(
-        !started
-    ){
-        return;
-    }
-
-
-    /*
-       ★ NFC를 다시 읽었다면
-
-       기존 interval을 또 만들지 않고
-       종료 시간만 다시 2초로 갱신.
-    */
-
-    clearTimeout(
-        autoAttackStopTimer
-    );
-
-
-    /*
-       현재 자동공격이 없다면 시작.
-    */
-
-    if(
-        !autoAttackTimer
-    ){
-
-        /*
-           첫 공격 즉시 실행
-        */
-
-        attack();
-
-
-        autoAttackTimer =
-            setInterval(
-                ()=>{
-
-                    attack();
-
-                },
-                CONFIG.ATTACK_INTERVAL
-            );
-
-    }
-
-
-    /*
-       마지막 NFC 인식으로부터
-       2초 뒤에 자동공격 종료
-    */
-
-    autoAttackStopTimer =
-        setTimeout(
-            ()=>{
-
-                clearInterval(
-                    autoAttackTimer
-                );
-
-
-                autoAttackTimer =
-                    null;
-
-
-                autoAttackStopTimer =
-                    null;
-
-            },
-            CONFIG.AUTO_ATTACK_TIME
-        );
 }
 
 
 /* =====================================================
    MONSTER DEAD
+
+   ★ 게임 종료 없음
+   ★ CLEAR 없음
 ===================================================== */
 
 function defeatMonster(){
@@ -1793,45 +2267,72 @@ function defeatMonster(){
 
 
     /*
-       몬스터 공격 애니메이션 중지
+       몬스터 공격 애니메이션 정리
     */
 
-    if(monsterAttackAnimation){
+    if(
+        monsterAttackAnimation
+    ){
+
         monsterAttackAnimation.cancel();
+
     }
 
 
-    if(monsterHitAnimation){
+    if(
+        monsterHitAnimation
+    ){
+
         monsterHitAnimation.cancel();
+
     }
 
 
     /*
-       죽는 애니메이션
+       몬스터 사망
     */
 
     $('monster')
+
         .classList
+
         .add('dead');
 
 
-    $('monsterShadow')
-        .animate(
-            [
-                {opacity:.42},
-                {opacity:0}
-            ],
+    /*
+       그림자 사라짐
+    */
+
+    $('monsterShadow').animate(
+
+        [
+
             {
-                duration:500,
-                fill:'forwards'
+                opacity:.42
+            },
+
+            {
+                opacity:0
             }
-        );
+
+        ],
+
+        {
+
+            duration:500,
+
+            fill:'forwards'
+
+        }
+
+    );
 
 
     /*
        ★ CLEAR 없음
        ★ 정지 없음
-       ★ 바로 계속 앞으로
+
+       바로 계속 앞으로 이동
     */
 
     continueStart = 0;
@@ -1843,25 +2344,34 @@ function defeatMonster(){
 
 
     continueRaf =
+
         requestAnimationFrame(
             continueForward
         );
+
 }
 
 
 /* =====================================================
    BATTLE START
 
-   ★ 화면에는 아무것도 표시하지 않음
+   ★ 아무 글자도 없음
+   ★ NFC 건드리지 않음
+   ★ 칼도 멈추지 않음
 ===================================================== */
 
 function battleStart(){
 
     if(
+
         battle ||
+
         monsterDead
+
     ){
+
         return;
+
     }
 
 
@@ -1869,19 +2379,31 @@ function battleStart(){
 
 
     /*
-       ★ NFC 건드리지 않음
-       ★ 검 건드리지 않음
-       ★ 글자 없음
-       ★ 화면 전환 없음
+       ★ 여기서 NFC 관련
+       아무것도 하지 않음.
+
+       ★ 검 애니메이션도
+       아무것도 건드리지 않음.
+
+       ★ BATTLE START도 없음.
     */
 
 
     enemyTimer =
+
         setInterval(
+
             playerHit,
+
             CONFIG.ENEMY_ATTACK_INTERVAL
+
         );
 
+
+    /*
+       전투 중에도
+       배경이 미세하게 움직임
+    */
 
     battleMotionStart = 0;
 
@@ -1892,9 +2414,11 @@ function battleStart(){
 
 
     battleRaf =
+
         requestAnimationFrame(
             battleMotion
         );
+
 }
 
 
@@ -1905,32 +2429,46 @@ function battleStart(){
 function walk(now){
 
     if(
+
         !started ||
+
         monsterDead
+
     ){
+
         return;
+
     }
 
 
-    if(!walkStart){
+    if(
+        !walkStart
+    ){
+
         walkStart = now;
+
     }
 
 
     const t =
+
         Math.min(
+
             (
                 now -
                 walkStart
             ) /
+
             CONFIG.WALK_TIME,
+
             1
+
         );
 
 
-    /*
+    /* =================================================
        SKY
-    */
+    ================================================= */
 
     const skyScale =
 
@@ -1950,9 +2488,9 @@ function walk(now){
          scale(${skyScale})`;
 
 
-    /*
+    /* =================================================
        BACK
-    */
+    ================================================= */
 
     const backScale =
 
@@ -1972,9 +2510,9 @@ function walk(now){
          scale(${backScale})`;
 
 
-    /*
+    /* =================================================
        FRONT
-    */
+    ================================================= */
 
     const frontScale =
 
@@ -1997,9 +2535,9 @@ function walk(now){
         scale(${frontScale})`;
 
 
-    /*
+    /* =================================================
        MONSTER
-    */
+    ================================================= */
 
     const monsterScale =
 
@@ -2019,9 +2557,12 @@ function walk(now){
          scale(${monsterScale})`;
 
 
-    /*
-       몬스터 도착
-    */
+    /* =================================================
+       몬스터에게 도착
+
+       ★ 장면 전환 없음
+       ★ 바로 전투 상태
+    ================================================= */
 
     if(
         t >= 1
@@ -2030,51 +2571,77 @@ function walk(now){
         battleStart();
 
         return;
+
     }
 
 
     raf =
+
         requestAnimationFrame(
             walk
         );
+
 }
 
 
 /* =====================================================
    BATTLE MOTION
 
-   ★ 전투 중에도 배경 미세하게 계속 움직임
+   전투 중에도 화면을 완전히
+   정지시키지 않음
 ===================================================== */
 
 function battleMotion(now){
 
     if(
+
         !started ||
+
         !battle ||
+
         monsterDead
+
     ){
+
         return;
+
     }
 
 
-    if(!battleMotionStart){
+    if(
+        !battleMotionStart
+    ){
+
         battleMotionStart = now;
+
     }
 
 
     const elapsed =
+
         now -
+
         battleMotionStart;
 
 
     const wave =
+
         Math.sin(
+
             elapsed /
+
             1200 *
+
             Math.PI *
+
             2
+
         );
 
+
+    /*
+       앞 풀밭
+    */
 
     $('frontGroup').style.transform =
 
@@ -2087,6 +2654,10 @@ function battleMotion(now){
         )`;
 
 
+    /*
+       뒤쪽 배경
+    */
+
     $('backLayer').style.transform =
 
         `translateY(
@@ -2098,14 +2669,18 @@ function battleMotion(now){
 
 
     battleRaf =
+
         requestAnimationFrame(
             battleMotion
         );
+
 }
 
 
 /* =====================================================
    CONTINUE FORWARD
+
+   몬스터 사망 후에도 계속 전진
 ===================================================== */
 
 function continueForward(now){
@@ -2113,34 +2688,54 @@ function continueForward(now){
     if(
         !started
     ){
+
         return;
+
     }
 
 
-    if(!continueStart){
+    if(
+        !continueStart
+    ){
+
         continueStart = now;
+
     }
 
 
     const elapsed =
+
         now -
+
         continueStart;
 
 
     const cycle =
+
         (
             elapsed %
+
             2400
+
         ) /
+
         2400;
 
 
     const wave =
+
         Math.sin(
+
             cycle *
+
             Math.PI
+
         );
 
+
+    /*
+       앞 풀밭
+    */
 
     $('frontGroup').style.transform =
 
@@ -2153,6 +2748,10 @@ function continueForward(now){
         )`;
 
 
+    /*
+       뒤 배경
+    */
+
     $('backLayer').style.transform =
 
         `translateY(
@@ -2163,6 +2762,10 @@ function continueForward(now){
         )`;
 
 
+    /*
+       하늘
+    */
+
     $('bg').style.transform =
 
         `translateY(-.15%)
@@ -2172,9 +2775,11 @@ function continueForward(now){
 
 
     continueRaf =
+
         requestAnimationFrame(
             continueForward
         );
+
 }
 
 
@@ -2185,37 +2790,51 @@ function continueForward(now){
 async function startNFC(){
 
     if(
+
         !window.isSecureContext ||
+
         location.protocol !== 'https:'
+
     ){
 
         $('nt').textContent =
             'HTTPS 필요';
 
+
         return false;
+
     }
 
 
     if(
+
         !(
             'NDEFReader'
             in window
         )
+
     ){
 
         $('nt').textContent =
             'NFC 미지원';
 
+
         return false;
+
     }
 
 
-    if(nfcOn){
+    if(
+        nfcOn
+    ){
+
         return true;
+
     }
 
 
     try{
+
 
         const reader =
             new NDEFReader();
@@ -2236,6 +2855,7 @@ async function startNFC(){
 
 
         reader.onreadingerror =
+
             ()=>{
 
                 $('nt').textContent =
@@ -2245,6 +2865,7 @@ async function startNFC(){
 
 
         reader.onreading =
+
             ()=>{
 
 
@@ -2253,15 +2874,21 @@ async function startNFC(){
 
 
                 /*
-                   ★ 요청대로 1ms
+                   ★ NFC 쿨타임 1ms
                 */
 
                 if(
+
                     now -
+
                     lastTag <
+
                     CONFIG.NFC_COOLDOWN
+
                 ){
+
                     return;
+
                 }
 
 
@@ -2269,13 +2896,18 @@ async function startNFC(){
 
 
                 /*
-                   ★ NFC 이벤트에서는
-                   무거운 그래픽 처리를 직접 하지 않고
+                   ★★★★★★★★★★★★★
 
-                   자동공격만 시작
+                   NFC 1회 인식
+
+                        ↓
+
+                   공격 딱 1번
+
+                   ★★★★★★★★★★★★★
                 */
 
-                startAutoAttack();
+                attack();
 
             };
 
@@ -2284,13 +2916,18 @@ async function startNFC(){
 
     }
 
+
     catch(e){
+
 
         $('nt').textContent =
             'NFC 권한 확인';
 
+
         return false;
+
     }
+
 }
 
 
@@ -2299,24 +2936,36 @@ async function startNFC(){
 ===================================================== */
 
 $('go').onclick =
+
     async function(){
 
 
         if(
+
             isKakaoBrowser() &&
+
             isAndroid()
+
         ){
 
             $('chromeGuide')
+
                 .classList
+
                 .add('show');
 
+
             return;
+
         }
 
 
         /*
-           NFC는 처음에 딱 한 번만 시작
+           NFC는 처음에 한 번만 시작.
+
+           이후 전투 시작이나
+           몬스터 공격에서
+           NFC를 건드리지 않는다.
         */
 
         await startNFC();
@@ -2326,7 +2975,9 @@ $('go').onclick =
 
 
         $('start')
+
             .classList
+
             .add('hidden');
 
 
@@ -2338,8 +2989,14 @@ $('go').onclick =
         updateHP();
 
 
+        /*
+           처음부터 검 걷기 모션
+        */
+
         $('sword')
+
             .classList
+
             .add('walking');
 
 
@@ -2352,9 +3009,11 @@ $('go').onclick =
 
 
         raf =
+
             requestAnimationFrame(
                 walk
             );
+
     };
 
 
