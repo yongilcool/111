@@ -2,20 +2,19 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="viewport"
+      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#07111d">
 
 <title>PIXEL ADVENTURE</title>
 
 <style>
-
 *{
     box-sizing:border-box;
     -webkit-tap-highlight-color:transparent;
 }
 
-html,
-body{
+html,body{
     margin:0;
     width:100%;
     height:100%;
@@ -41,6 +40,11 @@ body{
     touch-action:manipulation;
 }
 
+
+/* =====================================================
+   CAMERA
+===================================================== */
+
 #camera{
     position:absolute;
     inset:0;
@@ -56,9 +60,8 @@ body{
 
 
 /* =====================================================
-   하늘
-   ★ 이번 수정:
-   하늘은 거의 움직이지 않음
+   SKY
+   하늘은 거의 고정
 ===================================================== */
 
 #bg{
@@ -82,8 +85,8 @@ body{
 
 
 /* =====================================================
-   뒤쪽 풀밭 / 산
-   하늘보다 조금만 움직임
+   BACK LAYER
+   산 / 뒤쪽 풀밭
 ===================================================== */
 
 #backLayer{
@@ -110,7 +113,7 @@ body{
 
 
 /* =====================================================
-   먼 안개
+   HAZE
 ===================================================== */
 
 #farHaze{
@@ -134,14 +137,8 @@ body{
 
 
 /* =====================================================
-   맨앞 풀밭
-
-   ★ 이번 수정의 핵심
-
-   화면 아래쪽에만 있던 풀밭을
-   화면 중간 정도까지 위로 올림.
-
-   그리고 전진할 때 가장 빠르게 확대됨.
+   FRONT GRASS
+   가장 가까운 풀밭
 ===================================================== */
 
 #frontLayer{
@@ -150,13 +147,8 @@ body{
     left:-13%;
 
     width:126%;
-
     height:65%;
 
-    /*
-       화면의 중간 부근부터
-       노란 풀밭이 시작되도록 올림
-    */
     bottom:-1%;
 
     object-fit:cover;
@@ -173,9 +165,59 @@ body{
 
 
 /* =====================================================
+   MONSTER SHADOW
+
+   ★ 추가
+   몬스터 발 바로 아래 그림자.
+   공중에 떠 보이는 느낌을 줄여줌.
+===================================================== */
+
+#monsterShadow{
+    position:absolute;
+
+    left:50%;
+    bottom:22.5%;
+
+    width:28%;
+    height:4%;
+
+    transform:
+        translateX(-50%)
+        scale(.2);
+
+    border-radius:50%;
+
+    background:
+        radial-gradient(
+            ellipse at center,
+            rgba(0,0,0,.45) 0%,
+            rgba(0,0,0,.26) 45%,
+            rgba(0,0,0,0) 75%
+        );
+
+    opacity:.1;
+
+    z-index:6;
+
+    filter:blur(4px);
+
+    will-change:
+        transform,
+        opacity,
+        bottom;
+}
+
+
+/* =====================================================
    MONSTER
 
-   ★ 앞 풀밭 위에 서도록 아래로 이동
+   ★ 수정 핵심
+
+   top 기준 제거.
+   bottom 기준으로 이동.
+
+   그래서 몬스터의 발이
+   풀밭 위에 붙은 상태로 접근함.
 ===================================================== */
 
 #monsterWrap{
@@ -184,33 +226,32 @@ body{
     left:50%;
 
     /*
-       이전보다 아래로 이동
-       참고 이미지처럼 풀밭 위에 서게 함
+        게임 시작 시 멀리 있는 위치
     */
-    top:auto;
-    bottom:24%;
+    bottom:48%;
 
-    width:58%;
+    width:64%;
 
     aspect-ratio:1 / 1;
 
     transform:
         translateX(-50%)
-        scale(.14);
+        scale(.17);
 
+    /*
+        발쪽을 중심으로 확대
+    */
     transform-origin:
         50% 88%;
 
-    opacity:.30;
+    opacity:.20;
 
-    /*
-       앞 풀밭보다 위
-    */
     z-index:7;
 
     will-change:
         transform,
-        opacity;
+        opacity,
+        bottom;
 }
 
 
@@ -227,8 +268,8 @@ body{
 
     filter:
         drop-shadow(
-            0 12px 10px
-            rgba(0,0,0,.48)
+            0 8px 7px
+            rgba(0,0,0,.38)
         );
 
     will-change:
@@ -239,7 +280,7 @@ body{
 
 
 /* =====================================================
-   몬스터 피격
+   MONSTER HIT
 ===================================================== */
 
 #monster.hit{
@@ -358,8 +399,7 @@ body{
 
 
 /* =====================================================
-   몬스터 사망
-   흔들리면서 페이드아웃
+   MONSTER DEAD
 ===================================================== */
 
 #monster.dead{
@@ -380,8 +420,7 @@ body{
             translate(0,0)
             scale(1);
 
-        filter:
-            brightness(1);
+        filter:brightness(1);
     }
 
     12%{
@@ -443,18 +482,15 @@ body{
             scale(.88);
 
         opacity:0;
-
-        filter:
-            brightness(1);
     }
 }
 
 
 /* =====================================================
-   칼
+   SWORD
 
-   참고 이미지처럼 화면 아래에서
-   크게 보이도록 유지
+   ★ 수정
+   두 번째 참고사진처럼 처음부터 크게.
 ===================================================== */
 
 #sword{
@@ -462,10 +498,13 @@ body{
 
     z-index:25;
 
-    right:-31%;
+    /*
+        오른쪽 아래에서 크게 보이게
+    */
+    right:-28%;
     bottom:-18%;
 
-    width:172%;
+    width:170%;
     height:148%;
 
     object-fit:contain;
@@ -487,7 +526,7 @@ body{
 
 
 /* =====================================================
-   칼 idle
+   SWORD IDLE
 ===================================================== */
 
 #sword.idle{
@@ -511,15 +550,15 @@ body{
 
     50%{
         transform:
-            translateY(-11px)
-            rotate(-15.5deg)
+            translateY(-9px)
+            rotate(-16deg)
             scale(1.005);
     }
 }
 
 
 /* =====================================================
-   걷는 중 칼
+   WALKING SWORD
 ===================================================== */
 
 #sword.walking{
@@ -536,22 +575,20 @@ body{
 
     from{
         transform:
-            rotate(-18deg)
-            translateY(8px)
-            translateX(2px);
+            rotate(-19deg)
+            translateY(5px);
     }
 
     to{
         transform:
-            rotate(8deg)
-            translateY(-8px)
-            translateX(-5px);
+            rotate(10deg)
+            translateY(-5px);
     }
 }
 
 
 /* =====================================================
-   칼 공격
+   SWORD ATTACK
 ===================================================== */
 
 #sword.attack{
@@ -603,7 +640,7 @@ body{
 
 
 /* =====================================================
-   베기 이펙트
+   SLASH
 ===================================================== */
 
 #slash{
@@ -637,8 +674,6 @@ body{
             rgba(255,180,40,.8) 24% 28%,
             transparent 29% 100%
         );
-
-    filter:blur(.3px);
 
     transform:
         rotate(-18deg);
@@ -694,7 +729,6 @@ body{
     top:12px;
 
     display:flex;
-
     gap:8px;
 
     justify-content:space-between;
@@ -703,19 +737,15 @@ body{
         0 2px 3px #000;
 }
 
-
 .unit{
     width:48%;
 }
 
-
 .lab{
     font-size:12px;
     font-weight:900;
-
     margin-bottom:3px;
 }
-
 
 .bar{
     height:14px;
@@ -733,14 +763,10 @@ body{
         0 2px 6px #000;
 }
 
-
 .fill{
     height:100%;
-
-    transition:
-        width .18s;
+    transition:width .18s;
 }
-
 
 #pf{
     background:
@@ -752,7 +778,6 @@ body{
     width:100%;
 }
 
-
 #ef{
     background:
         linear-gradient(
@@ -763,7 +788,6 @@ body{
     width:100%;
 }
 
-
 #pb.blink,
 #eb.blink{
     animation:
@@ -772,12 +796,9 @@ body{
         steps(2,end);
 }
 
-
 @keyframes hpBlink{
-
     50%{
-        filter:
-            brightness(2.8);
+        filter:brightness(2.8);
     }
 }
 
@@ -792,14 +813,12 @@ body{
     z-index:55;
 
     top:48px;
-
     left:50%;
 
     transform:
         translateX(-50%);
 
-    padding:
-        7px 12px;
+    padding:7px 12px;
 
     border-radius:12px;
 
@@ -811,7 +830,6 @@ body{
         rgba(255,255,255,.35);
 
     font-size:12px;
-
     font-weight:700;
 
     white-space:nowrap;
@@ -820,7 +838,6 @@ body{
         0 3px 10px
         rgba(0,0,0,.35);
 }
-
 
 #dot{
     display:inline-block;
@@ -854,8 +871,7 @@ body{
 
     opacity:0;
 
-    padding:
-        8px 13px;
+    padding:8px 13px;
 
     border-radius:10px;
 
@@ -872,7 +888,6 @@ body{
 
     transition:.18s;
 }
-
 
 #toast.show{
     opacity:1;
@@ -909,14 +924,12 @@ body{
     pointer-events:none;
 }
 
-
 #dmg.show{
     animation:
         dmgPop
         .65s
         ease-out;
 }
-
 
 @keyframes dmgPop{
 
@@ -947,7 +960,7 @@ body{
 
 
 /* =====================================================
-   빨간 플래시
+   RED FLASH
 ===================================================== */
 
 #red{
@@ -965,7 +978,6 @@ body{
     pointer-events:none;
 }
 
-
 #red.on{
     animation:
         redHit
@@ -973,28 +985,13 @@ body{
         ease-out;
 }
 
-
 @keyframes redHit{
 
-    0%{
-        opacity:.98;
-    }
-
-    18%{
-        opacity:.85;
-    }
-
-    38%{
-        opacity:.62;
-    }
-
-    58%{
-        opacity:.34;
-    }
-
-    100%{
-        opacity:0;
-    }
+    0%{opacity:.98;}
+    18%{opacity:.85;}
+    38%{opacity:.62;}
+    58%{opacity:.34;}
+    100%{opacity:0;}
 }
 
 
@@ -1017,8 +1014,7 @@ body{
 
     opacity:0;
 
-    padding:
-        10px 22px;
+    padding:10px 22px;
 
     background:
         linear-gradient(
@@ -1046,14 +1042,12 @@ body{
         rgba(255,80,0,.65);
 }
 
-
 #battle.show{
     animation:
         battleIn
         .8s
         ease-out;
 }
-
 
 @keyframes battleIn{
 
@@ -1104,17 +1098,13 @@ body{
     pointer-events:none;
 }
 
-
 #clear.show{
     opacity:1;
-
     transition:.3s;
 }
 
-
 .cb{
-    padding:
-        18px 25px;
+    padding:18px 25px;
 
     text-align:center;
 
@@ -1131,27 +1121,20 @@ body{
 
     box-shadow:
         0 0 35px
-        rgba(255,200,50,.8),
-
-        inset 0 0 20px
-        rgba(255,255,255,.25);
+        rgba(255,200,50,.8);
 
     text-shadow:
         0 4px 4px #6b2b00;
 }
-
 
 .ct{
     font-size:34px;
     font-weight:1000;
 }
 
-
 .cs{
     font-size:15px;
-
     margin-top:7px;
-
     font-weight:800;
 }
 
@@ -1167,7 +1150,6 @@ body{
     z-index:100;
 
     display:flex;
-
     align-items:center;
     justify-content:center;
 
@@ -1180,18 +1162,15 @@ body{
     text-align:center;
 }
 
-
 #start.hidden{
     display:none;
 }
-
 
 .startBox{
     width:86%;
     max-width:380px;
 
-    padding:
-        20px 16px;
+    padding:20px 16px;
 
     border-radius:18px;
 
@@ -1206,10 +1185,8 @@ body{
         blur(5px);
 }
 
-
 .startBox h1{
-    margin:
-        0 0 10px;
+    margin:0 0 10px;
 
     font-size:31px;
 
@@ -1221,26 +1198,20 @@ body{
         0 3px 4px #6b3500;
 }
 
-
 .startBox p{
     font-size:13px;
-
     line-height:1.6;
-
     color:#eee;
 }
-
 
 #go{
     border:0;
 
     border-radius:11px;
 
-    padding:
-        14px 28px;
+    padding:14px 28px;
 
     font-size:18px;
-
     font-weight:1000;
 
     color:#fff;
@@ -1258,17 +1229,8 @@ body{
 }
 
 
-#go:active{
-    transform:
-        translateY(3px);
-
-    box-shadow:
-        0 1px 0 #6d2904;
-}
-
-
 /* =====================================================
-   카카오톡 → 크롬
+   CHROME GUIDE
 ===================================================== */
 
 #chromeGuide{
@@ -1291,18 +1253,15 @@ body{
         blur(5px);
 }
 
-
 #chromeGuide.show{
     display:flex;
 }
-
 
 .chromeBox{
     width:100%;
     max-width:360px;
 
-    padding:
-        25px 20px 22px;
+    padding:25px 20px 22px;
 
     border-radius:18px;
 
@@ -1320,27 +1279,6 @@ body{
     text-align:center;
 }
 
-
-.chromeBox h2{
-    margin:
-        0 0 10px;
-
-    font-size:22px;
-}
-
-
-.chromeBox p{
-    margin:
-        0 0 19px;
-
-    color:#ddd;
-
-    font-size:14px;
-
-    line-height:1.65;
-}
-
-
 #chromeBtn{
     width:100%;
 
@@ -1348,8 +1286,7 @@ body{
 
     border-radius:11px;
 
-    padding:
-        14px 10px;
+    padding:14px 10px;
 
     background:
         linear-gradient(
@@ -1376,105 +1313,67 @@ body{
         steps(9,end);
 }
 
-
 @keyframes cameraShake{
 
-    0%{
-        transform:translate(0);
-    }
+    0%{transform:translate(0);}
 
-    10%{
-        transform:
-            translate(-13px,8px);
-    }
+    10%{transform:translate(-13px,8px);}
 
-    21%{
-        transform:
-            translate(15px,-8px);
-    }
+    21%{transform:translate(15px,-8px);}
 
-    32%{
-        transform:
-            translate(-14px,9px);
-    }
+    32%{transform:translate(-14px,9px);}
 
-    43%{
-        transform:
-            translate(13px,-8px);
-    }
+    43%{transform:translate(13px,-8px);}
 
-    54%{
-        transform:
-            translate(-11px,7px);
-    }
+    54%{transform:translate(-11px,7px);}
 
-    65%{
-        transform:
-            translate(9px,-5px);
-    }
+    65%{transform:translate(9px,-5px);}
 
-    76%{
-        transform:
-            translate(-7px,4px);
-    }
+    76%{transform:translate(-7px,4px);}
 
-    88%{
-        transform:
-            translate(4px,-2px);
-    }
+    88%{transform:translate(4px,-2px);}
 
-    100%{
-        transform:translate(0);
-    }
+    100%{transform:translate(0);}
 }
 
 </style>
 </head>
 
-
 <body>
 
 <div id="game">
 
-
     <div id="camera">
-
 
         <div id="world">
 
-
             <!-- 하늘 -->
-
             <img
                 id="bg"
                 src="https://static.wixstatic.com/media/172435_d6012f4ec1594a17858298879561b509~mv2.png"
                 alt=""
             >
 
-
             <!-- 뒤 풀밭 -->
-
             <img
                 id="backLayer"
                 src="https://static.wixstatic.com/media/172435_54aea94be0ae4c5eb4a1f5fa3f56e7ea~mv2.png"
                 alt=""
             >
 
-
             <div id="farHaze"></div>
 
-
             <!-- 맨앞 풀밭 -->
-
             <img
                 id="frontLayer"
                 src="https://static.wixstatic.com/media/172435_b05f44aab7384d4ead52127131d3fe8c~mv2.png"
                 alt=""
             >
 
+            <!-- 몬스터 발 그림자 -->
+            <div id="monsterShadow"></div>
 
             <!-- 몬스터 -->
-
             <div id="monsterWrap">
 
                 <img
@@ -1485,19 +1384,18 @@ body{
 
             </div>
 
-
         </div>
 
 
         <div id="slash"></div>
 
 
+        <!-- 검 -->
         <img
             id="sword"
             src="https://static.wixstatic.com/media/172435_1c16a5d4f8ca44d8a558923200659bb7~mv2.png"
             alt=""
         >
-
 
     </div>
 
@@ -1506,29 +1404,17 @@ body{
 
     <div id="hud">
 
-
         <div class="unit">
 
             <div class="lab">
-
                 HP
                 <span id="pt">
                     100 / 100
                 </span>
-
             </div>
 
-
-            <div
-                class="bar"
-                id="pb"
-            >
-
-                <div
-                    class="fill"
-                    id="pf"
-                ></div>
-
+            <div class="bar" id="pb">
+                <div class="fill" id="pf"></div>
             </div>
 
         </div>
@@ -1546,21 +1432,11 @@ body{
 
             </div>
 
-
-            <div
-                class="bar"
-                id="eb"
-            >
-
-                <div
-                    class="fill"
-                    id="ef"
-                ></div>
-
+            <div class="bar" id="eb">
+                <div class="fill" id="ef"></div>
             </div>
 
         </div>
-
 
     </div>
 
@@ -1580,11 +1456,9 @@ body{
 
     <div id="toast"></div>
 
-
     <div id="dmg">
         -16
     </div>
-
 
     <div id="red"></div>
 
@@ -1638,7 +1512,7 @@ body{
     </div>
 
 
-    <!-- 카카오톡 → 크롬 -->
+    <!-- CHROME GUIDE -->
 
     <div id="chromeGuide">
 
@@ -1660,7 +1534,6 @@ body{
         </div>
 
     </div>
-
 
 </div>
 
@@ -1688,7 +1561,7 @@ let eHP = 80;
 
 
 /* =====================================================
-   카카오톡 감지
+   BROWSER
 ===================================================== */
 
 function isKakaoBrowser(){
@@ -1725,7 +1598,6 @@ function openChrome(){
             /^https?:\/\//i,
             ''
         );
-
 
     window.location.href =
         'intent://' +
@@ -1771,16 +1643,13 @@ function toast(text){
     $('toast').textContent =
         text;
 
-
     $('toast')
         .classList
         .add('show');
 
-
     clearTimeout(
         toast.timer
     );
-
 
     toast.timer =
         setTimeout(
@@ -1806,7 +1675,6 @@ function hp(){
     $('pf').style.width =
         pHP + '%';
 
-
     $('ef').style.width =
         (
             eHP /
@@ -1814,11 +1682,9 @@ function hp(){
             100
         ) + '%';
 
-
     $('pt').textContent =
         pHP +
         ' / 100';
-
 
     $('et').textContent =
         eHP +
@@ -1860,8 +1726,9 @@ function shake(){
 
 
 /* =====================================================
-   적 맞을 때 진동
-   한 번만
+   MONSTER HIT VIBRATION
+
+   몬스터가 맞을 때만 진동
 ===================================================== */
 
 function strongEnemyVibe(){
@@ -1881,6 +1748,8 @@ function strongEnemyVibe(){
 
 /* =====================================================
    PLAYER HIT
+
+   플레이어 피격은 진동 없음
 ===================================================== */
 
 function playerHit(){
@@ -1911,9 +1780,23 @@ function playerHit(){
 
 
     /*
-       플레이어 피격은
-       진동 없음
+       내 피격:
+       진동 없음.
+       화면 효과만.
     */
+
+    shake();
+
+
+    $('red')
+        .classList
+        .remove('on');
+
+    void $('red').offsetWidth;
+
+    $('red')
+        .classList
+        .add('on');
 
 
     if(
@@ -1967,14 +1850,15 @@ function monsterDamage(){
 
 
     /*
-       진동 한 번
+       몬스터가 맞았을 때만
+       진동
     */
 
     strongEnemyVibe();
 
 
     /*
-       강한 화면 흔들림
+       화면 흔들림
     */
 
     shake();
@@ -1988,9 +1872,7 @@ function monsterDamage(){
         .classList
         .remove('on');
 
-
     void $('red').offsetWidth;
-
 
     $('red')
         .classList
@@ -1998,7 +1880,7 @@ function monsterDamage(){
 
 
     /*
-       몬스터 피격
+       몬스터 자체 흔들림
     */
 
     $('monster')
@@ -2008,9 +1890,7 @@ function monsterDamage(){
             'dead'
         );
 
-
     void $('monster').offsetWidth;
-
 
     $('monster')
         .classList
@@ -2018,16 +1898,14 @@ function monsterDamage(){
 
 
     /*
-       데미지
+       데미지 표시
     */
 
     $('dmg')
         .classList
         .remove('show');
 
-
     void $('dmg').offsetWidth;
-
 
     $('dmg')
         .classList
@@ -2047,6 +1925,8 @@ function monsterDamage(){
 
 /* =====================================================
    ATTACK
+
+   걷는 중에도 NFC 공격 가능
 ===================================================== */
 
 function attack(){
@@ -2089,6 +1969,11 @@ function attack(){
         .add('on');
 
 
+    /*
+       전투 시작 이후라면
+       실제 몬스터 데미지
+    */
+
     if(
         battle
     ){
@@ -2097,11 +1982,16 @@ function attack(){
             'NFC 인식! 검 공격!'
         );
 
-
         monsterDamage();
 
     }
+
     else{
+
+        /*
+           걷는 중에도 칼은 휘두름.
+           단 데미지는 아직 없음.
+        */
 
         toast(
             'NFC 인식! 검을 휘둘렀습니다!'
@@ -2111,7 +2001,10 @@ function attack(){
 
 
     /*
-       공격 후 idle
+       공격이 끝나면
+
+       이동 중이면 다시 walking
+       전투 중이면 idle
     */
 
     setTimeout(
@@ -2126,13 +2019,28 @@ function attack(){
                     .classList
                     .remove(
                         'attack',
+                        'idle',
                         'walking'
                     );
 
 
-                $('sword')
-                    .classList
-                    .add('idle');
+                if(
+                    battle
+                ){
+
+                    $('sword')
+                        .classList
+                        .add('idle');
+
+                }
+
+                else{
+
+                    $('sword')
+                        .classList
+                        .add('walking');
+
+                }
 
             }
 
@@ -2206,17 +2114,28 @@ function battleStart(){
     }
 
 
-    battle =
-        true;
+    battle = true;
+
+
+    /*
+       걷는 모션 종료
+       전투 idle로 전환
+    */
+
+    $('sword')
+        .classList
+        .remove('walking');
+
+    $('sword')
+        .classList
+        .add('idle');
 
 
     $('battle')
         .classList
         .remove('show');
 
-
     void $('battle').offsetWidth;
-
 
     $('battle')
         .classList
@@ -2238,25 +2157,22 @@ function battleStart(){
 
 
 /* =====================================================
-   ★★★ 2.5D WALK ★★★
+   2.5D WALK
 
-   이번에 거리감 구조를 완전히 수정함.
+   ★ 이번 핵심 변경
 
-   하늘
-      ↓
-   거의 고정
+   하늘:
+       거의 고정
 
-   뒤 풀밭
-      ↓
-   아주 느리게 확대
+   뒤쪽 산:
+       천천히 이동
 
-   맨앞 풀밭
-      ↓
-   가장 빨리 확대
+   앞 풀밭:
+       빠르게 확대
 
-   몬스터
-      ↓
-   앞으로 빠르게 접근
+   몬스터:
+       발 위치가 지면을 따라
+       멀리서 → 앞 풀밭까지 이동
 ===================================================== */
 
 function walk(now){
@@ -2281,6 +2197,10 @@ function walk(now){
     }
 
 
+    /*
+       8초 접근
+    */
+
     const t =
         Math.min(
             (
@@ -2293,10 +2213,7 @@ function walk(now){
 
 
     /* =================================================
-       하늘
-
-       ★ 거의 움직이지 않는다.
-       이전처럼 확 확대되지 않는다.
+       SKY
     ================================================= */
 
     const skyScale =
@@ -2319,19 +2236,16 @@ function walk(now){
 
 
     /* =================================================
-       뒤쪽 산 / 풀밭
-
-       하늘보다는 움직이지만
-       매우 느림
+       BACK LAYER
     ================================================= */
 
     const backScale =
         1 +
-        t * .055;
+        t * .07;
 
 
     const backY =
-        t * .9;
+        t * 1.5;
 
 
     $('backLayer').style.transform =
@@ -2345,26 +2259,20 @@ function walk(now){
 
 
     /* =================================================
-       ★ 맨앞 풀밭
-
-       이전 하늘이 확대되던 속도를
-       여기로 옮겼다.
-
-       플레이어와 가장 가까우므로
-       가장 크게 확대된다.
+       FRONT GRASS
     ================================================= */
 
     const frontScale =
-        1.00 +
-        t * .24;
+        1 +
+        t * .26;
 
 
     const frontY =
-        t * 4.2;
+        t * 5;
 
 
     const frontX =
-        -t * .8;
+        -t * 1.2;
 
 
     $('frontLayer').style.transform =
@@ -2380,34 +2288,38 @@ function walk(now){
 
 
     /* =================================================
-       몬스터
+       MONSTER
 
-       처음엔 멀리 있다가
-       풀밭 위를 따라 플레이어 앞으로 접근
+       ★ 중요한 부분
 
-       참고 이미지처럼 최종적으로
-       화면 중하단에 위치
+       예전:
+       top 위치에서 그냥 커짐.
+       그래서 둥실 떠 보였음.
+
+       지금:
+       bottom 위치가 계속 변하면서
+       지면을 따라 접근함.
     ================================================= */
 
+
     const monsterScale =
-        .14 +
-        t * .72;
+        .17 +
+        t * .69;
 
 
     /*
-       몬스터의 발 위치 자체가
-       먼 지평선에서 앞쪽 풀밭으로 내려오도록 한다.
+       멀리 있을 때
 
-       멀리 있을 때 : bottom 48%
-       전투 시작 때 : bottom 24%
+       bottom 48%
 
-       그래서 커지기만 하며 공중에 뜨는 느낌이 아니라
-       실제로 풀밭을 따라 앞으로 걸어오는 것처럼 보인다.
+       가까이 왔을 때
+
+       bottom 23%
     */
 
     const monsterBottom =
         48 -
-        t * 24;
+        t * 25;
 
 
     const monsterX =
@@ -2431,14 +2343,52 @@ function walk(now){
 
         Math.min(
             1,
-            .30 +
-            t * 1.15
+            .20 +
+            t * 1.3
         );
 
 
 
     /* =================================================
-       전투
+       MONSTER SHADOW
+
+       몬스터가 가까워지면서
+       그림자도 같이 커짐.
+    ================================================= */
+
+    const shadowScale =
+        .2 +
+        t * .8;
+
+
+    const shadowBottom =
+        46.5 -
+        t * 24;
+
+
+    $('monsterShadow').style.bottom =
+        shadowBottom + '%';
+
+
+    $('monsterShadow').style.transform =
+
+        'translateX(-50%) scale(' +
+        shadowScale +
+        ')';
+
+
+    $('monsterShadow').style.opacity =
+
+        Math.min(
+            .42,
+            .1 +
+            t * .36
+        );
+
+
+
+    /* =================================================
+       BATTLE POSITION
     ================================================= */
 
     if(
@@ -2446,12 +2396,16 @@ function walk(now){
     ){
 
         /*
-           최종 몬스터 위치를
-           참고 이미지에 맞춰 고정
+           ★ 최종 위치
+
+           참고 이미지처럼
+           화면 중하단의 앞 풀밭에
+           딱 붙도록 고정
         */
 
         $('monsterWrap').style.bottom =
-            '24%';
+            '23%';
+
 
         $('monsterWrap').style.transform =
             'translateX(-50%) scale(.86)';
@@ -2459,6 +2413,22 @@ function walk(now){
 
         $('monsterWrap').style.opacity =
             '1';
+
+
+        /*
+           그림자도 발 아래 고정
+        */
+
+        $('monsterShadow').style.bottom =
+            '22%';
+
+
+        $('monsterShadow').style.transform =
+            'translateX(-50%) scale(1)';
+
+
+        $('monsterShadow').style.opacity =
+            '.42';
 
 
         battleStart();
@@ -2574,7 +2544,8 @@ async function startNFC(){
 
 
                 /*
-                   연속 인식 방지
+                   같은 NFC를 한 번 댔는데
+                   여러 번 연속 인식되는 것 방지
                 */
 
                 if(
@@ -2600,6 +2571,7 @@ async function startNFC(){
         return true;
 
     }
+
     catch(e){
 
 
@@ -2657,11 +2629,22 @@ $('go').onclick =
         pHP =
             100;
 
+
         eHP =
             80;
 
 
         hp();
+
+
+        /*
+           처음부터 큰 칼이 보이고
+           걷기 모션 시작
+        */
+
+        $('sword')
+            .classList
+            .remove('idle');
 
 
         $('sword')
