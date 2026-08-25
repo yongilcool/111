@@ -14,30 +14,21 @@
 
 <style>
 
-/* =====================================================
-   ★ 조절용 설정
-
-   칼 위치 / 크기
-===================================================== */
-
 :root{
-
-    /* 더 음수 = 더 오른쪽 */
+    /* 칼 위치: 더 음수 = 오른쪽 */
     --sword-right:-150%;
 
-    /* 더 음수 = 더 아래 */
+    /* 칼 높이 */
     --sword-bottom:-25%;
 
     /* 칼 크기 */
     --sword-size:135%;
 }
 
-
 *{
     box-sizing:border-box;
     -webkit-tap-highlight-color:transparent;
 }
-
 
 html,
 body{
@@ -48,7 +39,6 @@ body{
     background:#05080c;
     font-family:Arial,sans-serif;
 }
-
 
 body{
     display:flex;
@@ -63,17 +53,12 @@ body{
 
 #game{
     position:relative;
-
     width:min(100vw,520px);
     height:100dvh;
     max-height:1000px;
-
     overflow:hidden;
-
     background:#101820;
-
     color:white;
-
     touch-action:manipulation;
 }
 
@@ -85,17 +70,13 @@ body{
 #camera{
     position:absolute;
     inset:0;
-
     overflow:hidden;
-
     will-change:transform;
 }
-
 
 #world{
     position:absolute;
     inset:0;
-
     overflow:hidden;
 }
 
@@ -107,19 +88,13 @@ body{
 #bg{
     position:absolute;
     inset:0;
-
     width:100%;
     height:100%;
-
     object-fit:cover;
     object-position:center top;
-
     z-index:1;
-
     transform:scale(1.01);
-
     transform-origin:center center;
-
     will-change:transform;
 }
 
@@ -130,23 +105,15 @@ body{
 
 #backLayer{
     position:absolute;
-
     left:-6%;
-
     width:112%;
     height:61%;
-
     bottom:3%;
-
     object-fit:cover;
     object-position:center bottom;
-
     z-index:2;
-
     pointer-events:none;
-
     transform-origin:center bottom;
-
     will-change:transform;
 }
 
@@ -158,9 +125,7 @@ body{
 #farHaze{
     position:absolute;
     inset:0;
-
     z-index:3;
-
     pointer-events:none;
 
     background:
@@ -177,24 +142,18 @@ body{
 
 /* =====================================================
    FRONT GROUP
-
-   풀밭 + 몬스터
 ===================================================== */
 
 #frontGroup{
     position:absolute;
-
     left:0;
     right:0;
     bottom:0;
-
     width:100%;
     height:67%;
-
     z-index:5;
 
     transform-origin:50% 92%;
-
     will-change:transform;
 }
 
@@ -205,19 +164,15 @@ body{
 
 #frontLayer{
     position:absolute;
-
     left:-13%;
-
     width:126%;
     height:100%;
-
     bottom:-1%;
 
     object-fit:cover;
     object-position:center top;
 
     z-index:1;
-
     pointer-events:none;
 }
 
@@ -228,7 +183,6 @@ body{
 
 #monsterShadow{
     position:absolute;
-
     left:50%;
     bottom:14.3%;
 
@@ -248,27 +202,23 @@ body{
         );
 
     filter:blur(3px);
-
     opacity:.42;
 
     z-index:2;
-
     pointer-events:none;
 }
 
 
 /* =====================================================
-   MONSTER WRAP
+   MONSTER
 ===================================================== */
 
 #monsterWrap{
     position:absolute;
-
     left:50%;
     bottom:10.5%;
 
     width:55%;
-
     aspect-ratio:1/1;
 
     transform:
@@ -278,12 +228,9 @@ body{
     transform-origin:50% 91%;
 
     opacity:1;
-
     z-index:3;
 
-    will-change:
-        transform,
-        opacity;
+    will-change:transform,opacity;
 }
 
 
@@ -305,7 +252,6 @@ body{
 
     will-change:transform;
 }
-
 
 @keyframes monsterBreathing{
 
@@ -336,7 +282,6 @@ body{
     height:100%;
 
     object-fit:contain;
-
     image-rendering:pixelated;
 
     translate:0 10%;
@@ -359,18 +304,15 @@ body{
 ===================================================== */
 
 #monster.hit{
-
     animation:
         monsterHit
         .88s
         steps(9,end);
 }
 
-
 @keyframes monsterHit{
 
     0%{
-
         transform:
             translate(0,0)
             rotate(0);
@@ -379,7 +321,6 @@ body{
     }
 
     9%{
-
         transform:
             translate(-20px,7px)
             rotate(-5deg)
@@ -395,7 +336,6 @@ body{
     }
 
     20%{
-
         transform:
             translate(22px,-9px)
             rotate(5deg)
@@ -410,7 +350,6 @@ body{
     }
 
     31%{
-
         transform:
             translate(-21px,9px)
             rotate(-5deg);
@@ -421,7 +360,6 @@ body{
     }
 
     42%{
-
         transform:
             translate(19px,-8px)
             rotate(5deg);
@@ -430,7 +368,6 @@ body{
     }
 
     53%{
-
         transform:
             translate(-16px,7px)
             rotate(-4deg);
@@ -439,7 +376,6 @@ body{
     }
 
     64%{
-
         transform:
             translate(13px,-6px)
             rotate(3deg);
@@ -448,7 +384,6 @@ body{
     }
 
     76%{
-
         transform:
             translate(-9px,4px)
             rotate(-2deg);
@@ -457,7 +392,6 @@ body{
     }
 
     88%{
-
         transform:
             translate(5px,-2px)
             rotate(1deg);
@@ -466,7 +400,6 @@ body{
     }
 
     100%{
-
         transform:
             translate(0,0)
             rotate(0);
@@ -478,13 +411,9 @@ body{
 
 /* =====================================================
    MONSTER DEAD
-
-   죽은 뒤 사라짐.
-   게임은 끝나지 않음.
 ===================================================== */
 
 #monster.dead{
-
     animation:
         monsterDead
         1.15s
@@ -492,11 +421,9 @@ body{
         forwards;
 }
 
-
 @keyframes monsterDead{
 
     0%{
-
         opacity:1;
 
         transform:
@@ -505,7 +432,6 @@ body{
     }
 
     12%{
-
         transform:
             translate(-20px,6px)
             rotate(-5deg);
@@ -516,7 +442,6 @@ body{
     }
 
     25%{
-
         transform:
             translate(22px,-7px)
             rotate(5deg);
@@ -525,7 +450,6 @@ body{
     }
 
     45%{
-
         transform:
             translate(-16px,6px)
             rotate(-4deg);
@@ -534,7 +458,6 @@ body{
     }
 
     65%{
-
         transform:
             translate(10px,4px)
             rotate(3deg)
@@ -544,7 +467,6 @@ body{
     }
 
     82%{
-
         transform:
             translateY(15px)
             scale(.88);
@@ -553,7 +475,6 @@ body{
     }
 
     100%{
-
         transform:
             translateY(35px)
             scale(.70);
@@ -565,9 +486,6 @@ body{
 
 /* =====================================================
    SWORD
-
-   ★ right -150%
-   ★ size 135%
 ===================================================== */
 
 #sword{
@@ -575,23 +493,16 @@ body{
 
     z-index:25;
 
-    right:
-        var(--sword-right);
-
-    bottom:
-        var(--sword-bottom);
+    right:var(--sword-right);
+    bottom:var(--sword-bottom);
 
     width:auto;
-
-    height:
-        var(--sword-size);
+    height:var(--sword-size);
 
     max-width:none;
-
     object-fit:contain;
 
-    transform-origin:
-        82% 91%;
+    transform-origin:82% 91%;
 
     filter:
         drop-shadow(
@@ -600,41 +511,7 @@ body{
         );
 
     will-change:transform;
-
     pointer-events:none;
-}
-
-
-/* =====================================================
-   SWORD IDLE
-===================================================== */
-
-#sword.idle{
-
-    animation:
-        swordIdle
-        1.7s
-        ease-in-out
-        infinite;
-}
-
-
-@keyframes swordIdle{
-
-    0%,
-    100%{
-
-        transform:
-            translateY(0)
-            rotate(-18deg);
-    }
-
-    50%{
-
-        transform:
-            translateY(-9px)
-            rotate(-15.5deg);
-    }
 }
 
 
@@ -643,7 +520,6 @@ body{
 ===================================================== */
 
 #sword.walking{
-
     animation:
         swordWalk
         .68s
@@ -652,18 +528,15 @@ body{
         alternate;
 }
 
-
 @keyframes swordWalk{
 
     from{
-
         transform:
             rotate(-19deg)
             translateY(5px);
     }
 
     to{
-
         transform:
             rotate(9deg)
             translateY(-5px);
@@ -676,7 +549,6 @@ body{
 ===================================================== */
 
 #sword.attack{
-
     animation:
         swordSlash
         .30s
@@ -684,11 +556,9 @@ body{
         forwards;
 }
 
-
 @keyframes swordSlash{
 
     0%{
-
         transform:
             rotate(-18deg)
             translate(0,0)
@@ -696,7 +566,6 @@ body{
     }
 
     14%{
-
         transform:
             rotate(-43deg)
             translate(-15px,8px)
@@ -704,7 +573,6 @@ body{
     }
 
     47%{
-
         transform:
             rotate(57deg)
             translate(-42px,-34px)
@@ -712,7 +580,6 @@ body{
     }
 
     68%{
-
         transform:
             rotate(34deg)
             translate(-17px,-15px)
@@ -720,7 +587,6 @@ body{
     }
 
     100%{
-
         transform:
             rotate(-18deg)
             translate(0,0)
@@ -765,15 +631,12 @@ body{
             transparent 29% 100%
         );
 
-    transform:
-        rotate(-18deg);
+    transform:rotate(-18deg);
 
     mix-blend-mode:screen;
 }
 
-
 #slash.on{
-
     animation:
         slashFx
         .30s
@@ -781,11 +644,9 @@ body{
         forwards;
 }
 
-
 @keyframes slashFx{
 
     0%{
-
         opacity:0;
 
         transform:
@@ -794,12 +655,10 @@ body{
     }
 
     30%{
-
         opacity:1;
     }
 
     100%{
-
         opacity:0;
 
         transform:
@@ -832,11 +691,9 @@ body{
         0 2px 3px #000;
 }
 
-
 .unit{
     width:48%;
 }
-
 
 .lab{
     font-size:12px;
@@ -844,13 +701,10 @@ body{
     margin-bottom:3px;
 }
 
-
 .bar{
     height:14px;
 
-    border:
-        2px solid #fff;
-
+    border:2px solid #fff;
     border-radius:5px;
 
     background:#220b0b;
@@ -861,17 +715,12 @@ body{
         0 2px 6px #000;
 }
 
-
 .fill{
     height:100%;
-
-    transition:
-        width .18s;
+    transition:width .18s;
 }
 
-
 #pf{
-
     background:
         linear-gradient(
             #ff6868,
@@ -881,9 +730,7 @@ body{
     width:100%;
 }
 
-
 #ef{
-
     background:
         linear-gradient(
             #bd76ff,
@@ -893,23 +740,18 @@ body{
     width:100%;
 }
 
-
 #pb.blink,
 #eb.blink{
-
     animation:
         hpBlink
         .32s
         steps(2,end);
 }
 
-
 @keyframes hpBlink{
 
     50%{
-
-        filter:
-            brightness(2.8);
+        filter:brightness(2.8);
     }
 }
 
@@ -926,11 +768,9 @@ body{
     top:48px;
     left:50%;
 
-    transform:
-        translateX(-50%);
+    transform:translateX(-50%);
 
-    padding:
-        7px 12px;
+    padding:7px 12px;
 
     border-radius:12px;
 
@@ -950,7 +790,6 @@ body{
         0 3px 10px
         rgba(0,0,0,.35);
 }
-
 
 #dot{
     display:inline-block;
@@ -984,8 +823,7 @@ body{
 
     opacity:0;
 
-    padding:
-        8px 13px;
+    padding:8px 13px;
 
     border-radius:10px;
 
@@ -1003,9 +841,7 @@ body{
     transition:.18s;
 }
 
-
 #toast.show{
-
     opacity:1;
 
     transform:
@@ -1040,20 +876,16 @@ body{
     pointer-events:none;
 }
 
-
 #dmg.show{
-
     animation:
         dmgPop
         .65s
         ease-out;
 }
 
-
 @keyframes dmgPop{
 
     0%{
-
         opacity:0;
 
         transform:
@@ -1062,7 +894,6 @@ body{
     }
 
     20%{
-
         opacity:1;
 
         transform:
@@ -1071,7 +902,6 @@ body{
     }
 
     100%{
-
         opacity:0;
 
         transform:
@@ -1099,15 +929,12 @@ body{
     pointer-events:none;
 }
 
-
 #red.on{
-
     animation:
         redHit
         .62s
         ease-out;
 }
-
 
 @keyframes redHit{
 
@@ -1116,93 +943,6 @@ body{
     38%{opacity:.62;}
     58%{opacity:.34;}
     100%{opacity:0;}
-}
-
-
-/* =====================================================
-   BATTLE
-===================================================== */
-
-#battle{
-    position:absolute;
-
-    z-index:70;
-
-    left:50%;
-    top:50%;
-
-    transform:
-        translate(-50%,-50%)
-        scale(.7)
-        skewX(-8deg);
-
-    opacity:0;
-
-    padding:
-        10px 22px;
-
-    background:
-        linear-gradient(
-            90deg,
-            #9b0909,
-            #ff4b13,
-            #9b0909
-        );
-
-    border:
-        3px solid #ffdf52;
-
-    color:#fff;
-
-    font-size:27px;
-    font-weight:1000;
-
-    white-space:nowrap;
-
-    text-shadow:
-        0 3px 4px #4b0000;
-
-    box-shadow:
-        0 0 20px
-        rgba(255,80,0,.65);
-}
-
-
-#battle.show{
-
-    animation:
-        battleIn
-        .8s
-        ease-out;
-}
-
-
-@keyframes battleIn{
-
-    0%{
-
-        opacity:0;
-
-        transform:
-            translate(-50%,-50%)
-            scale(1.8)
-            skewX(-8deg);
-    }
-
-    30%{
-
-        opacity:1;
-    }
-
-    100%{
-
-        opacity:0;
-
-        transform:
-            translate(-50%,-50%)
-            scale(1)
-            skewX(-8deg);
-    }
 }
 
 
@@ -1230,19 +970,15 @@ body{
     text-align:center;
 }
 
-
 #start.hidden{
-
     display:none;
 }
-
 
 .startBox{
     width:86%;
     max-width:380px;
 
-    padding:
-        20px 16px;
+    padding:20px 16px;
 
     border-radius:18px;
 
@@ -1253,14 +989,11 @@ body{
         1px solid
         rgba(255,255,255,.3);
 
-    backdrop-filter:
-        blur(5px);
+    backdrop-filter:blur(5px);
 }
 
-
 .startBox h1{
-    margin:
-        0 0 10px;
+    margin:0 0 10px;
 
     font-size:31px;
 
@@ -1272,21 +1005,18 @@ body{
         0 3px 4px #6b3500;
 }
 
-
 .startBox p{
     font-size:13px;
     line-height:1.6;
     color:#eee;
 }
 
-
 #go{
     border:0;
 
     border-radius:11px;
 
-    padding:
-        14px 28px;
+    padding:14px 28px;
 
     font-size:18px;
     font-weight:1000;
@@ -1324,23 +1054,18 @@ body{
     background:
         rgba(0,0,0,.78);
 
-    backdrop-filter:
-        blur(5px);
+    backdrop-filter:blur(5px);
 }
-
 
 #chromeGuide.show{
-
     display:flex;
 }
-
 
 .chromeBox{
     width:100%;
     max-width:360px;
 
-    padding:
-        25px 20px 22px;
+    padding:25px 20px 22px;
 
     border-radius:18px;
 
@@ -1358,7 +1083,6 @@ body{
     text-align:center;
 }
 
-
 #chromeBtn{
     width:100%;
 
@@ -1366,8 +1090,7 @@ body{
 
     border-radius:11px;
 
-    padding:
-        14px 10px;
+    padding:14px 10px;
 
     background:
         linear-gradient(
@@ -1387,13 +1110,11 @@ body{
 ===================================================== */
 
 #camera.shake{
-
     animation:
         cameraShake
         .88s
         steps(9,end);
 }
-
 
 @keyframes cameraShake{
 
@@ -1417,12 +1138,9 @@ body{
 
 <div id="game">
 
-
     <div id="camera">
 
-
         <div id="world">
-
 
             <img
                 id="bg"
@@ -1430,19 +1148,16 @@ body{
                 alt=""
             >
 
-
             <img
                 id="backLayer"
                 src="https://static.wixstatic.com/media/172435_54aea94be0ae4c5eb4a1f5fa3f56e7ea~mv2.png"
                 alt=""
             >
 
-
             <div id="farHaze"></div>
 
 
             <div id="frontGroup">
-
 
                 <img
                     id="frontLayer"
@@ -1450,15 +1165,11 @@ body{
                     alt=""
                 >
 
-
                 <div id="monsterShadow"></div>
-
 
                 <div id="monsterWrap">
 
-
                     <div id="monsterBreath">
-
 
                         <img
                             id="monster"
@@ -1466,15 +1177,11 @@ body{
                             alt=""
                         >
 
-
                     </div>
-
 
                 </div>
 
-
             </div>
-
 
         </div>
 
@@ -1488,40 +1195,21 @@ body{
             alt=""
         >
 
-
     </div>
 
 
-    <!-- HUD -->
-
     <div id="hud">
 
-
         <div class="unit">
 
             <div class="lab">
-
                 HP
-
-                <span id="pt">
-                    100 / 100
-                </span>
-
+                <span id="pt">100 / 100</span>
             </div>
 
-
-            <div
-                class="bar"
-                id="pb"
-            >
-
-                <div
-                    class="fill"
-                    id="pf"
-                ></div>
-
+            <div class="bar" id="pb">
+                <div class="fill" id="pf"></div>
             </div>
-
 
         </div>
 
@@ -1529,31 +1217,15 @@ body{
         <div class="unit">
 
             <div class="lab">
-
                 MONSTER HP
-
-                <span id="et">
-                    80 / 80
-                </span>
-
+                <span id="et">80 / 80</span>
             </div>
 
-
-            <div
-                class="bar"
-                id="eb"
-            >
-
-                <div
-                    class="fill"
-                    id="ef"
-                ></div>
-
+            <div class="bar" id="eb">
+                <div class="fill" id="ef"></div>
             </div>
-
 
         </div>
-
 
     </div>
 
@@ -1577,10 +1249,6 @@ body{
 
     <div id="red"></div>
 
-    <div id="battle">
-        BATTLE START!
-    </div>
-
 
     <div id="start">
 
@@ -1592,7 +1260,7 @@ body{
 
             <p>
                 게임 시작과 동시에 앞으로 전진합니다.<br>
-                NFC는 걷는 동안에도 사용할 수 있습니다.<br>
+                NFC는 언제든 사용할 수 있습니다.<br>
                 몬스터를 쓰러뜨려도 계속 앞으로 진행합니다.
             </p>
 
@@ -1626,15 +1294,13 @@ body{
 
     </div>
 
-
 </div>
 
 
 <script>
 
-
 /* =====================================================
-   ★ 게임 조절값
+   ★★★★★ 조절값 ★★★★★
 ===================================================== */
 
 const CONFIG = {
@@ -1643,26 +1309,25 @@ const CONFIG = {
     MONSTER_START_SCALE:1.00,
     MONSTER_END_SCALE:1.66,
 
-    /* 몬스터 위치 */
+    /* 몬스터 높이 */
     MONSTER_BOTTOM:10.5,
 
-    /* 첫 접근 시간 */
+    /* 몬스터까지 접근하는 시간 */
     WALK_TIME:8000,
 
-    /* 풀밭 최종 확대 */
+    /* 앞 풀밭 확대 */
     FRONT_END_SCALE:1.30,
 
-    /* 뒤 배경 */
+    /* 뒤 배경 확대 */
     BACK_END_SCALE:1.065,
 
-    /* 하늘 */
+    /* 하늘 확대 */
     SKY_END_SCALE:1.022,
 
     /*
-       ★ NFC 재인식 속도
+       ★ NFC 쿨타임
 
-       기존 650
-       → 100ms
+       요청대로 1ms
     */
     NFC_COOLDOWN:1
 };
@@ -1676,32 +1341,28 @@ let started = false;
 
 let battle = false;
 
-/*
-   ★ 게임 종료 상태 삭제.
-
-   monsterDead는
-   몬스터만 죽었다는 뜻.
-*/
-
 let monsterDead = false;
 
-
 let nfcOn = false;
+
 let lastTag = 0;
 
-
 let walkStart = 0;
+
 let raf = 0;
 
+let battleMotionStart = 0;
+
+let battleRaf = 0;
 
 let continueStart = 0;
-let continueRaf = 0;
 
+let continueRaf = 0;
 
 let enemyTimer = null;
 
-
 let pHP = 100;
+
 let eHP = 80;
 
 
@@ -1722,7 +1383,6 @@ function isKakaoBrowser(){
         /KAKAOTALK/i.test(ua) ||
         /KakaoTalk/i.test(ua)
     );
-
 }
 
 
@@ -1733,7 +1393,6 @@ function isAndroid(){
             navigator.userAgent || ''
         )
     );
-
 }
 
 
@@ -1748,16 +1407,13 @@ function openChrome(){
             ''
         );
 
-
     window.location.href =
-
         'intent://' +
         clean +
         '#Intent;' +
         'scheme=https;' +
         'package=com.android.chrome;' +
         'end';
-
 }
 
 
@@ -1794,16 +1450,13 @@ function toast(text){
     $('toast').textContent =
         text;
 
-
     $('toast')
         .classList
         .add('show');
 
-
     clearTimeout(
         toast.timer
     );
-
 
     toast.timer =
         setTimeout(
@@ -1814,9 +1467,8 @@ function toast(text){
                     .remove('show');
 
             },
-            900
+            700
         );
-
 }
 
 
@@ -1829,7 +1481,6 @@ function hp(){
     $('pf').style.width =
         pHP + '%';
 
-
     $('ef').style.width =
         (
             eHP /
@@ -1837,16 +1488,13 @@ function hp(){
             100
         ) + '%';
 
-
     $('pt').textContent =
         pHP +
         ' / 100';
 
-
     $('et').textContent =
         eHP +
         ' / 80';
-
 }
 
 
@@ -1856,14 +1504,11 @@ function blink(el){
         'blink'
     );
 
-
     void el.offsetWidth;
-
 
     el.classList.add(
         'blink'
     );
-
 }
 
 
@@ -1875,25 +1520,18 @@ function shake(){
 
     $('camera')
         .classList
-        .remove(
-            'shake'
-        );
-
+        .remove('shake');
 
     void $('camera').offsetWidth;
 
-
     $('camera')
         .classList
-        .add(
-            'shake'
-        );
-
+        .add('shake');
 }
 
 
 /* =====================================================
-   MONSTER VIBRATION
+   MONSTER HIT VIBRATION
 ===================================================== */
 
 function strongEnemyVibe(){
@@ -1907,12 +1545,11 @@ function strongEnemyVibe(){
         );
 
     }
-
 }
 
 
 /* =====================================================
-   PLAYER HIT
+   PLAYER DAMAGE
 ===================================================== */
 
 function playerHit(){
@@ -1922,9 +1559,7 @@ function playerHit(){
         monsterDead ||
         pHP <= 0
     ){
-
         return;
-
     }
 
 
@@ -1937,15 +1572,13 @@ function playerHit(){
 
     hp();
 
-
     blink(
         $('pb')
     );
 
 
     /*
-       플레이어 피격:
-
+       플레이어가 맞을 때
        진동 없음
     */
 
@@ -1954,19 +1587,13 @@ function playerHit(){
 
     $('red')
         .classList
-        .remove(
-            'on'
-        );
-
+        .remove('on');
 
     void $('red').offsetWidth;
 
-
     $('red')
         .classList
-        .add(
-            'on'
-        );
+        .add('on');
 
 
     if(
@@ -1977,18 +1604,11 @@ function playerHit(){
             enemyTimer
         );
 
-
-        /*
-           일단 죽어도 화면을
-           완전히 종료하지 않음.
-        */
-
         toast(
             'HP 0'
         );
 
     }
-
 }
 
 
@@ -2003,9 +1623,7 @@ function monsterDamage(){
         monsterDead ||
         pHP <= 0
     ){
-
         return;
-
     }
 
 
@@ -2025,8 +1643,7 @@ function monsterDamage(){
 
 
     /*
-       몬스터가 실제로 맞을 때만
-       진동
+       몬스터가 실제로 맞았을 때만 진동
     */
 
     strongEnemyVibe();
@@ -2037,19 +1654,13 @@ function monsterDamage(){
 
     $('red')
         .classList
-        .remove(
-            'on'
-        );
-
+        .remove('on');
 
     void $('red').offsetWidth;
 
-
     $('red')
         .classList
-        .add(
-            'on'
-        );
+        .add('on');
 
 
     $('monster')
@@ -2065,26 +1676,18 @@ function monsterDamage(){
 
     $('monster')
         .classList
-        .add(
-            'hit'
-        );
+        .add('hit');
 
 
     $('dmg')
         .classList
-        .remove(
-            'show'
-        );
-
+        .remove('show');
 
     void $('dmg').offsetWidth;
 
-
     $('dmg')
         .classList
-        .add(
-            'show'
-        );
+        .add('show');
 
 
     if(
@@ -2094,14 +1697,13 @@ function monsterDamage(){
         defeatMonster();
 
     }
-
 }
 
 
 /* =====================================================
    ATTACK
 
-   ★ 몬스터가 죽어도 계속 검 휘두르기 가능
+   ★ 처음부터 끝까지 공격 가능
 ===================================================== */
 
 function attack(){
@@ -2109,9 +1711,7 @@ function attack(){
     if(
         !started
     ){
-
         return;
-
     }
 
 
@@ -2119,16 +1719,13 @@ function attack(){
         .classList
         .remove(
             'attack',
-            'idle',
             'walking'
         );
 
 
     $('slash')
         .classList
-        .remove(
-            'on'
-        );
+        .remove('on');
 
 
     void $('sword').offsetWidth;
@@ -2137,21 +1734,17 @@ function attack(){
 
     $('sword')
         .classList
-        .add(
-            'attack'
-        );
+        .add('attack');
 
 
     $('slash')
         .classList
-        .add(
-            'on'
-        );
+        .add('on');
 
 
     /*
-       몬스터가 살아있고
-       전투 중일 때만 데미지
+       몬스터 앞에 있을 때만
+       실제 데미지
     */
 
     if(
@@ -2165,76 +1758,48 @@ function attack(){
 
 
     /*
-       죽은 뒤에는 그냥 휘두르기만 함
-       진동 없음
+       공격 후 즉시 다시 걷기 모션
     */
 
     setTimeout(
         ()=>{
 
             if(
-                started
+                !started
             ){
-
-                $('sword')
-                    .classList
-                    .remove(
-                        'attack',
-                        'idle',
-                        'walking'
-                    );
-
-
-                if(
-                    battle &&
-                    !monsterDead
-                ){
-
-                    $('sword')
-                        .classList
-                        .add(
-                            'idle'
-                        );
-
-                }
-
-                else{
-
-                    $('sword')
-                        .classList
-                        .add(
-                            'walking'
-                        );
-
-                }
-
+                return;
             }
+
+            $('sword')
+                .classList
+                .remove(
+                    'attack',
+                    'walking'
+                );
+
+            $('sword')
+                .classList
+                .add('walking');
 
         },
         310
     );
-
 }
 
 
 /* =====================================================
-   ★ MONSTER DEFEATED
+   MONSTER DEFEATED
 
-   CLEAR 없음.
-   게임 종료 없음.
-
-   몬스터만 쓰러지고
-   계속 앞으로 진행.
+   ★ 게임 종료 없음
+   ★ CLEAR 없음
+   ★ 계속 전진
 ===================================================== */
 
 function defeatMonster(){
 
-    monsterDead =
-        true;
+    monsterDead = true;
 
-
-    battle =
-        false;
+    battle = false;
 
 
     clearInterval(
@@ -2242,23 +1807,20 @@ function defeatMonster(){
     );
 
 
-    $('monster')
-        .classList
-        .remove(
-            'hit'
-        );
+    cancelAnimationFrame(
+        battleRaf
+    );
 
 
     $('monster')
         .classList
-        .add(
-            'dead'
-        );
+        .remove('hit');
 
 
-    /*
-       그림자도 사라짐
-    */
+    $('monster')
+        .classList
+        .add('dead');
+
 
     $('monsterShadow')
         .style
@@ -2266,61 +1828,49 @@ function defeatMonster(){
         '0';
 
 
-    /*
-       검을 다시 걷기 모션
-    */
-
     $('sword')
         .classList
         .remove(
-            'idle',
-            'attack'
-        );
-
-
-    $('sword')
-        .classList
-        .add(
+            'attack',
             'walking'
         );
 
 
-    toast(
-        '몬스터 격파!'
-    );
+    $('sword')
+        .classList
+        .add('walking');
 
 
     /*
-       죽는 애니메이션 후
-       계속 전진 시작
+       ★ CLEAR 표시 없음
+       ★ 멈춤 없음
+
+       죽는 애니메이션이 진행되는 동안에도
+       바로 계속 전진 시작
     */
 
-    setTimeout(
-        ()=>{
-
-            continueStart =
-                0;
+    continueStart = 0;
 
 
-            cancelAnimationFrame(
-                continueRaf
-            );
-
-
-            continueRaf =
-                requestAnimationFrame(
-                    continueForward
-                );
-
-        },
-        800
+    cancelAnimationFrame(
+        continueRaf
     );
 
+
+    continueRaf =
+        requestAnimationFrame(
+            continueForward
+        );
 }
 
 
 /* =====================================================
-   BATTLE START
+   ★ BATTLE START
+
+   글자 없음
+   화면 전환 없음
+   칼 멈춤 없음
+   NFC 변경 없음
 ===================================================== */
 
 function battleStart(){
@@ -2329,51 +1879,37 @@ function battleStart(){
         battle ||
         monsterDead
     ){
-
         return;
-
     }
 
 
-    battle =
-        true;
+    battle = true;
 
 
-    $('sword')
-        .classList
-        .remove(
-            'walking'
-        );
-
+    /*
+       ★ walking을 그대로 유지
+    */
 
     $('sword')
         .classList
-        .add(
-            'idle'
-        );
+        .remove('attack');
 
-
-    $('battle')
+    $('sword')
         .classList
-        .remove(
-            'show'
-        );
+        .add('walking');
 
 
-    void $('battle').offsetWidth;
+    /*
+       ★ BATTLE START 글자 없음
+       ★ toast 없음
+       ★ NFC 재시작 없음
+       ★ 화면 전환 없음
+    */
 
 
-    $('battle')
-        .classList
-        .add(
-            'show'
-        );
-
-
-    toast(
-        '몬스터 앞에 도착했습니다!'
-    );
-
+    /*
+       몬스터 공격만 조용히 시작
+    */
 
     enemyTimer =
         setInterval(
@@ -2381,11 +1917,31 @@ function battleStart(){
             1700
         );
 
+
+    /*
+       전투 중에도 화면이 살아 있도록
+       움직임 계속
+    */
+
+    battleMotionStart = 0;
+
+
+    cancelAnimationFrame(
+        battleRaf
+    );
+
+
+    battleRaf =
+        requestAnimationFrame(
+            battleMotion
+        );
 }
 
 
 /* =====================================================
    FIRST WALK
+
+   몬스터에게 접근
 ===================================================== */
 
 function walk(now){
@@ -2394,9 +1950,7 @@ function walk(now){
         !started ||
         monsterDead
     ){
-
         return;
-
     }
 
 
@@ -2404,8 +1958,7 @@ function walk(now){
         !walkStart
     ){
 
-        walkStart =
-            now;
+        walkStart = now;
 
     }
 
@@ -2421,7 +1974,9 @@ function walk(now){
         );
 
 
-    /* SKY */
+    /* =================================================
+       SKY
+    ================================================= */
 
     const skyStart =
         1.01;
@@ -2449,8 +2004,9 @@ function walk(now){
         ')';
 
 
-
-    /* BACK */
+    /* =================================================
+       BACK
+    ================================================= */
 
     const backScale =
         1 +
@@ -2474,8 +2030,9 @@ function walk(now){
         ')';
 
 
-
-    /* FRONT */
+    /* =================================================
+       FRONT
+    ================================================= */
 
     const frontScale =
         1 +
@@ -2505,8 +2062,9 @@ function walk(now){
         ')';
 
 
-
-    /* MONSTER */
+    /* =================================================
+       MONSTER
+    ================================================= */
 
     const monsterScale =
 
@@ -2527,6 +2085,11 @@ function walk(now){
         ')';
 
 
+    /* =================================================
+       몬스터 도착
+
+       ★ 아무 화면 전환 없이 바로 이어짐
+    ================================================= */
 
     if(
         t >= 1
@@ -2550,7 +2113,6 @@ function walk(now){
 
 
         return;
-
     }
 
 
@@ -2558,18 +2120,135 @@ function walk(now){
         requestAnimationFrame(
             walk
         );
-
 }
 
 
 /* =====================================================
-   ★ CONTINUE FORWARD
+   ★ BATTLE MOTION
 
-   몬스터 사망 후에도
-   무한히 걷는 느낌 유지.
+   몬스터 앞에 도착해도
+   화면이 완전히 멈추지 않음.
+===================================================== */
 
-   너무 계속 확대해서 화면이 깨지는 걸 막기 위해
-   작은 확대 / 이동을 반복함.
+function battleMotion(now){
+
+    if(
+        !started ||
+        monsterDead ||
+        !battle
+    ){
+        return;
+    }
+
+
+    if(
+        !battleMotionStart
+    ){
+
+        battleMotionStart = now;
+
+    }
+
+
+    const elapsed =
+        now -
+        battleMotionStart;
+
+
+    /*
+       약 1.2초 주기
+    */
+
+    const cycle =
+        (
+            elapsed %
+            1200
+        ) /
+        1200;
+
+
+    const wave =
+        Math.sin(
+            cycle *
+            Math.PI *
+            2
+        );
+
+
+    /*
+       앞 풀밭 계속 미세하게 움직임
+    */
+
+    const frontScale =
+        CONFIG.FRONT_END_SCALE +
+        wave * .012;
+
+
+    const frontY =
+        3 +
+        wave * .35;
+
+
+    const frontX =
+        -.8 +
+        wave * .18;
+
+
+    $('frontGroup').style.transform =
+
+        'translate(' +
+        frontX +
+        '%,' +
+        frontY +
+        '%) scale(' +
+        frontScale +
+        ')';
+
+
+    /*
+       뒤쪽 배경
+    */
+
+    $('backLayer').style.transform =
+
+        'translateY(' +
+        (
+            1.1 +
+            wave * .18
+        ) +
+        '%) scale(' +
+        (
+            CONFIG.BACK_END_SCALE +
+            wave * .004
+        ) +
+        ')';
+
+
+    /*
+       하늘은 거의 고정
+    */
+
+    $('bg').style.transform =
+
+        'translateY(-.15%) scale(' +
+        (
+            CONFIG.SKY_END_SCALE +
+            wave * .0008
+        ) +
+        ')';
+
+
+    battleRaf =
+        requestAnimationFrame(
+            battleMotion
+        );
+}
+
+
+/* =====================================================
+   CONTINUE FORWARD
+
+   몬스터 사망 후에도 계속 전진
 ===================================================== */
 
 function continueForward(now){
@@ -2577,9 +2256,7 @@ function continueForward(now){
     if(
         !started
     ){
-
         return;
-
     }
 
 
@@ -2587,8 +2264,7 @@ function continueForward(now){
         !continueStart
     ){
 
-        continueStart =
-            now;
+        continueStart = now;
 
     }
 
@@ -2598,10 +2274,6 @@ function continueForward(now){
         continueStart;
 
 
-    /*
-       2.4초마다 걷기 사이클 반복
-    */
-
     const cycle =
         (
             elapsed %
@@ -2610,21 +2282,12 @@ function continueForward(now){
         2400;
 
 
-    /*
-       0 → 1 → 0 느낌
-    */
-
     const wave =
         Math.sin(
             cycle *
             Math.PI
         );
 
-
-    /*
-       앞 풀밭은 계속
-       가까이 지나가는 느낌
-    */
 
     const frontScale =
         1.30 +
@@ -2655,11 +2318,6 @@ function continueForward(now){
         ')';
 
 
-
-    /*
-       뒤 풀밭도 아주 약하게 움직임
-    */
-
     $('backLayer').style.transform =
 
         'translateY(' +
@@ -2677,11 +2335,6 @@ function continueForward(now){
         ')';
 
 
-
-    /*
-       하늘은 거의 가만히
-    */
-
     $('bg').style.transform =
 
         'translateY(-.15%) scale(' +
@@ -2697,7 +2350,6 @@ function continueForward(now){
         requestAnimationFrame(
             continueForward
         );
-
 }
 
 
@@ -2716,14 +2368,11 @@ async function startNFC(){
         $('nt').textContent =
             'HTTPS 필요';
 
-
         toast(
             'HTTPS 주소에서 실행해주세요.'
         );
 
-
         return false;
-
     }
 
 
@@ -2737,14 +2386,11 @@ async function startNFC(){
         $('nt').textContent =
             'NFC 미지원';
 
-
         toast(
             'Android Chrome에서 Web NFC를 사용할 수 있습니다.'
         );
 
-
         return false;
-
     }
 
 
@@ -2753,12 +2399,10 @@ async function startNFC(){
     ){
 
         return true;
-
     }
 
 
     try{
-
 
         const reader =
             new NDEFReader();
@@ -2767,8 +2411,7 @@ async function startNFC(){
         await reader.scan();
 
 
-        nfcOn =
-            true;
+        nfcOn = true;
 
 
         $('nt').textContent =
@@ -2798,9 +2441,16 @@ async function startNFC(){
 
 
                 /*
-                   ★ 기존 650ms
+                   ★★★★★★★★★★★★★★★★★
 
-                   → 100ms
+                   NFC 쿨타임 = 1ms
+
+                   사실상 코드상 제한 없음.
+
+                   실제 NFC 읽기 속도는
+                   휴대폰/Chrome/NFC 태그가 결정.
+
+                   ★★★★★★★★★★★★★★★★★
                 */
 
                 if(
@@ -2810,13 +2460,16 @@ async function startNFC(){
                 ){
 
                     return;
-
                 }
 
 
-                lastTag =
-                    now;
+                lastTag = now;
 
+
+                /*
+                   ★ 게임 상태와 관계없이
+                   즉시 공격 호출
+                */
 
                 attack();
 
@@ -2827,9 +2480,7 @@ async function startNFC(){
 
     }
 
-
     catch(e){
-
 
         $('nt').textContent =
             'NFC 권한 확인';
@@ -2841,9 +2492,7 @@ async function startNFC(){
 
 
         return false;
-
     }
-
 }
 
 
@@ -2862,57 +2511,53 @@ $('go').onclick =
 
             $('chromeGuide')
                 .classList
-                .add(
-                    'show'
-                );
-
+                .add('show');
 
             return;
-
         }
 
+
+        /*
+           NFC는 여기서 한 번만 시작.
+
+           이후 전투 시작 / 몬스터 사망 등에서는
+           NFC를 절대로 다시 시작하거나 종료하지 않음.
+        */
 
         await startNFC();
 
 
-        started =
-            true;
+        started = true;
 
 
         $('start')
             .classList
-            .add(
-                'hidden'
-            );
+            .add('hidden');
 
 
-        pHP =
-            100;
+        pHP = 100;
 
-
-        eHP =
-            80;
+        eHP = 80;
 
 
         hp();
 
 
-        $('sword')
-            .classList
-            .remove(
-                'idle'
-            );
-
+        /*
+           처음부터 walking
+        */
 
         $('sword')
             .classList
-            .add(
-                'walking'
-            );
+            .remove('attack');
 
 
-        walkStart =
-            0;
+        $('sword')
+            .classList
+            .add('walking');
+
+
+        walkStart = 0;
 
 
         cancelAnimationFrame(
@@ -2924,7 +2569,6 @@ $('go').onclick =
             requestAnimationFrame(
                 walk
             );
-
     };
 
 
