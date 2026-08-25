@@ -10,188 +10,230 @@
 <style>
 
 *{
-  box-sizing:border-box;
-  -webkit-tap-highlight-color:transparent;
+    box-sizing:border-box;
+    -webkit-tap-highlight-color:transparent;
 }
 
-html,body{
-  margin:0;
-  width:100%;
-  height:100%;
-  overflow:hidden;
-  background:#05080c;
-  font-family:Arial,sans-serif;
+html,
+body{
+    margin:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#05080c;
+    font-family:Arial,sans-serif;
 }
 
 body{
-  display:flex;
-  justify-content:center;
-  align-items:center;
+    display:flex;
+    justify-content:center;
+    align-items:center;
 }
 
 #game{
-  position:relative;
-  width:min(100vw,520px);
-  height:100dvh;
-  overflow:hidden;
-  background:#101820;
-  color:#fff;
-  touch-action:manipulation;
+    position:relative;
+    width:min(100vw,520px);
+    height:100dvh;
+    max-height:1000px;
+    overflow:hidden;
+    background:#101820;
+    color:#fff;
+    touch-action:manipulation;
 }
 
 #camera{
-  position:absolute;
-  inset:0;
-  overflow:hidden;
-  will-change:transform;
+    position:absolute;
+    inset:0;
+    overflow:hidden;
+    will-change:transform;
 }
 
 #world{
-  position:absolute;
-  inset:0;
-  overflow:hidden;
+    position:absolute;
+    inset:0;
+    overflow:hidden;
 }
 
 
 /* =====================================================
    하늘
+   ★ 이번 수정:
+   하늘은 거의 움직이지 않음
 ===================================================== */
 
 #bg{
-  position:absolute;
-  inset:0;
+    position:absolute;
+    inset:0;
 
-  width:100%;
-  height:100%;
+    width:100%;
+    height:100%;
 
-  object-fit:cover;
-  object-position:center center;
+    object-fit:cover;
+    object-position:center top;
 
-  z-index:1;
+    z-index:1;
 
-  transform-origin:center center;
+    transform:scale(1.01);
 
-  will-change:transform;
+    transform-origin:center center;
+
+    will-change:transform;
 }
 
 
 /* =====================================================
-   뒤 풀밭
+   뒤쪽 풀밭 / 산
+   하늘보다 조금만 움직임
 ===================================================== */
 
 #backLayer{
+    position:absolute;
 
-  position:absolute;
+    left:-6%;
 
-  left:-5%;
+    width:112%;
+    height:61%;
 
-  width:110%;
+    bottom:3%;
 
-  /*
-    이미지의 위쪽 빈 공간을 고려해서
-    화면 중간부터 풀밭이 나오도록 배치
-  */
+    object-fit:cover;
+    object-position:center bottom;
 
-  height:62%;
+    z-index:2;
 
-  bottom:13%;
+    pointer-events:none;
 
-  object-fit:fill;
+    transform-origin:center bottom;
 
-  z-index:2;
-
-  pointer-events:none;
-
-  transform-origin:center bottom;
-
-  will-change:transform;
+    will-change:transform;
 }
 
 
 /* =====================================================
-   안개
+   먼 안개
 ===================================================== */
 
 #farHaze{
+    position:absolute;
+    inset:0;
 
-  position:absolute;
+    z-index:3;
 
-  inset:0;
+    pointer-events:none;
 
-  z-index:3;
-
-  pointer-events:none;
-
-  background:
-    linear-gradient(
-      to bottom,
-      rgba(255,255,255,0) 0%,
-      rgba(255,255,255,0) 42%,
-      rgba(255,255,255,.02) 55%,
-      rgba(70,110,60,.05) 75%,
-      rgba(20,35,15,.12) 100%
-    );
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(255,255,255,0) 0%,
+            rgba(255,255,255,0) 45%,
+            rgba(255,255,255,.025) 56%,
+            rgba(80,120,70,.04) 76%,
+            rgba(25,40,20,.10) 100%
+        );
 }
 
 
 /* =====================================================
-   몬스터
+   맨앞 풀밭
+
+   ★ 이번 수정의 핵심
+
+   화면 아래쪽에만 있던 풀밭을
+   화면 중간 정도까지 위로 올림.
+
+   그리고 전진할 때 가장 빠르게 확대됨.
+===================================================== */
+
+#frontLayer{
+    position:absolute;
+
+    left:-13%;
+
+    width:126%;
+
+    height:65%;
+
+    /*
+       화면의 중간 부근부터
+       노란 풀밭이 시작되도록 올림
+    */
+    bottom:-1%;
+
+    object-fit:cover;
+    object-position:center top;
+
+    z-index:5;
+
+    pointer-events:none;
+
+    transform-origin:50% 80%;
+
+    will-change:transform;
+}
+
+
+/* =====================================================
+   MONSTER
+
+   ★ 앞 풀밭 위에 서도록 아래로 이동
 ===================================================== */
 
 #monsterWrap{
+    position:absolute;
 
-  position:absolute;
+    left:50%;
 
-  left:50%;
+    /*
+       이전보다 아래로 이동
+       참고 이미지처럼 풀밭 위에 서게 함
+    */
+    top:43%;
 
-  /*
-    기존보다 몬스터 자체를 크게
-  */
+    width:68%;
 
-  top:18%;
+    aspect-ratio:1 / 1;
 
-  width:78%;
+    transform:
+        translateX(-50%)
+        scale(.18);
 
-  aspect-ratio:1 / 1;
+    transform-origin:
+        50% 88%;
 
-  transform:
-    translateX(-50%)
-    scale(.34);
+    opacity:.22;
 
-  transform-origin:50% 80%;
+    /*
+       앞 풀밭보다 위
+    */
+    z-index:7;
 
-  opacity:.25;
-
-  z-index:5;
-
-  will-change:
-    transform,
-    opacity;
+    will-change:
+        transform,
+        opacity;
 }
 
 
 #monster{
+    position:absolute;
+    inset:0;
 
-  position:absolute;
+    width:100%;
+    height:100%;
 
-  inset:0;
+    object-fit:contain;
 
-  width:100%;
-  height:100%;
+    image-rendering:pixelated;
 
-  object-fit:contain;
+    filter:
+        drop-shadow(
+            0 12px 10px
+            rgba(0,0,0,.48)
+        );
 
-  image-rendering:pixelated;
-
-  filter:
-    drop-shadow(
-      0 14px 10px
-      rgba(0,0,0,.48)
-    );
-
-  will-change:
-    transform,
-    filter;
+    will-change:
+        transform,
+        filter,
+        opacity;
 }
 
 
@@ -200,259 +242,246 @@ body{
 ===================================================== */
 
 #monster.hit{
-
-  animation:
-    monsterHit
-    .82s
-    steps(8,end);
+    animation:
+        monsterHit
+        .88s
+        steps(9,end);
 }
 
 
 @keyframes monsterHit{
 
-  0%{
-    transform:translate(0,0) rotate(0);
-    filter:brightness(1);
-  }
+    0%{
+        transform:
+            translate(0,0)
+            rotate(0);
 
-  10%{
-    transform:
-      translate(-18px,6px)
-      rotate(-4deg)
-      scale(1.02);
+        filter:
+            brightness(1);
+    }
 
-    filter:
-      brightness(3.2)
-      saturate(2.2);
-  }
+    9%{
+        transform:
+            translate(-20px,7px)
+            rotate(-5deg)
+            scale(1.03);
 
-  22%{
-    transform:
-      translate(19px,-8px)
-      rotate(4deg)
-      scale(1.04);
+        filter:
+            brightness(3.5)
+            saturate(2.4)
+            drop-shadow(
+                0 0 28px
+                rgba(255,0,0,.95)
+            );
+    }
 
-    filter:
-      brightness(3.4)
-      saturate(2.3);
-  }
+    20%{
+        transform:
+            translate(22px,-9px)
+            rotate(5deg)
+            scale(1.05);
 
-  34%{
-    transform:
-      translate(-17px,8px)
-      rotate(-4deg);
+        filter:
+            brightness(3.8)
+            saturate(2.6)
+            drop-shadow(
+                0 0 35px
+                red
+            );
+    }
 
-    filter:
-      brightness(3)
-      saturate(2.1);
-  }
+    31%{
+        transform:
+            translate(-21px,9px)
+            rotate(-5deg);
 
-  46%{
-    transform:
-      translate(15px,-7px)
-      rotate(4deg);
+        filter:
+            brightness(3.3)
+            saturate(2.3);
+    }
 
-    filter:
-      brightness(2.7)
-      saturate(1.9);
-  }
+    42%{
+        transform:
+            translate(19px,-8px)
+            rotate(5deg);
 
-  58%{
-    transform:
-      translate(-12px,6px)
-      rotate(-3deg);
+        filter:
+            brightness(3);
+    }
 
-    filter:
-      brightness(2.3);
-  }
+    53%{
+        transform:
+            translate(-16px,7px)
+            rotate(-4deg);
 
-  72%{
-    transform:
-      translate(9px,-4px)
-      rotate(2deg);
+        filter:
+            brightness(2.6);
+    }
 
-    filter:
-      brightness(1.7);
-  }
+    64%{
+        transform:
+            translate(13px,-6px)
+            rotate(3deg);
 
-  86%{
-    transform:
-      translate(-5px,2px);
+        filter:
+            brightness(2.1);
+    }
 
-    filter:
-      brightness(1.3);
-  }
+    76%{
+        transform:
+            translate(-9px,4px)
+            rotate(-2deg);
 
-  100%{
-    transform:
-      translate(0,0)
-      rotate(0);
+        filter:
+            brightness(1.7);
+    }
 
-    filter:
-      brightness(1);
-  }
+    88%{
+        transform:
+            translate(5px,-2px)
+            rotate(1deg);
 
+        filter:
+            brightness(1.3);
+    }
+
+    100%{
+        transform:
+            translate(0,0)
+            rotate(0);
+
+        filter:
+            brightness(1);
+    }
 }
 
 
 /* =====================================================
    몬스터 사망
+   흔들리면서 페이드아웃
 ===================================================== */
 
 #monster.dead{
-
-  animation:
-    monsterDead
-    1.15s
-    ease-out
-    forwards;
+    animation:
+        monsterDead
+        1.2s
+        ease-out
+        forwards;
 }
 
 
 @keyframes monsterDead{
 
-  0%{
-    opacity:1;
+    0%{
+        opacity:1;
 
-    transform:
-      translate(0,0)
-      scale(1);
+        transform:
+            translate(0,0)
+            scale(1);
 
-    filter:brightness(1);
-  }
+        filter:
+            brightness(1);
+    }
 
-  12%{
-    transform:
-      translate(-19px,7px)
-      rotate(-5deg);
+    12%{
+        transform:
+            translate(-20px,7px)
+            rotate(-5deg);
 
-    filter:
-      brightness(3.2)
-      saturate(2);
-  }
+        filter:
+            brightness(3.4)
+            saturate(2);
+    }
 
-  24%{
-    transform:
-      translate(20px,-8px)
-      rotate(5deg);
+    24%{
+        transform:
+            translate(21px,-8px)
+            rotate(5deg);
 
-    filter:
-      brightness(2.8);
-  }
+        filter:
+            brightness(2.8);
+    }
 
-  38%{
-    transform:
-      translate(-17px,7px)
-      rotate(-4deg);
+    38%{
+        transform:
+            translate(-18px,7px)
+            rotate(-4deg);
 
-    filter:
-      brightness(2.3);
-  }
+        filter:
+            brightness(2.2);
+    }
 
-  52%{
-    transform:
-      translate(13px,-6px)
-      rotate(4deg);
+    52%{
+        transform:
+            translate(14px,-6px)
+            rotate(4deg);
 
-    filter:
-      brightness(1.9);
-  }
+        opacity:.9;
+    }
 
-  68%{
-    transform:
-      translate(-9px,4px)
-      rotate(-2deg);
+    68%{
+        transform:
+            translate(-10px,4px)
+            rotate(-2deg)
+            scale(.98);
 
-    opacity:.72;
-  }
+        opacity:.68;
+    }
 
-  82%{
-    transform:
-      translate(6px,-3px)
-      rotate(1deg)
-      scale(.96);
+    82%{
+        transform:
+            translate(6px,-3px)
+            scale(.93);
 
-    opacity:.36;
-  }
+        opacity:.32;
+    }
 
-  100%{
-    transform:
-      translate(0,0)
-      scale(.88);
+    100%{
+        transform:
+            translate(0,0)
+            scale(.88);
 
-    opacity:0;
+        opacity:0;
 
-    filter:brightness(1);
-  }
-
-}
-
-
-/* =====================================================
-   앞 풀밭
-===================================================== */
-
-#frontLayer{
-
-  position:absolute;
-
-  left:-8%;
-
-  width:116%;
-
-  height:57%;
-
-  bottom:-3%;
-
-  object-fit:fill;
-
-  z-index:8;
-
-  pointer-events:none;
-
-  transform-origin:center bottom;
-
-  will-change:transform;
+        filter:
+            brightness(1);
+    }
 }
 
 
 /* =====================================================
    칼
+
+   참고 이미지처럼 화면 아래에서
+   크게 보이도록 유지
 ===================================================== */
 
 #sword{
+    position:absolute;
 
-  position:absolute;
+    z-index:25;
 
-  z-index:25;
+    right:-22%;
+    bottom:-14%;
 
-  /*
-    기존 70%에서 크게 확대
-  */
+    width:137%;
+    height:123%;
 
-  right:-19%;
+    object-fit:contain;
+    object-position:right bottom;
 
-  bottom:-13%;
+    transform-origin:
+        82% 91%;
 
-  width:125%;
+    filter:
+        drop-shadow(
+            0 7px 10px
+            rgba(0,0,0,.7)
+        );
 
-  height:112%;
+    will-change:transform;
 
-  object-fit:contain;
-
-  object-position:right bottom;
-
-  transform-origin:82% 91%;
-
-  filter:
-    drop-shadow(
-      0 7px 9px
-      rgba(0,0,0,.7)
-    );
-
-  will-change:transform;
-
-  pointer-events:none;
+    pointer-events:none;
 }
 
 
@@ -461,69 +490,60 @@ body{
 ===================================================== */
 
 #sword.idle{
-
-  animation:
-    swordIdle
-    1.8s
-    ease-in-out
-    infinite;
+    animation:
+        swordIdle
+        1.7s
+        ease-in-out
+        infinite;
 }
 
 
 @keyframes swordIdle{
 
-  0%,100%{
+    0%,
+    100%{
+        transform:
+            translateY(0)
+            rotate(-18deg)
+            scale(1);
+    }
 
-    transform:
-      translateY(0)
-      rotate(-18deg)
-      scale(1);
-  }
-
-  50%{
-
-    transform:
-      translateY(-10px)
-      rotate(-16deg)
-      scale(1);
-  }
-
+    50%{
+        transform:
+            translateY(-11px)
+            rotate(-15.5deg)
+            scale(1.005);
+    }
 }
 
 
 /* =====================================================
-   칼 걷기
+   걷는 중 칼
 ===================================================== */
 
 #sword.walking{
-
-  animation:
-    swordWalk
-    .64s
-    ease-in-out
-    infinite
-    alternate;
+    animation:
+        swordWalk
+        .68s
+        ease-in-out
+        infinite
+        alternate;
 }
 
 
 @keyframes swordWalk{
 
-  from{
+    from{
+        transform:
+            rotate(-20deg)
+            translateY(7px);
+    }
 
-    transform:
-      rotate(-20deg)
-      translateY(6px)
-      scale(1);
-  }
-
-  to{
-
-    transform:
-      rotate(16deg)
-      translateY(-6px)
-      scale(1);
-  }
-
+    to{
+        transform:
+            rotate(14deg)
+            translateY(-7px);
+    }
 }
 
 
@@ -532,141 +552,128 @@ body{
 ===================================================== */
 
 #sword.attack{
-
-  animation:
-    swordSlash
-    .34s
-    cubic-bezier(.12,.9,.2,1)
-    forwards;
+    animation:
+        swordSlash
+        .34s
+        cubic-bezier(.12,.9,.2,1)
+        forwards;
 }
 
 
 @keyframes swordSlash{
 
-  0%{
+    0%{
+        transform:
+            rotate(-18deg)
+            translate(0,0)
+            scale(1);
+    }
 
-    transform:
-      rotate(-18deg)
-      translate(0,0)
-      scale(1);
-  }
+    14%{
+        transform:
+            rotate(-43deg)
+            translate(-15px,8px)
+            scale(1.03);
+    }
 
-  14%{
+    47%{
+        transform:
+            rotate(57deg)
+            translate(-42px,-34px)
+            scale(1.16);
+    }
 
-    transform:
-      rotate(-43deg)
-      translate(-15px,8px)
-      scale(1.03);
-  }
+    68%{
+        transform:
+            rotate(34deg)
+            translate(-17px,-15px)
+            scale(1.08);
+    }
 
-  47%{
-
-    transform:
-      rotate(57deg)
-      translate(-42px,-34px)
-      scale(1.16);
-  }
-
-  68%{
-
-    transform:
-      rotate(34deg)
-      translate(-17px,-15px)
-      scale(1.08);
-  }
-
-  100%{
-
-    transform:
-      rotate(-18deg)
-      translate(0,0)
-      scale(1);
-  }
-
+    100%{
+        transform:
+            rotate(-18deg)
+            translate(0,0)
+            scale(1);
+    }
 }
 
 
 /* =====================================================
-   베기 효과
+   베기 이펙트
 ===================================================== */
 
 #slash{
+    position:absolute;
 
-  position:absolute;
+    z-index:24;
 
-  z-index:24;
+    right:0;
+    bottom:18%;
 
-  right:0;
+    width:85%;
+    height:68%;
 
-  bottom:19%;
+    opacity:0;
 
-  width:80%;
+    pointer-events:none;
 
-  height:65%;
+    background:
 
-  opacity:0;
+        radial-gradient(
+            ellipse at 70% 55%,
+            rgba(255,255,255,.95) 0 2%,
+            rgba(255,225,110,.85) 3% 5%,
+            transparent 7%
+        ),
 
-  pointer-events:none;
+        conic-gradient(
+            from 205deg at 70% 55%,
+            transparent 0 19%,
+            rgba(255,245,190,.95) 20% 23%,
+            rgba(255,180,40,.8) 24% 28%,
+            transparent 29% 100%
+        );
 
-  background:
+    filter:blur(.3px);
 
-    radial-gradient(
-      ellipse at 70% 55%,
-      rgba(255,255,255,.95) 0 2%,
-      rgba(255,225,110,.85) 3% 5%,
-      transparent 7%
-    ),
+    transform:
+        rotate(-18deg);
 
-    conic-gradient(
-      from 205deg at 70% 55%,
-      transparent 0 19%,
-      rgba(255,245,190,.95) 20% 23%,
-      rgba(255,180,40,.8) 24% 28%,
-      transparent 29% 100%
-    );
-
-  filter:blur(.3px);
-
-  transform:rotate(-18deg);
-
-  mix-blend-mode:screen;
+    mix-blend-mode:screen;
 }
 
 
 #slash.on{
-
-  animation:
-    slashFx
-    .34s
-    ease-out
-    forwards;
+    animation:
+        slashFx
+        .34s
+        ease-out
+        forwards;
 }
 
 
 @keyframes slashFx{
 
-  0%{
+    0%{
+        opacity:0;
 
-    opacity:0;
+        transform:
+            rotate(-25deg)
+            scale(.55);
+    }
 
-    transform:
-      rotate(-25deg)
-      scale(.55);
-  }
+    30%{
+        opacity:1;
+    }
 
-  30%{
-    opacity:1;
-  }
+    100%{
+        opacity:0;
 
-  100%{
-
-    opacity:0;
-
-    transform:
-      rotate(20deg)
-      scale(1.18);
-  }
-
+        transform:
+            rotate(20deg)
+            scale(1.18);
+    }
 }
 
 
@@ -675,109 +682,100 @@ body{
 ===================================================== */
 
 #hud{
+    position:absolute;
 
-  position:absolute;
+    z-index:50;
 
-  z-index:50;
+    left:5%;
+    right:5%;
+    top:12px;
 
-  left:5%;
-  right:5%;
+    display:flex;
 
-  top:12px;
+    gap:8px;
 
-  display:flex;
+    justify-content:space-between;
 
-  gap:8px;
-
-  justify-content:space-between;
-
-  text-shadow:
-    0 2px 3px #000;
+    text-shadow:
+        0 2px 3px #000;
 }
 
 
 .unit{
-  width:48%;
+    width:48%;
 }
 
 
 .lab{
+    font-size:12px;
+    font-weight:900;
 
-  font-size:12px;
-
-  font-weight:900;
-
-  margin-bottom:3px;
+    margin-bottom:3px;
 }
 
 
 .bar{
+    height:14px;
 
-  height:14px;
+    border:
+        2px solid #fff;
 
-  border:
-    2px solid #fff;
+    border-radius:5px;
 
-  border-radius:5px;
+    background:#220b0b;
 
-  background:#220b0b;
+    overflow:hidden;
 
-  overflow:hidden;
-
-  box-shadow:
-    0 2px 6px #000;
+    box-shadow:
+        0 2px 6px #000;
 }
 
 
 .fill{
+    height:100%;
 
-  height:100%;
-
-  transition:
-    width .18s;
+    transition:
+        width .18s;
 }
 
 
 #pf{
+    background:
+        linear-gradient(
+            #ff6868,
+            #c41414
+        );
 
-  background:
-    linear-gradient(
-      #ff6868,
-      #c41414
-    );
-
-  width:100%;
+    width:100%;
 }
 
 
 #ef{
+    background:
+        linear-gradient(
+            #bd76ff,
+            #6320a5
+        );
 
-  background:
-    linear-gradient(
-      #bd76ff,
-      #6320a5
-    );
-
-  width:100%;
+    width:100%;
 }
 
 
 #pb.blink,
 #eb.blink{
-
-  animation:
-    hpBlink
-    .32s
-    steps(2,end);
+    animation:
+        hpBlink
+        .32s
+        steps(2,end);
 }
 
 
 @keyframes hpBlink{
 
-  50%{
-    filter:brightness(2.8);
-  }
-
+    50%{
+        filter:
+            brightness(2.8);
+    }
 }
 
 
@@ -786,54 +784,52 @@ body{
 ===================================================== */
 
 #nfc{
+    position:absolute;
 
-  position:absolute;
+    z-index:55;
 
-  z-index:55;
+    top:48px;
 
-  top:48px;
+    left:50%;
 
-  left:50%;
+    transform:
+        translateX(-50%);
 
-  transform:
-    translateX(-50%);
+    padding:
+        7px 12px;
 
-  padding:
-    7px 12px;
+    border-radius:12px;
 
-  border-radius:12px;
+    background:
+        rgba(0,0,0,.6);
 
-  background:
-    rgba(0,0,0,.6);
+    border:
+        1px solid
+        rgba(255,255,255,.35);
 
-  border:
-    1px solid
-    rgba(255,255,255,.35);
+    font-size:12px;
 
-  font-size:12px;
+    font-weight:700;
 
-  font-weight:700;
+    white-space:nowrap;
 
-  white-space:nowrap;
-
-  box-shadow:
-    0 3px 10px
-    rgba(0,0,0,.35);
+    box-shadow:
+        0 3px 10px
+        rgba(0,0,0,.35);
 }
 
 
 #dot{
+    display:inline-block;
 
-  display:inline-block;
+    width:8px;
+    height:8px;
 
-  width:8px;
-  height:8px;
+    border-radius:50%;
 
-  border-radius:50%;
+    background:#ffd84d;
 
-  background:#ffd84d;
-
-  margin-right:5px;
+    margin-right:5px;
 }
 
 
@@ -842,48 +838,45 @@ body{
 ===================================================== */
 
 #toast{
+    position:absolute;
 
-  position:absolute;
+    z-index:70;
 
-  z-index:70;
+    left:50%;
+    bottom:88px;
 
-  left:50%;
+    transform:
+        translateX(-50%)
+        translateY(16px);
 
-  bottom:88px;
+    opacity:0;
 
-  transform:
-    translateX(-50%)
-    translateY(16px);
+    padding:
+        8px 13px;
 
-  opacity:0;
+    border-radius:10px;
 
-  padding:
-    8px 13px;
+    background:
+        rgba(0,0,0,.78);
 
-  border-radius:10px;
+    border:
+        1px solid
+        rgba(255,255,255,.3);
 
-  background:
-    rgba(0,0,0,.78);
+    font-size:12px;
 
-  border:
-    1px solid
-    rgba(255,255,255,.3);
+    white-space:nowrap;
 
-  font-size:12px;
-
-  white-space:nowrap;
-
-  transition:.18s;
+    transition:.18s;
 }
 
 
 #toast.show{
+    opacity:1;
 
-  opacity:1;
-
-  transform:
-    translateX(-50%)
-    translateY(0);
+    transform:
+        translateX(-50%)
+        translateY(0);
 }
 
 
@@ -892,124 +885,113 @@ body{
 ===================================================== */
 
 #dmg{
+    position:absolute;
 
-  position:absolute;
+    z-index:65;
 
-  z-index:65;
+    left:65%;
+    top:42%;
 
-  left:65%;
+    font-size:38px;
+    font-weight:1000;
 
-  top:42%;
+    color:#fff;
 
-  font-size:38px;
+    text-shadow:
+        0 0 4px #900,
+        3px 3px 0 #d00;
 
-  font-weight:1000;
+    opacity:0;
 
-  color:#fff;
-
-  text-shadow:
-    0 0 4px #900,
-    3px 3px 0 #d00;
-
-  opacity:0;
-
-  pointer-events:none;
+    pointer-events:none;
 }
 
 
 #dmg.show{
-
-  animation:
-    dmgPop
-    .65s
-    ease-out;
+    animation:
+        dmgPop
+        .65s
+        ease-out;
 }
 
 
 @keyframes dmgPop{
 
-  0%{
+    0%{
+        opacity:0;
 
-    opacity:0;
+        transform:
+            scale(.5)
+            translateY(15px);
+    }
 
-    transform:
-      scale(.5)
-      translateY(15px);
-  }
+    20%{
+        opacity:1;
 
-  20%{
+        transform:
+            scale(1.35)
+            translateY(0);
+    }
 
-    opacity:1;
+    100%{
+        opacity:0;
 
-    transform:
-      scale(1.35)
-      translateY(0);
-  }
-
-  100%{
-
-    opacity:0;
-
-    transform:
-      scale(1)
-      translateY(-50px);
-  }
-
+        transform:
+            scale(1)
+            translateY(-50px);
+    }
 }
 
 
 /* =====================================================
-   RED FLASH
+   빨간 플래시
 ===================================================== */
 
 #red{
+    position:absolute;
 
-  position:absolute;
+    inset:0;
 
-  inset:0;
+    z-index:60;
 
-  z-index:60;
+    background:
+        rgba(255,0,0,.58);
 
-  background:
-    rgba(255,0,0,.58);
+    opacity:0;
 
-  opacity:0;
-
-  pointer-events:none;
+    pointer-events:none;
 }
 
 
 #red.on{
-
-  animation:
-    redHit
-    .62s
-    ease-out;
+    animation:
+        redHit
+        .62s
+        ease-out;
 }
 
 
 @keyframes redHit{
 
-  0%{
-    opacity:.98;
-  }
+    0%{
+        opacity:.98;
+    }
 
-  18%{
-    opacity:.85;
-  }
+    18%{
+        opacity:.85;
+    }
 
-  38%{
-    opacity:.62;
-  }
+    38%{
+        opacity:.62;
+    }
 
-  58%{
-    opacity:.34;
-  }
+    58%{
+        opacity:.34;
+    }
 
-  100%{
-    opacity:0;
-  }
-
+    100%{
+        opacity:0;
+    }
 }
 
 
@@ -1018,89 +1000,81 @@ body{
 ===================================================== */
 
 #battle{
+    position:absolute;
 
-  position:absolute;
+    z-index:70;
 
-  z-index:70;
+    left:50%;
+    top:50%;
 
-  left:50%;
-  top:50%;
+    transform:
+        translate(-50%,-50%)
+        scale(.7)
+        skewX(-8deg);
 
-  transform:
-    translate(-50%,-50%)
-    scale(.7)
-    skewX(-8deg);
+    opacity:0;
 
-  opacity:0;
+    padding:
+        10px 22px;
 
-  padding:
-    10px 22px;
+    background:
+        linear-gradient(
+            90deg,
+            #9b0909,
+            #ff4b13,
+            #9b0909
+        );
 
-  background:
-    linear-gradient(
-      90deg,
-      #9b0909,
-      #ff4b13,
-      #9b0909
-    );
+    border:
+        3px solid #ffdf52;
 
-  border:
-    3px solid
-    #ffdf52;
+    color:#fff;
 
-  color:#fff;
+    font-size:27px;
+    font-weight:1000;
 
-  font-size:27px;
+    white-space:nowrap;
 
-  font-weight:1000;
+    text-shadow:
+        0 3px 4px #4b0000;
 
-  white-space:nowrap;
-
-  text-shadow:
-    0 3px 4px
-    #4b0000;
-
-  box-shadow:
-    0 0 20px
-    rgba(255,80,0,.65);
+    box-shadow:
+        0 0 20px
+        rgba(255,80,0,.65);
 }
 
 
 #battle.show{
-
-  animation:
-    battleIn
-    .8s
-    ease-out;
+    animation:
+        battleIn
+        .8s
+        ease-out;
 }
 
 
 @keyframes battleIn{
 
-  0%{
+    0%{
+        opacity:0;
 
-    opacity:0;
+        transform:
+            translate(-50%,-50%)
+            scale(1.8)
+            skewX(-8deg);
+    }
 
-    transform:
-      translate(-50%,-50%)
-      scale(1.8)
-      skewX(-8deg);
-  }
+    30%{
+        opacity:1;
+    }
 
-  30%{
-    opacity:1;
-  }
+    100%{
+        opacity:0;
 
-  100%{
-
-    opacity:0;
-
-    transform:
-      translate(-50%,-50%)
-      scale(1)
-      skewX(-8deg);
-  }
-
+        transform:
+            translate(-50%,-50%)
+            scale(1)
+            skewX(-8deg);
+    }
 }
 
 
@@ -1109,83 +1083,73 @@ body{
 ===================================================== */
 
 #clear{
+    position:absolute;
+    inset:0;
 
-  position:absolute;
+    z-index:90;
 
-  inset:0;
+    display:flex;
 
-  z-index:90;
+    align-items:center;
+    justify-content:center;
 
-  display:flex;
+    background:
+        rgba(0,0,0,.2);
 
-  align-items:center;
+    opacity:0;
 
-  justify-content:center;
-
-  background:
-    rgba(0,0,0,.2);
-
-  opacity:0;
-
-  pointer-events:none;
+    pointer-events:none;
 }
 
 
 #clear.show{
+    opacity:1;
 
-  opacity:1;
-
-  transition:.3s;
+    transition:.3s;
 }
 
 
 .cb{
+    padding:
+        18px 25px;
 
-  padding:
-    18px 25px;
+    text-align:center;
 
-  text-align:center;
+    background:
+        linear-gradient(
+            #ffdf65,
+            #a85a08
+        );
 
-  background:
-    linear-gradient(
-      #ffdf65,
-      #a85a08
-    );
+    border:
+        4px solid #fff1a4;
 
-  border:
-    4px solid
-    #fff1a4;
+    border-radius:14px;
 
-  border-radius:14px;
+    box-shadow:
+        0 0 35px
+        rgba(255,200,50,.8),
 
-  box-shadow:
-    0 0 35px
-    rgba(255,200,50,.8),
+        inset 0 0 20px
+        rgba(255,255,255,.25);
 
-    inset 0 0 20px
-    rgba(255,255,255,.25);
-
-  text-shadow:
-    0 4px 4px
-    #6b2b00;
+    text-shadow:
+        0 4px 4px #6b2b00;
 }
 
 
 .ct{
-
-  font-size:34px;
-
-  font-weight:1000;
+    font-size:34px;
+    font-weight:1000;
 }
 
 
 .cs{
+    font-size:15px;
 
-  font-size:15px;
+    margin-top:7px;
 
-  margin-top:7px;
-
-  font-weight:800;
+    font-weight:800;
 }
 
 
@@ -1194,121 +1158,207 @@ body{
 ===================================================== */
 
 #start{
+    position:absolute;
+    inset:0;
 
-  position:absolute;
+    z-index:100;
 
-  inset:0;
+    display:flex;
 
-  z-index:100;
+    align-items:center;
+    justify-content:center;
 
-  display:flex;
+    background:
+        linear-gradient(
+            rgba(0,0,0,.2),
+            rgba(0,0,0,.58)
+        );
 
-  align-items:center;
-
-  justify-content:center;
-
-  background:
-    linear-gradient(
-      rgba(0,0,0,.2),
-      rgba(0,0,0,.58)
-    );
-
-  text-align:center;
+    text-align:center;
 }
 
 
 #start.hidden{
-  display:none;
+    display:none;
 }
 
 
 .startBox{
+    width:86%;
+    max-width:380px;
 
-  width:86%;
+    padding:
+        20px 16px;
 
-  max-width:380px;
+    border-radius:18px;
 
-  padding:
-    20px 16px;
+    background:
+        rgba(5,12,20,.65);
 
-  border-radius:18px;
+    border:
+        1px solid
+        rgba(255,255,255,.3);
 
-  background:
-    rgba(5,12,20,.65);
-
-  border:
-    1px solid
-    rgba(255,255,255,.3);
-
-  backdrop-filter:
-    blur(5px);
+    backdrop-filter:
+        blur(5px);
 }
 
 
 .startBox h1{
+    margin:
+        0 0 10px;
 
-  margin:
-    0 0 10px;
+    font-size:31px;
 
-  font-size:31px;
+    letter-spacing:2px;
 
-  letter-spacing:2px;
+    color:#ffe17a;
 
-  color:#ffe17a;
-
-  text-shadow:
-    0 3px 4px
-    #6b3500;
+    text-shadow:
+        0 3px 4px #6b3500;
 }
 
 
 .startBox p{
+    font-size:13px;
 
-  font-size:13px;
+    line-height:1.6;
 
-  line-height:1.6;
-
-  color:#eee;
+    color:#eee;
 }
 
 
 #go{
+    border:0;
 
-  border:0;
+    border-radius:11px;
 
-  border-radius:11px;
+    padding:
+        14px 28px;
 
-  padding:
-    14px 28px;
+    font-size:18px;
 
-  font-size:18px;
+    font-weight:1000;
 
-  font-weight:1000;
+    color:#fff;
 
-  color:#fff;
+    background:
+        linear-gradient(
+            #f7a62b,
+            #b94d08
+        );
 
-  background:
-    linear-gradient(
-      #f7a62b,
-      #b94d08
-    );
+    box-shadow:
+        0 4px 0 #6d2904;
 
-  box-shadow:
-    0 4px 0
-    #6d2904;
-
-  cursor:pointer;
+    cursor:pointer;
 }
 
 
 #go:active{
+    transform:
+        translateY(3px);
 
-  transform:
-    translateY(3px);
+    box-shadow:
+        0 1px 0 #6d2904;
+}
 
-  box-shadow:
-    0 1px 0
-    #6d2904;
+
+/* =====================================================
+   카카오톡 → 크롬
+===================================================== */
+
+#chromeGuide{
+    position:absolute;
+    inset:0;
+
+    z-index:300;
+
+    display:none;
+
+    align-items:center;
+    justify-content:center;
+
+    padding:22px;
+
+    background:
+        rgba(0,0,0,.78);
+
+    backdrop-filter:
+        blur(5px);
+}
+
+
+#chromeGuide.show{
+    display:flex;
+}
+
+
+.chromeBox{
+    width:100%;
+    max-width:360px;
+
+    padding:
+        25px 20px 22px;
+
+    border-radius:18px;
+
+    background:
+        linear-gradient(
+            145deg,
+            #182635,
+            #09121c
+        );
+
+    border:
+        1px solid
+        rgba(255,255,255,.25);
+
+    text-align:center;
+}
+
+
+.chromeBox h2{
+    margin:
+        0 0 10px;
+
+    font-size:22px;
+}
+
+
+.chromeBox p{
+    margin:
+        0 0 19px;
+
+    color:#ddd;
+
+    font-size:14px;
+
+    line-height:1.65;
+}
+
+
+#chromeBtn{
+    width:100%;
+
+    border:0;
+
+    border-radius:11px;
+
+    padding:
+        14px 10px;
+
+    background:
+        linear-gradient(
+            #4285f4,
+            #1769d1
+        );
+
+    color:#fff;
+
+    font-size:17px;
+
+    font-weight:900;
 }
 
 
@@ -1317,60 +1367,62 @@ body{
 ===================================================== */
 
 #camera.shake{
-
-  animation:
-    cameraShake
-    .82s
-    steps(8,end);
+    animation:
+        cameraShake
+        .88s
+        steps(9,end);
 }
 
 
 @keyframes cameraShake{
 
-  0%{
-    transform:translate(0);
-  }
+    0%{
+        transform:translate(0);
+    }
 
-  12%{
-    transform:
-      translate(-12px,7px);
-  }
+    10%{
+        transform:
+            translate(-13px,8px);
+    }
 
-  24%{
-    transform:
-      translate(13px,-7px);
-  }
+    21%{
+        transform:
+            translate(15px,-8px);
+    }
 
-  36%{
-    transform:
-      translate(-11px,6px);
-  }
+    32%{
+        transform:
+            translate(-14px,9px);
+    }
 
-  48%{
-    transform:
-      translate(10px,-6px);
-  }
+    43%{
+        transform:
+            translate(13px,-8px);
+    }
 
-  60%{
-    transform:
-      translate(-8px,4px);
-  }
+    54%{
+        transform:
+            translate(-11px,7px);
+    }
 
-  72%{
-    transform:
-      translate(7px,-3px);
-  }
+    65%{
+        transform:
+            translate(9px,-5px);
+    }
 
-  84%{
-    transform:
-      translate(-4px,2px);
-  }
+    76%{
+        transform:
+            translate(-7px,4px);
+    }
 
-  100%{
-    transform:
-      translate(0);
-  }
+    88%{
+        transform:
+            translate(4px,-2px);
+    }
 
+    100%{
+        transform:translate(0);
+    }
 }
 
 </style>
@@ -1381,200 +1433,231 @@ body{
 
 <div id="game">
 
-  <div id="camera">
 
-    <div id="world">
-
-
-      <!-- =================================================
-           하늘
-      ================================================== -->
-
-      <img
-        id="bg"
-        src="https://static.wixstatic.com/media/172435_d6012f4ec1594a17858298879561b509~mv2.png"
-        alt=""
-      >
+    <div id="camera">
 
 
-      <!-- =================================================
-           뒤 풀밭
-      ================================================== -->
-
-      <img
-        id="backLayer"
-        src="https://static.wixstatic.com/media/172435_54aea94be0ae4c5eb4a1f5fa3f56e7ea~mv2.png"
-        alt=""
-      >
+        <div id="world">
 
 
-      <div id="farHaze"></div>
+            <!-- 하늘 -->
+
+            <img
+                id="bg"
+                src="https://static.wixstatic.com/media/172435_d6012f4ec1594a17858298879561b509~mv2.png"
+                alt=""
+            >
 
 
-      <!-- =================================================
-           MONSTER
-      ================================================== -->
+            <!-- 뒤 풀밭 -->
 
-      <div id="monsterWrap">
+            <img
+                id="backLayer"
+                src="https://static.wixstatic.com/media/172435_54aea94be0ae4c5eb4a1f5fa3f56e7ea~mv2.png"
+                alt=""
+            >
+
+
+            <div id="farHaze"></div>
+
+
+            <!-- 맨앞 풀밭 -->
+
+            <img
+                id="frontLayer"
+                src="https://static.wixstatic.com/media/172435_b05f44aab7384d4ead52127131d3fe8c~mv2.png"
+                alt=""
+            >
+
+
+            <!-- 몬스터 -->
+
+            <div id="monsterWrap">
+
+                <img
+                    id="monster"
+                    src="https://static.wixstatic.com/media/172435_02b890fad23e48b29d15ad67934eda6d~mv2.png"
+                    alt=""
+                >
+
+            </div>
+
+
+        </div>
+
+
+        <div id="slash"></div>
+
 
         <img
-          id="monster"
-          src="https://static.wixstatic.com/media/172435_02b890fad23e48b29d15ad67934eda6d~mv2.png"
-          alt=""
+            id="sword"
+            src="https://static.wixstatic.com/media/172435_1c16a5d4f8ca44d8a558923200659bb7~mv2.png"
+            alt=""
         >
 
-      </div>
-
-
-      <!-- =================================================
-           앞 풀밭
-      ================================================== -->
-
-      <img
-        id="frontLayer"
-        src="https://static.wixstatic.com/media/172435_b05f44aab7384d4ead52127131d3fe8c~mv2.png"
-        alt=""
-      >
-
 
     </div>
 
 
-    <!-- 칼 베기 효과 -->
+    <!-- HUD -->
 
-    <div id="slash"></div>
-
-
-    <!-- =================================================
-         칼
-    ================================================== -->
-
-    <img
-      id="sword"
-      src="https://static.wixstatic.com/media/172435_1c16a5d4f8ca44d8a558923200659bb7~mv2.png"
-      alt=""
-    >
+    <div id="hud">
 
 
-  </div>
+        <div class="unit">
+
+            <div class="lab">
+
+                HP
+                <span id="pt">
+                    100 / 100
+                </span>
+
+            </div>
 
 
-  <!-- ===================================================
-       HUD
-  ==================================================== -->
+            <div
+                class="bar"
+                id="pb"
+            >
 
-  <div id="hud">
+                <div
+                    class="fill"
+                    id="pf"
+                ></div>
 
-    <div class="unit">
+            </div>
 
-      <div class="lab">
-        HP <span id="pt">100 / 100</span>
-      </div>
-
-      <div class="bar" id="pb">
-
-        <div
-          class="fill"
-          id="pf">
         </div>
 
-      </div>
 
-    </div>
+        <div class="unit">
+
+            <div class="lab">
+
+                MONSTER HP
+
+                <span id="et">
+                    80 / 80
+                </span>
+
+            </div>
 
 
-    <div class="unit">
+            <div
+                class="bar"
+                id="eb"
+            >
 
-      <div class="lab">
-        MONSTER HP
-        <span id="et">80 / 80</span>
-      </div>
+                <div
+                    class="fill"
+                    id="ef"
+                ></div>
 
-      <div class="bar" id="eb">
+            </div>
 
-        <div
-          class="fill"
-          id="ef">
         </div>
 
-      </div>
 
     </div>
 
-  </div>
 
+    <!-- NFC -->
 
-  <!-- NFC -->
+    <div id="nfc">
 
-  <div id="nfc">
+        <span id="dot"></span>
 
-    <span id="dot"></span>
-
-    <span id="nt">
-      NFC 준비 중
-    </span>
-
-  </div>
-
-
-  <div id="toast"></div>
-
-
-  <div id="dmg">
-    -16
-  </div>
-
-
-  <div id="red"></div>
-
-
-  <div id="battle">
-    BATTLE START!
-  </div>
-
-
-  <!-- CLEAR -->
-
-  <div id="clear">
-
-    <div class="cb">
-
-      <div class="ct">
-        MISSION CLEAR!
-      </div>
-
-      <div class="cs">
-        몬스터가 쓰러졌습니다!
-      </div>
+        <span id="nt">
+            NFC 준비 중
+        </span>
 
     </div>
 
-  </div>
+
+    <div id="toast"></div>
 
 
-  <!-- START -->
+    <div id="dmg">
+        -16
+    </div>
 
-  <div id="start">
 
-    <div class="startBox">
+    <div id="red"></div>
 
-      <h1>
-        PIXEL ADVENTURE
-      </h1>
 
-      <p>
-        게임 시작과 동시에 앞으로 전진합니다.<br>
-        NFC는 걷는 동안에도 사용할 수 있습니다.<br>
-        몬스터 앞에 도착하면 NFC 공격이 실제 데미지가 됩니다.
-      </p>
+    <div id="battle">
+        BATTLE START!
+    </div>
 
-      <button id="go">
-        GAME START
-      </button>
+
+    <!-- CLEAR -->
+
+    <div id="clear">
+
+        <div class="cb">
+
+            <div class="ct">
+                MISSION CLEAR!
+            </div>
+
+            <div class="cs">
+                몬스터가 쓰러졌습니다!
+            </div>
+
+        </div>
 
     </div>
 
-  </div>
+
+    <!-- START -->
+
+    <div id="start">
+
+        <div class="startBox">
+
+            <h1>
+                PIXEL ADVENTURE
+            </h1>
+
+            <p>
+                게임 시작과 동시에 앞으로 전진합니다.<br>
+                NFC는 걷는 동안에도 사용할 수 있습니다.<br>
+                몬스터 앞에 도착하면 NFC 공격이 데미지가 됩니다.
+            </p>
+
+            <button id="go">
+                GAME START
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- 카카오톡 → 크롬 -->
+
+    <div id="chromeGuide">
+
+        <div class="chromeBox">
+
+            <h2>
+                Chrome으로 연결합니다
+            </h2>
+
+            <p>
+                NFC 게임은 Chrome에서 실행해야 합니다.<br>
+                아래 버튼을 눌러 Chrome으로 이동해주세요.
+            </p>
+
+            <button id="chromeBtn">
+                Chrome으로 연결하기
+            </button>
+
+        </div>
+
+    </div>
+
 
 </div>
 
@@ -1582,7 +1665,7 @@ body{
 <script>
 
 const $ =
-  id => document.getElementById(id);
+    id => document.getElementById(id);
 
 
 let started = false;
@@ -1594,10 +1677,86 @@ let lastTag = 0;
 
 let walkStart = 0;
 let raf = 0;
+
 let enemyTimer = null;
 
 let pHP = 100;
 let eHP = 80;
+
+
+/* =====================================================
+   카카오톡 감지
+===================================================== */
+
+function isKakaoBrowser(){
+
+    const ua =
+        navigator.userAgent || '';
+
+    return (
+        /KAKAOTALK/i.test(ua) ||
+        /KakaoTalk/i.test(ua)
+    );
+
+}
+
+
+function isAndroid(){
+
+    return (
+        /Android/i.test(
+            navigator.userAgent || ''
+        )
+    );
+
+}
+
+
+function openChrome(){
+
+    const url =
+        window.location.href;
+
+    const clean =
+        url.replace(
+            /^https?:\/\//i,
+            ''
+        );
+
+
+    window.location.href =
+        'intent://' +
+        clean +
+        '#Intent;' +
+        'scheme=https;' +
+        'package=com.android.chrome;' +
+        'end';
+
+}
+
+
+(function(){
+
+    if(
+        isKakaoBrowser() &&
+        isAndroid()
+    ){
+
+        $('chromeGuide')
+            .classList
+            .add('show');
+
+    }
+
+})();
+
+
+$('chromeBtn').onclick =
+    function(){
+
+        openChrome();
+
+    };
 
 
 /* =====================================================
@@ -1606,26 +1765,32 @@ let eHP = 80;
 
 function toast(text){
 
-  $('toast').textContent =
-    text;
+    $('toast').textContent =
+        text;
 
-  $('toast')
-    .classList
-    .add('show');
 
-  clearTimeout(
-    toast.timer
-  );
-
-  toast.timer =
-    setTimeout(
-      () =>
-        $('toast')
+    $('toast')
         .classList
-        .remove('show'),
+        .add('show');
 
-      1200
+
+    clearTimeout(
+        toast.timer
     );
+
+
+    toast.timer =
+        setTimeout(
+            () => {
+
+                $('toast')
+                    .classList
+                    .remove('show');
+
+            },
+            1200
+        );
+
 }
 
 
@@ -1635,67 +1800,78 @@ function toast(text){
 
 function hp(){
 
-  $('pf').style.width =
-    pHP + '%';
+    $('pf').style.width =
+        pHP + '%';
 
-  $('ef').style.width =
-    (eHP / 80 * 100) + '%';
 
-  $('pt').textContent =
-    pHP + ' / 100';
+    $('ef').style.width =
+        (
+            eHP /
+            80 *
+            100
+        ) + '%';
 
-  $('et').textContent =
-    eHP + ' / 80';
+
+    $('pt').textContent =
+        pHP +
+        ' / 100';
+
+
+    $('et').textContent =
+        eHP +
+        ' / 80';
 
 }
 
 
 function blink(el){
 
-  el.classList
-    .remove('blink');
+    el.classList
+        .remove('blink');
 
-  void el.offsetWidth;
+    void el.offsetWidth;
 
-  el.classList
-    .add('blink');
+    el.classList
+        .add('blink');
 
 }
 
 
 /* =====================================================
-   CAMERA SHAKE
+   SHAKE
 ===================================================== */
 
 function shake(){
 
-  $('camera')
-    .classList
-    .remove('shake');
+    $('camera')
+        .classList
+        .remove('shake');
 
-  void $('camera').offsetWidth;
+    void $('camera').offsetWidth;
 
-  $('camera')
-    .classList
-    .add('shake');
+    $('camera')
+        .classList
+        .add('shake');
 
 }
 
 
 /* =====================================================
-   진동
-   딱 한 번
+   적 맞을 때 진동
+   한 번만
 ===================================================== */
 
 function strongEnemyVibe(){
 
-  if(
-    navigator.vibrate
-  ){
+    if(
+        navigator.vibrate
+    ){
 
-    navigator.vibrate(90);
+        navigator.vibrate(
+            90
+        );
 
-  }
+    }
 
 }
 
@@ -1706,58 +1882,51 @@ function strongEnemyVibe(){
 
 function playerHit(){
 
-  if(
-    won ||
-    pHP <= 0
-  ){
+    if(
+        won ||
+        pHP <= 0
+    ){
 
-    return;
+        return;
 
-  }
+    }
 
 
-  pHP =
-    Math.max(
-      0,
-      pHP - 5
+    pHP =
+        Math.max(
+            0,
+            pHP - 5
+        );
+
+
+    hp();
+
+
+    blink(
+        $('pb')
     );
 
 
-  hp();
+    /*
+       플레이어 피격은
+       진동 없음
+    */
 
 
-  blink(
-    $('pb')
-  );
+    if(
+        pHP <= 0
+    ){
+
+        clearInterval(
+            enemyTimer
+        );
 
 
-  shake();
+        toast(
+            'YOU DIED'
+        );
 
-
-  $('red')
-    .classList
-    .remove('on');
-
-  void $('red').offsetWidth;
-
-  $('red')
-    .classList
-    .add('on');
-
-
-  if(
-    pHP <= 0
-  ){
-
-    clearInterval(
-      enemyTimer
-    );
-
-    toast(
-      'YOU DIED'
-    );
-
-  }
+    }
 
 }
 
@@ -1768,190 +1937,205 @@ function playerHit(){
 
 function monsterDamage(){
 
-  if(
-    !battle ||
-    won ||
-    pHP <= 0
-  ){
+    if(
+        !battle ||
+        won ||
+        pHP <= 0
+    ){
 
-    return;
+        return;
 
-  }
+    }
 
 
-  eHP =
-    Math.max(
-      0,
-      eHP - 16
+    eHP =
+        Math.max(
+            0,
+            eHP - 16
+        );
+
+
+    hp();
+
+
+    blink(
+        $('eb')
     );
 
 
-  hp();
+    /*
+       진동 한 번
+    */
+
+    strongEnemyVibe();
 
 
-  blink(
-    $('eb')
-  );
+    /*
+       강한 화면 흔들림
+    */
+
+    shake();
 
 
-  /* 진동 딱 한 번 */
+    /*
+       빨간 플래시
+    */
 
-  strongEnemyVibe();
-
-
-  /* 강한 카메라 흔들림 */
-
-  shake();
-
-
-  /* 빨간 플래시 */
-
-  $('red')
-    .classList
-    .remove('on');
-
-  void $('red').offsetWidth;
-
-  $('red')
-    .classList
-    .add('on');
+    $('red')
+        .classList
+        .remove('on');
 
 
-  /* 몬스터 강한 피격 */
-
-  $('monster')
-    .classList
-    .remove(
-      'hit',
-      'dead'
-    );
-
-  void $('monster').offsetWidth;
-
-  $('monster')
-    .classList
-    .add('hit');
+    void $('red').offsetWidth;
 
 
-  /* 데미지 숫자 */
-
-  $('dmg')
-    .classList
-    .remove('show');
-
-  void $('dmg').offsetWidth;
-
-  $('dmg')
-    .classList
-    .add('show');
+    $('red')
+        .classList
+        .add('on');
 
 
-  if(
-    eHP <= 0
-  ){
+    /*
+       몬스터 피격
+    */
 
-    win();
+    $('monster')
+        .classList
+        .remove(
+            'hit',
+            'dead'
+        );
 
-  }
+
+    void $('monster').offsetWidth;
+
+
+    $('monster')
+        .classList
+        .add('hit');
+
+
+    /*
+       데미지
+    */
+
+    $('dmg')
+        .classList
+        .remove('show');
+
+
+    void $('dmg').offsetWidth;
+
+
+    $('dmg')
+        .classList
+        .add('show');
+
+
+    if(
+        eHP <= 0
+    ){
+
+        win();
+
+    }
 
 }
 
 
 /* =====================================================
-   NFC 공격
+   ATTACK
 ===================================================== */
 
 function attack(){
 
-  if(
-    won ||
-    pHP <= 0
-  ){
+    if(
+        won ||
+        pHP <= 0
+    ){
 
-    return;
+        return;
 
-  }
-
-
-  /* idle / walking 정지 */
-
-  $('sword')
-    .classList
-    .remove(
-      'attack',
-      'idle',
-      'walking'
-    );
+    }
 
 
-  $('slash')
-    .classList
-    .remove('on');
-
-
-  void $('sword').offsetWidth;
-  void $('slash').offsetWidth;
-
-
-  /* 공격 */
-
-  $('sword')
-    .classList
-    .add('attack');
-
-
-  $('slash')
-    .classList
-    .add('on');
-
-
-  if(
-    battle
-  ){
-
-    toast(
-      'NFC 인식! 검 공격!'
-    );
-
-
-    monsterDamage();
-
-  }
-  else{
-
-    toast(
-      'NFC 인식! 검을 휘둘렀습니다!'
-    );
-
-  }
-
-
-  /* 공격 후 다시 idle */
-
-  setTimeout(
-    () => {
-
-      if(
-        !won &&
-        started
-      ){
-
-        $('sword')
-          .classList
-          .remove(
+    $('sword')
+        .classList
+        .remove(
             'attack',
+            'idle',
             'walking'
-          );
+        );
 
-        $('sword')
-          .classList
-          .add('idle');
 
-      }
+    $('slash')
+        .classList
+        .remove('on');
 
-    },
-    360
-  );
+
+    void $('sword').offsetWidth;
+    void $('slash').offsetWidth;
+
+
+    $('sword')
+        .classList
+        .add('attack');
+
+
+    $('slash')
+        .classList
+        .add('on');
+
+
+    if(
+        battle
+    ){
+
+        toast(
+            'NFC 인식! 검 공격!'
+        );
+
+
+        monsterDamage();
+
+    }
+    else{
+
+        toast(
+            'NFC 인식! 검을 휘둘렀습니다!'
+        );
+
+    }
+
+
+    /*
+       공격 후 idle
+    */
+
+    setTimeout(
+        () => {
+
+            if(
+                !won &&
+                started
+            ){
+
+                $('sword')
+                    .classList
+                    .remove(
+                        'attack',
+                        'walking'
+                    );
+
+
+                $('sword')
+                    .classList
+                    .add('idle');
+
+            }
+
+        },
+        360
+    );
 
 }
 
@@ -1962,43 +2146,43 @@ function attack(){
 
 function win(){
 
-  won = true;
+    won = true;
 
 
-  clearInterval(
-    enemyTimer
-  );
-
-
-  $('monster')
-    .classList
-    .remove('hit');
-
-
-  $('monster')
-    .classList
-    .add('dead');
-
-
-  $('sword')
-    .classList
-    .remove(
-      'idle',
-      'walking',
-      'attack'
+    clearInterval(
+        enemyTimer
     );
 
 
-  setTimeout(
-    () => {
-
-      $('clear')
+    $('monster')
         .classList
-        .add('show');
+        .remove('hit');
 
-    },
-    900
-  );
+
+    $('monster')
+        .classList
+        .add('dead');
+
+
+    $('sword')
+        .classList
+        .remove(
+            'idle',
+            'walking',
+            'attack'
+        );
+
+
+    setTimeout(
+        () => {
+
+            $('clear')
+                .classList
+                .add('show');
+
+        },
+        900
+    );
 
 }
 
@@ -2009,180 +2193,272 @@ function win(){
 
 function battleStart(){
 
-  if(
-    battle ||
-    won
-  ){
+    if(
+        battle ||
+        won
+    ){
 
-    return;
+        return;
 
-  }
-
-
-  battle = true;
+    }
 
 
-  $('battle')
-    .classList
-    .remove('show');
-
-  void $('battle').offsetWidth;
-
-  $('battle')
-    .classList
-    .add('show');
+    battle =
+        true;
 
 
-  toast(
-    '몬스터 앞에 도착했습니다!'
-  );
+    $('battle')
+        .classList
+        .remove('show');
 
 
-  enemyTimer =
-    setInterval(
-      playerHit,
-      1700
+    void $('battle').offsetWidth;
+
+
+    $('battle')
+        .classList
+        .add('show');
+
+
+    toast(
+        '몬스터 앞에 도착했습니다!'
     );
+
+
+    enemyTimer =
+        setInterval(
+            playerHit,
+            1700
+        );
 
 }
 
 
 /* =====================================================
-   WALK
+   ★★★ 2.5D WALK ★★★
+
+   이번에 거리감 구조를 완전히 수정함.
+
+   하늘
+      ↓
+   거의 고정
+
+   뒤 풀밭
+      ↓
+   아주 느리게 확대
+
+   맨앞 풀밭
+      ↓
+   가장 빨리 확대
+
+   몬스터
+      ↓
+   앞으로 빠르게 접근
 ===================================================== */
 
 function walk(now){
 
-  if(
-    !started ||
-    won
-  ){
+    if(
+        !started ||
+        won
+    ){
 
-    return;
+        return;
 
-  }
-
-
-  if(
-    !walkStart
-  ){
-
-    walkStart =
-      now;
-
-  }
+    }
 
 
-  const t =
-    Math.min(
-      (now - walkStart) / 8000,
-      1
-    );
+    if(
+        !walkStart
+    ){
+
+        walkStart =
+            now;
+
+    }
 
 
-  /* =================================================
-     하늘
-  ================================================= */
-
-  const bgScale =
-    1.02 + t * .28;
-
-
-  const bgX =
-    -t * 1.5;
-
-
-  const bgY =
-    -t * 2;
+    const t =
+        Math.min(
+            (
+                now -
+                walkStart
+            ) /
+            8000,
+            1
+        );
 
 
-  $('bg').style.transform =
-    'translate(' +
-    bgX +
-    '%,' +
-    bgY +
-    '%) scale(' +
-    bgScale +
-    ')';
+    /* =================================================
+       하늘
+
+       ★ 거의 움직이지 않는다.
+       이전처럼 확 확대되지 않는다.
+    ================================================= */
+
+    const skyScale =
+        1.01 +
+        t * .015;
 
 
-  /* =================================================
-     뒤 풀밭
-  ================================================= */
-
-  $('backLayer').style.transform =
-    'translate(' +
-    (-t * 4) +
-    '%,' +
-    (-t * 2) +
-    '%) scale(' +
-    (1 + t * .16) +
-    ')';
+    const skyY =
+        t * -.2;
 
 
-  /* =================================================
-     앞 풀밭
-  ================================================= */
+    $('bg').style.transform =
 
-  $('frontLayer').style.transform =
-    'translate(' +
-    (-t * 7) +
-    '%,' +
-    (t * 2) +
-    '%) scale(' +
-    (1 + t * .14) +
-    ')';
+        'translateY(' +
+        skyY +
+        '%) scale(' +
+        skyScale +
+        ')';
 
 
-  /* =================================================
-     몬스터
-     훨씬 크게 접근
-  ================================================= */
 
-  const monsterScale =
-    .34 + t * 1.55;
+    /* =================================================
+       뒤쪽 산 / 풀밭
 
+       하늘보다는 움직이지만
+       매우 느림
+    ================================================= */
 
-  const monsterY =
-    2 + t * 29;
-
-
-  $('monsterWrap').style.transform =
-
-    'translate(-50%,' +
-    monsterY +
-    '%) scale(' +
-    monsterScale +
-    ')';
+    const backScale =
+        1 +
+        t * .07;
 
 
-  $('monsterWrap').style.opacity =
-
-    Math.min(
-      1,
-      .3 + t * 1.1
-    );
+    const backY =
+        t * 1.5;
 
 
-  /* =================================================
-     전투
-  ================================================= */
+    $('backLayer').style.transform =
 
-  if(
-    t >= 1
-  ){
-
-    battleStart();
-
-    return;
-
-  }
+        'translateY(' +
+        backY +
+        '%) scale(' +
+        backScale +
+        ')';
 
 
-  raf =
-    requestAnimationFrame(
-      walk
-    );
+
+    /* =================================================
+       ★ 맨앞 풀밭
+
+       이전 하늘이 확대되던 속도를
+       여기로 옮겼다.
+
+       플레이어와 가장 가까우므로
+       가장 크게 확대된다.
+    ================================================= */
+
+    const frontScale =
+        1.00 +
+        t * .32;
+
+
+    const frontY =
+        t * 7;
+
+
+    const frontX =
+        -t * 1.5;
+
+
+    $('frontLayer').style.transform =
+
+        'translate(' +
+        frontX +
+        '%,' +
+        frontY +
+        '%) scale(' +
+        frontScale +
+        ')';
+
+
+
+    /* =================================================
+       몬스터
+
+       처음엔 멀리 있다가
+       풀밭 위를 따라 플레이어 앞으로 접근
+
+       참고 이미지처럼 최종적으로
+       화면 중하단에 위치
+    ================================================= */
+
+    const monsterScale =
+        .18 +
+        t * 1.23;
+
+
+    /*
+       top 자체가 이미 43%이므로
+       너무 아래로 많이 이동하지 않음
+    */
+
+    const monsterY =
+        -10 +
+        t * 13;
+
+
+    const monsterX =
+        t * .5;
+
+
+    $('monsterWrap').style.transform =
+
+        'translate(calc(-50% + ' +
+        monsterX +
+        '%),' +
+        monsterY +
+        '%) scale(' +
+        monsterScale +
+        ')';
+
+
+    $('monsterWrap').style.opacity =
+
+        Math.min(
+            1,
+            .22 +
+            t * 1.25
+        );
+
+
+
+    /* =================================================
+       전투
+    ================================================= */
+
+    if(
+        t >= 1
+    ){
+
+        /*
+           최종 몬스터 위치를
+           참고 이미지에 맞춰 고정
+        */
+
+        $('monsterWrap').style.transform =
+            'translate(-50%,3%) scale(1.41)';
+
+
+        $('monsterWrap').style.opacity =
+            '1';
+
+
+        battleStart();
+
+
+        return;
+
+    }
+
+
+    raf =
+        requestAnimationFrame(
+            walk
+        );
 
 }
 
@@ -2193,220 +2469,210 @@ function walk(now){
 
 async function startNFC(){
 
-  if(
-    !window.isSecureContext ||
-    location.protocol !== 'https:'
-  ){
+    if(
+        !window.isSecureContext ||
+        location.protocol !==
+        'https:'
+    ){
 
-    $('nt').textContent =
-      'HTTPS 필요';
+        $('nt').textContent =
+            'HTTPS 필요';
 
-    toast(
-      'HTTPS 주소에서 실행해주세요.'
-    );
-
-    return false;
-
-  }
-
-
-  if(
-    !('NDEFReader' in window)
-  ){
-
-    $('nt').textContent =
-      'NFC 미지원';
-
-    toast(
-      'Android Chrome에서 Web NFC를 사용할 수 있습니다.'
-    );
-
-    return false;
-
-  }
-
-
-  if(
-    nfcOn
-  ){
-
-    return true;
-
-  }
-
-
-  try{
-
-    const reader =
-      new NDEFReader();
-
-
-    await reader.scan();
-
-
-    nfcOn = true;
-
-
-    $('nt').textContent =
-      'NFC 대기 중';
-
-
-    $('dot').style.background =
-      '#49ef6a';
-
-
-    reader.onreadingerror =
-      () => {
 
         toast(
-          'NFC 읽기 오류'
+            'HTTPS 주소에서 실행해주세요.'
         );
 
-      };
+
+        return false;
+
+    }
 
 
-    reader.onreading =
-      () => {
+    if(
+        !(
+            'NDEFReader'
+            in window
+        )
+    ){
 
-        const now =
-          Date.now();
+        $('nt').textContent =
+            'NFC 미지원';
+
+
+        toast(
+            'Android Chrome에서 Web NFC를 사용할 수 있습니다.'
+        );
+
+
+        return false;
+
+    }
+
+
+    if(
+        nfcOn
+    ){
+
+        return true;
+
+    }
+
+
+    try{
+
+
+        const reader =
+            new NDEFReader();
+
+
+        await reader.scan();
+
+
+        nfcOn =
+            true;
+
+
+        $('nt').textContent =
+            'NFC 대기 중';
+
+
+        $('dot').style.background =
+            '#49ef6a';
+
+
+        reader.onreadingerror =
+            () => {
+
+                toast(
+                    'NFC 읽기 오류'
+                );
+
+            };
+
+
+        reader.onreading =
+            () => {
+
+
+                const now =
+                    Date.now();
+
+
+                /*
+                   연속 인식 방지
+                */
+
+                if(
+                    now -
+                    lastTag <
+                    650
+                ){
+
+                    return;
+
+                }
+
+
+                lastTag =
+                    now;
+
+
+                attack();
+
+            };
+
+
+        return true;
+
+    }
+    catch(e){
+
+
+        $('nt').textContent =
+            'NFC 권한 확인';
+
+
+        toast(
+            'Chrome에서 NFC 권한을 허용해주세요.'
+        );
+
+
+        return false;
+
+    }
+
+}
+
+
+/* =====================================================
+   GAME START
+===================================================== */
+
+$('go').onclick =
+    async function(){
 
 
         if(
-          now - lastTag < 650
+            isKakaoBrowser() &&
+            isAndroid()
         ){
 
-          return;
+            $('chromeGuide')
+                .classList
+                .add('show');
+
+
+            return;
 
         }
 
 
-        lastTag =
-          now;
+        await startNFC();
 
 
-        attack();
-
-      };
-
-
-    return true;
-
-  }
-  catch(e){
-
-    $('nt').textContent =
-      'NFC 권한 확인';
+        started =
+            true;
 
 
-    toast(
-      'Chrome에서 NFC 권한을 허용해주세요.'
-    );
+        $('start')
+            .classList
+            .add('hidden');
 
 
-    return false;
+        pHP =
+            100;
 
-  }
-
-}
-
-
-/* =====================================================
-   CHROME
-===================================================== */
-
-function openChrome(){
-
-  const u =
-    location.href.replace(
-      /^https?:\/\//,
-      ''
-    );
+        eHP =
+            80;
 
 
-  location.href =
-    'intent://' +
-    u +
-    '#Intent;scheme=https;package=com.android.chrome;end';
-
-}
+        hp();
 
 
-/* =====================================================
-   START
-===================================================== */
-
-$('go').onclick =
-  async () => {
+        $('sword')
+            .classList
+            .add('walking');
 
 
-    const ua =
-      navigator.userAgent;
+        walkStart =
+            0;
 
 
-    if(
-      /Android/i.test(ua) &&
-      !/Chrome|CriOS/i.test(ua)
-    ){
-
-      openChrome();
-
-      return;
-
-    }
+        cancelAnimationFrame(
+            raf
+        );
 
 
-    if(
-      !window.isSecureContext ||
-      location.protocol !== 'https:'
-    ){
+        raf =
+            requestAnimationFrame(
+                walk
+            );
 
-      toast(
-        'HTTPS 주소에서 실행해주세요.'
-      );
-
-      return;
-
-    }
+    };
 
 
-    await startNFC();
-
-
-    started = true;
-
-
-    $('start')
-      .classList
-      .add('hidden');
-
-
-    pHP = 100;
-    eHP = 80;
-
-
-    hp();
-
-
-    $('sword')
-      .classList
-      .add('walking');
-
-
-    walkStart = 0;
-
-
-    cancelAnimationFrame(
-      raf
-    );
-
-
-    raf =
-      requestAnimationFrame(
-        walk
-      );
-
-  };
+hp();
 
 </script>
 
