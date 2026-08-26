@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 
 <meta
-  name="viewport"
-  content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    name="viewport"
+    content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"
 >
 
 <meta name="theme-color" content="#07111d">
@@ -94,7 +94,8 @@ canvas{
     background:#180707;
 
     box-shadow:
-        0 2px 7px rgba(0,0,0,.75);
+        0 2px 7px
+        rgba(0,0,0,.75);
 }
 
 .fill{
@@ -138,8 +139,7 @@ canvas{
     transform:
         translateX(-50%);
 
-    padding:
-        7px 13px;
+    padding:7px 13px;
 
     border-radius:15px;
 
@@ -272,8 +272,7 @@ canvas{
 }
 
 .startBox h1{
-    margin:
-        0 0 10px;
+    margin:0 0 10px;
 
     color:#ffe27b;
 
@@ -295,8 +294,7 @@ canvas{
 
     border:0;
 
-    padding:
-        15px 20px;
+    padding:15px 20px;
 
     border-radius:11px;
 
@@ -383,8 +381,7 @@ canvas{
 
     padding:15px;
 
-    background:
-        #4285f4;
+    background:#4285f4;
 
     color:white;
 
@@ -429,32 +426,22 @@ canvas{
 <div id="game">
 
 
-    <!-- =================================================
-         HUD
-    ================================================== -->
-
     <div id="hud">
-
 
         <div class="unit">
 
             <div class="label">
-
                 HP
-
                 <span id="playerText">
                     100 / 100
                 </span>
-
             </div>
 
             <div class="bar">
-
                 <div
                     id="playerHP"
                     class="fill"
                 ></div>
-
             </div>
 
         </div>
@@ -463,33 +450,23 @@ canvas{
         <div class="unit">
 
             <div class="label">
-
                 MONSTER
-
                 <span id="enemyText">
                     100 / 100
                 </span>
-
             </div>
 
             <div class="bar">
-
                 <div
                     id="enemyHP"
                     class="fill"
                 ></div>
-
             </div>
 
         </div>
 
-
     </div>
 
-
-    <!-- =================================================
-         NFC STATUS
-    ================================================== -->
 
     <div id="nfcStatus">
 
@@ -509,10 +486,6 @@ canvas{
     </div>
 
 
-    <!-- =================================================
-         START
-    ================================================== -->
-
     <div id="startScreen">
 
         <div class="startBox">
@@ -527,10 +500,7 @@ canvas{
                 Android에서는 Chrome으로 실행됩니다.
             </p>
 
-            <button
-                id="startButton"
-                onclick="handleStartButton()"
-            >
+            <button id="startButton">
                 GAME START
             </button>
 
@@ -538,10 +508,6 @@ canvas{
 
     </div>
 
-
-    <!-- =================================================
-         CHROME GUIDE
-    ================================================== -->
 
     <div id="chromeGuide">
 
@@ -552,16 +518,14 @@ canvas{
             </h2>
 
             <p>
-                이 게임의 NFC 기능은<br>
+                이 게임의 NFC 기능은
                 Android Chrome에서 실행됩니다.<br><br>
-                카카오톡이나 다른 브라우저에서는<br>
+
+                카카오톡이나 다른 브라우저에서는
                 아래 버튼을 눌러 Chrome으로 이동해주세요.
             </p>
 
-            <button
-                id="chromeButton"
-                onclick="openChrome()"
-            >
+            <button id="chromeButton">
                 Chrome으로 연결하기
             </button>
 
@@ -579,12 +543,10 @@ canvas{
 
 
 <!-- =====================================================
-     ★★★ 가장 먼저 실행되는 브라우저 검사 ★★★
-
-     Three.js보다 먼저 실행된다.
-
-     따라서 카톡에서 Three.js 로딩 문제가 있어도
-     Chrome 버튼은 정상 작동한다.
+     ★★★★★
+     브라우저/Chrome 이동 코드는
+     Three.js 모듈보다 먼저 실행
+     ★★★★★
 ===================================================== -->
 
 <script>
@@ -618,15 +580,6 @@ function isRealChrome(){
     const ua =
         navigator.userAgent || '';
 
-
-    /*
-       ★ 중요
-
-       카카오톡 인앱브라우저도
-       UA에 Chrome이라는 글자가 들어갈 수 있다.
-
-       따라서 Kakao를 먼저 제외한다.
-    */
 
     if(
         isKakaoBrowser()
@@ -664,7 +617,7 @@ function isRealChrome(){
 
 
 /* =====================================================
-   ★ Chrome 강제 이동
+   ★ Android Chrome 열기
 ===================================================== */
 
 function openChrome(){
@@ -680,7 +633,7 @@ function openChrome(){
         );
 
 
-    const intent =
+    window.location.href =
 
         'intent://' +
 
@@ -700,53 +653,12 @@ function openChrome(){
 
         ';end';
 
-
-    window.location.href =
-        intent;
-
 }
 
 
 /* =====================================================
-   ★ GAME START 버튼
-
-   Android에서 Chrome이 아니면
-   다른 기능보다 무조건 먼저 Chrome 이동.
-===================================================== */
-
-function handleStartButton(){
-
-
-    if(
-        isAndroid() &&
-        !isRealChrome()
-    ){
-
-        document
-            .getElementById(
-                'chromeGuide'
-            )
-            .classList
-            .add('show');
-
-
-        return;
-    }
-
-
-    /*
-       Chrome까지 들어온 뒤에만
-       실제 3D 게임 시작.
-    */
-
-    startRealGame();
-
-}
-
-
-/* =====================================================
-   ★ 페이지를 카톡에서 열었을 때도
-   미리 Chrome 안내 표시
+   ★ Android + Chrome 아닌 경우
+   처음부터 Chrome 안내 표시
 ===================================================== */
 
 window.addEventListener(
@@ -770,122 +682,66 @@ window.addEventListener(
     }
 );
 
+
+document
+    .getElementById(
+        'chromeButton'
+    )
+    .addEventListener(
+        'click',
+        openChrome
+    );
+
 </script>
 
 
 <!-- =====================================================
-     THREE.JS
+     ★★★★★★★★★★★★★★★★★★★★★
 
-     카톡에서 GAME START를 눌러 Chrome으로 넘기는
-     기본 코드와는 별개로 로딩됨.
+     THREE.JS ES MODULE
+
+     기존 three.min.js 방식 삭제.
+
+     ★★★★★★★★★★★★★★★★★★★★★
 ===================================================== -->
 
-<script
-    src="https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.min.js"
-></script>
+<script type="module">
 
+import * as THREE
+from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.min.js";
 
-<script>
 
 /* =====================================================
-   ★ 게임 설정
+   CONFIG
 ===================================================== */
 
 const CONFIG = {
 
-    /*
-       실제 몬스터 3D 위치
-    */
-
     MONSTER_Z:-34,
-
-
-    /*
-       플레이어 시작 위치
-    */
 
     START_Z:8,
 
-
-    /*
-       전투 거리
-    */
-
     BATTLE_DISTANCE:6.5,
-
-
-    /*
-       걷기 속도
-    */
 
     WALK_SPEED:3.1,
 
-
-    /*
-       플레이어 HP
-    */
-
     PLAYER_HP:100,
-
-
-    /*
-       몬스터 HP
-    */
 
     MONSTER_HP:100,
 
-
-    /*
-       검 공격력
-    */
-
     PLAYER_DAMAGE:20,
-
-
-    /*
-       몬스터 공격력
-    */
 
     MONSTER_DAMAGE:5,
 
-
-    /*
-       몬스터 공격 간격
-    */
-
     MONSTER_ATTACK_INTERVAL:1750,
-
-
-    /*
-       NFC 코드상 쿨타임
-    */
 
     NFC_COOLDOWN:1,
 
-
-    /*
-       검 공격 속도
-
-       ms
-
-       약 0.14초
-    */
-
     SWORD_SPEED:140,
-
-
-    /*
-       렌더링 해상도 제한
-
-       낮을수록 가벼움.
-
-       1.25면 모바일에서 상당히 가벼운 편.
-    */
 
     MAX_PIXEL_RATIO:1.25
 
 };
-
 
 
 const $ =
@@ -900,110 +756,74 @@ const $ =
 let gameInitialized =
     false;
 
-
 let started =
     false;
-
 
 let battle =
     false;
 
-
 let monsterDead =
     false;
-
 
 let nfcStarted =
     false;
 
-
 let lastTag =
     0;
-
 
 let playerHP =
     CONFIG.PLAYER_HP;
 
-
 let monsterHP =
     CONFIG.MONSTER_HP;
-
 
 let lastTime =
     performance.now();
 
-
 let walkingPhase =
     0;
-
 
 let swordAttackType =
     0;
 
-
 let swordAttacking =
     false;
-
 
 let monsterAttackTimer =
     null;
 
-
 let monsterAttackProgress =
     -1;
-
 
 let monsterAttackHit =
     false;
 
-
 let monsterHitTimer =
     0;
-
 
 let cameraShake =
     0;
 
 
-/*
-   Three.js
-*/
+/* THREE */
 
 let scene;
-
 let camera;
-
 let renderer;
 
-let clock;
-
-
 let monster;
-
-let monsterBody;
-
-let monsterHead;
-
 let monsterMaterial;
-
 let monsterOriginalZ;
 
-
 let sword;
-
 let swordHomePosition;
-
 let swordHomeRotation;
-
 
 let monsterShadow;
 
 
 /* =====================================================
-   ★ Canvas 픽셀 텍스처 생성 함수
-
-   외부 이미지를 받지 않아도
-   코드 안에서 텍스처를 직접 생성.
+   PIXEL TEXTURE GENERATOR
 ===================================================== */
 
 function makePixelTexture(
@@ -1020,7 +840,6 @@ function makePixelTexture(
 
     canvas.width =
         size;
-
 
     canvas.height =
         size;
@@ -1049,11 +868,17 @@ function makePixelTexture(
         ){
 
             const color =
+
                 colors[
+
                     Math.floor(
+
                         Math.random() *
+
                         colors.length
+
                     )
+
                 ];
 
 
@@ -1062,10 +887,13 @@ function makePixelTexture(
 
 
             ctx.fillRect(
+
                 x,
                 y,
+
                 blockSize,
                 blockSize
+
             );
 
         }
@@ -1105,7 +933,7 @@ function makePixelTexture(
 
 
 /* =====================================================
-   GRASS TEXTURE
+   TEXTURES
 ===================================================== */
 
 function createGrassTexture(){
@@ -1140,10 +968,6 @@ function createGrassTexture(){
 }
 
 
-/* =====================================================
-   PATH TEXTURE
-===================================================== */
-
 function createPathTexture(){
 
     const texture =
@@ -1175,10 +999,6 @@ function createPathTexture(){
 }
 
 
-/* =====================================================
-   TREE TEXTURE
-===================================================== */
-
 function createTreeTexture(){
 
     return makePixelTexture(
@@ -1199,10 +1019,6 @@ function createTreeTexture(){
 
 }
 
-
-/* =====================================================
-   MONSTER TEXTURE
-===================================================== */
 
 function createMonsterTexture(){
 
@@ -1227,34 +1043,15 @@ function createMonsterTexture(){
 
 
 /* =====================================================
-   THREE INIT
+   INIT
 ===================================================== */
 
 function init3D(){
 
 
-    if(
-        typeof THREE ===
-        'undefined'
-    ){
-
-        alert(
-            '3D 엔진을 불러오지 못했습니다. 인터넷 연결을 확인해주세요.'
-        );
-
-        return false;
-
-    }
-
-
     scene =
         new THREE.Scene();
 
-
-    /*
-       픽셀 RPG 느낌의
-       푸른 안개
-    */
 
     scene.background =
         new THREE.Color(
@@ -1264,15 +1061,17 @@ function init3D(){
 
     scene.fog =
         new THREE.Fog(
+
             0x88abc0,
+
             18,
+
             75
+
         );
 
 
-    /* =================================================
-       CAMERA
-    ================================================= */
+    /* CAMERA */
 
     camera =
         new THREE.PerspectiveCamera(
@@ -1300,16 +1099,12 @@ function init3D(){
     );
 
 
-    /* =================================================
-       RENDERER
-    ================================================= */
+    /* RENDERER */
 
     renderer =
         new THREE.WebGLRenderer({
 
             antialias:false,
-
-            alpha:false,
 
             powerPreference:
                 'high-performance'
@@ -1356,9 +1151,7 @@ function init3D(){
         );
 
 
-    /* =================================================
-       LIGHT
-    ================================================= */
+    /* LIGHT */
 
     const hemi =
         new THREE.HemisphereLight(
@@ -1367,7 +1160,7 @@ function init3D(){
 
             0x28361f,
 
-            2.0
+            2
 
         );
 
@@ -1403,21 +1196,10 @@ function init3D(){
     );
 
 
-    /* =================================================
-       FLOOR
-    ================================================= */
+    /* GROUND */
 
     const grassTexture =
         createGrassTexture();
-
-
-    const groundMaterial =
-        new THREE.MeshLambertMaterial({
-
-            map:
-                grassTexture
-
-        });
 
 
     const ground =
@@ -1431,14 +1213,18 @@ function init3D(){
 
             ),
 
-            groundMaterial
+            new THREE.MeshLambertMaterial({
+
+                map:
+                    grassTexture
+
+            })
 
         );
 
 
     ground.rotation.x =
-        -Math.PI /
-        2;
+        -Math.PI / 2;
 
 
     ground.position.set(
@@ -1457,21 +1243,10 @@ function init3D(){
     );
 
 
-    /* =================================================
-       PATH
-    ================================================= */
+    /* PATH */
 
     const pathTexture =
         createPathTexture();
-
-
-    const pathMaterial =
-        new THREE.MeshLambertMaterial({
-
-            map:
-                pathTexture
-
-        });
 
 
     const path =
@@ -1485,14 +1260,18 @@ function init3D(){
 
             ),
 
-            pathMaterial
+            new THREE.MeshLambertMaterial({
+
+                map:
+                    pathTexture
+
+            })
 
         );
 
 
     path.rotation.x =
-        -Math.PI /
-        2;
+        -Math.PI / 2;
 
 
     path.position.set(
@@ -1511,9 +1290,7 @@ function init3D(){
     );
 
 
-    /* =================================================
-       TREES
-    ================================================= */
+    /* TREES */
 
     const leafTexture =
         createTreeTexture();
@@ -1544,7 +1321,7 @@ function init3D(){
 
             .38,
 
-            3.0,
+            3,
 
             5
 
@@ -1603,7 +1380,7 @@ function init3D(){
 
 
         leaves1.position.y =
-            4.0;
+            4;
 
 
         tree.add(
@@ -1624,9 +1401,7 @@ function init3D(){
         leaves2.scale.set(
 
             .72,
-
             .72,
-
             .72
 
         );
@@ -1644,9 +1419,7 @@ function init3D(){
         tree.position.set(
 
             x,
-
             0,
-
             z
 
         );
@@ -1658,7 +1431,6 @@ function init3D(){
 
 
         tree.rotation.y =
-
             Math.random() *
             Math.PI;
 
@@ -1669,13 +1441,6 @@ function init3D(){
 
     }
 
-
-    /*
-       실제 Z 거리마다 나무 배치.
-
-       가까운 나무가 훨씬 빨리
-       화면을 지나가게 됨.
-    */
 
     for(
         let z = 5;
@@ -1719,9 +1484,7 @@ function init3D(){
     }
 
 
-    /* =================================================
-       PIXEL ROCKS
-    ================================================= */
+    /* ROCKS */
 
     const rockMaterial =
         new THREE.MeshLambertMaterial({
@@ -1815,24 +1578,10 @@ function init3D(){
     }
 
 
-    /* =================================================
-       MONSTER
-    ================================================= */
-
     createMonster();
-
-
-    /* =================================================
-       SWORD
-    ================================================= */
 
     createSword();
 
-
-    /*
-       검이 카메라에 붙어있기 때문에
-       카메라도 scene에 추가.
-    */
 
     scene.add(
         camera
@@ -1873,24 +1622,16 @@ function createMonster(){
         new THREE.Group();
 
 
-    const monsterTexture =
-        createMonsterTexture();
-
-
     monsterMaterial =
         new THREE.MeshLambertMaterial({
 
             map:
-                monsterTexture
+                createMonsterTexture()
 
         });
 
 
-    /* =================================================
-       BODY
-    ================================================= */
-
-    monsterBody =
+    const body =
         new THREE.Mesh(
 
             new THREE.SphereGeometry(
@@ -1908,31 +1649,25 @@ function createMonster(){
         );
 
 
-    monsterBody.scale.set(
+    body.scale.set(
 
         1.35,
-
         1.15,
-
         .85
 
     );
 
 
-    monsterBody.position.y =
+    body.position.y =
         1.35;
 
 
     monster.add(
-        monsterBody
+        body
     );
 
 
-    /* =================================================
-       HEAD
-    ================================================= */
-
-    monsterHead =
+    const head =
         new THREE.Mesh(
 
             new THREE.SphereGeometry(
@@ -1950,7 +1685,7 @@ function createMonster(){
         );
 
 
-    monsterHead.position.set(
+    head.position.set(
 
         0,
 
@@ -1962,13 +1697,11 @@ function createMonster(){
 
 
     monster.add(
-        monsterHead
+        head
     );
 
 
-    /* =================================================
-       EYES
-    ================================================= */
+    /* EYES */
 
     const eyeMaterial =
         new THREE.MeshBasicMaterial({
@@ -2073,9 +1806,7 @@ function createMonster(){
     }
 
 
-    /* =================================================
-       ARMS
-    ================================================= */
+    /* ARMS */
 
     const limbGeo =
         new THREE.CylinderGeometry(
@@ -2084,7 +1815,7 @@ function createMonster(){
 
             .30,
 
-            2.0,
+            2,
 
             5
 
@@ -2113,7 +1844,7 @@ function createMonster(){
 
 
     leftArm.rotation.z =
-        -.70;
+        -.7;
 
 
     monster.add(
@@ -2130,7 +1861,7 @@ function createMonster(){
 
 
     rightArm.rotation.z =
-        .70;
+        .7;
 
 
     monster.add(
@@ -2138,9 +1869,7 @@ function createMonster(){
     );
 
 
-    /* =================================================
-       LEGS
-    ================================================= */
+    /* LEGS */
 
     const legGeo =
         new THREE.CylinderGeometry(
@@ -2195,10 +1924,6 @@ function createMonster(){
     );
 
 
-    /* =================================================
-       REAL POSITION
-    ================================================= */
-
     monster.position.set(
 
         0,
@@ -2219,9 +1944,7 @@ function createMonster(){
     );
 
 
-    /* =================================================
-       SHADOW
-    ================================================= */
+    /* SHADOW */
 
     monsterShadow =
         new THREE.Mesh(
@@ -2272,7 +1995,7 @@ function createMonster(){
 
 
 /* =====================================================
-   FIRST PERSON SWORD
+   SWORD
 ===================================================== */
 
 function createSword(){
@@ -2280,23 +2003,6 @@ function createSword(){
 
     sword =
         new THREE.Group();
-
-
-    /* =================================================
-       BLADE
-    ================================================= */
-
-    const bladeMaterial =
-        new THREE.MeshStandardMaterial({
-
-            color:
-                0xe4e7e0,
-
-            roughness:.25,
-
-            metalness:.8
-
-        });
 
 
     const blade =
@@ -2312,7 +2018,16 @@ function createSword(){
 
             ),
 
-            bladeMaterial
+            new THREE.MeshStandardMaterial({
+
+                color:
+                    0xe4e7e0,
+
+                roughness:.25,
+
+                metalness:.8
+
+            })
 
         );
 
@@ -2326,11 +2041,7 @@ function createSword(){
     );
 
 
-    /* =================================================
-       PIXEL BLADE EDGE
-    ================================================= */
-
-    const bladeEdge =
+    const edge =
         new THREE.Mesh(
 
             new THREE.BoxGeometry(
@@ -2353,7 +2064,7 @@ function createSword(){
         );
 
 
-    bladeEdge.position.set(
+    edge.position.set(
 
         -.07,
 
@@ -2365,25 +2076,8 @@ function createSword(){
 
 
     sword.add(
-        bladeEdge
+        edge
     );
-
-
-    /* =================================================
-       GUARD
-    ================================================= */
-
-    const goldMaterial =
-        new THREE.MeshStandardMaterial({
-
-            color:
-                0xc68c26,
-
-            metalness:.6,
-
-            roughness:.35
-
-        });
 
 
     const guard =
@@ -2399,7 +2093,16 @@ function createSword(){
 
             ),
 
-            goldMaterial
+            new THREE.MeshStandardMaterial({
+
+                color:
+                    0xc68c26,
+
+                metalness:.6,
+
+                roughness:.35
+
+            })
 
         );
 
@@ -2412,10 +2115,6 @@ function createSword(){
         guard
     );
 
-
-    /* =================================================
-       GEM
-    ================================================= */
 
     const gem =
         new THREE.Mesh(
@@ -2456,10 +2155,6 @@ function createSword(){
     );
 
 
-    /* =================================================
-       HANDLE
-    ================================================= */
-
     const handle =
         new THREE.Mesh(
 
@@ -2493,10 +2188,6 @@ function createSword(){
         handle
     );
 
-
-    /* =================================================
-       ★ 화면 오른쪽 위치
-    ================================================= */
 
     sword.position.set(
 
@@ -2536,7 +2227,47 @@ function createSword(){
 
 
 /* =====================================================
-   START REAL GAME
+   START BUTTON
+===================================================== */
+
+$('startButton')
+    .addEventListener(
+        'click',
+        async ()=>{
+
+
+            /*
+               ★★★★★★★★★★★★★
+
+               Android에서 Chrome이 아니면
+               다른 작업보다 무조건 먼저
+               Chrome 안내.
+
+               ★★★★★★★★★★★★★
+            */
+
+            if(
+                isAndroid() &&
+                !isRealChrome()
+            ){
+
+                $('chromeGuide')
+                    .classList
+                    .add('show');
+
+
+                return;
+            }
+
+
+            await startRealGame();
+
+        }
+    );
+
+
+/* =====================================================
+   REAL GAME START
 ===================================================== */
 
 async function startRealGame(){
@@ -2549,77 +2280,60 @@ async function startRealGame(){
     }
 
 
-    /*
-       Android인데 Chrome이 아니라면
-       절대로 NFC나 게임 시작 안 함.
-    */
-
-    if(
-        isAndroid() &&
-        !isRealChrome()
-    ){
-
-        $('chromeGuide')
-            .classList
-            .add('show');
-
-
-        return;
-    }
-
-
     $('loading')
         .classList
         .add('show');
 
 
-    /*
-       아직 3D 초기화 안 됐으면
-       여기서 초기화.
-    */
-
-    if(
-        !gameInitialized
-    ){
-
-        const result =
-            init3D();
+    try{
 
 
         if(
-            !result
+            !gameInitialized
         ){
 
-            $('loading')
-                .classList
-                .remove('show');
+            init3D();
 
-
-            return;
         }
+
+
+        await startNFC();
+
+
+        started =
+            true;
+
+
+        $('loading')
+            .classList
+            .remove('show');
+
+
+        $('startScreen')
+            .classList
+            .add('hidden');
 
     }
 
 
-    /*
-       NFC 시작
-    */
-
-    await startNFC();
+    catch(error){
 
 
-    started =
-        true;
+        console.error(
+            error
+        );
 
 
-    $('loading')
-        .classList
-        .remove('show');
+        $('loading')
+            .classList
+            .remove('show');
 
 
-    $('startScreen')
-        .classList
-        .add('hidden');
+        alert(
+            '게임 시작 중 오류가 발생했습니다.'
+        );
+
+    }
 
 }
 
@@ -2632,10 +2346,8 @@ async function startNFC(){
 
 
     /*
-       ★ 또 한 번 Chrome 확인
-
-       실수로라도 인앱브라우저에서
-       scan() 호출되지 않게 이중 방어.
+       Android에서 Chrome 아닌 경우
+       Web NFC 호출 금지.
     */
 
     if(
@@ -2693,11 +2405,6 @@ async function startNFC(){
             new NDEFReader();
 
 
-        /*
-           ★ 반드시 GAME START 버튼의
-           사용자 클릭 흐름 안에서 scan()
-        */
-
         await reader.scan();
 
 
@@ -2716,7 +2423,6 @@ async function startNFC(){
         reader.onreadingerror =
             ()=>{
 
-
                 $('nfcText').textContent =
                     'NFC 읽기 오류';
 
@@ -2732,12 +2438,9 @@ async function startNFC(){
 
 
                 if(
-
                     now -
                     lastTag <
-
                     CONFIG.NFC_COOLDOWN
-
                 ){
 
                     return;
@@ -2748,12 +2451,6 @@ async function startNFC(){
                 lastTag =
                     now;
 
-
-                /*
-                   ★ NFC 1회
-                   =
-                   검 1회
-                */
 
                 attack();
 
@@ -2769,6 +2466,7 @@ async function startNFC(){
 
 
         console.error(
+            'NFC ERROR:',
             error
         );
 
@@ -2785,7 +2483,7 @@ async function startNFC(){
 
 
 /* =====================================================
-   UPDATE HP
+   HP
 ===================================================== */
 
 function updateHP(){
@@ -2798,7 +2496,6 @@ function updateHP(){
             CONFIG.PLAYER_HP *
             100
         ) +
-
         '%';
 
 
@@ -2809,7 +2506,6 @@ function updateHP(){
             CONFIG.MONSTER_HP *
             100
         ) +
-
         '%';
 
 
@@ -2834,7 +2530,7 @@ function updateHP(){
 
 
 /* =====================================================
-   SWORD ATTACK
+   ATTACK
 ===================================================== */
 
 function attack(){
@@ -2853,7 +2549,7 @@ function attack(){
         true;
 
 
-    const attackMode =
+    const mode =
         swordAttackType;
 
 
@@ -2864,11 +2560,11 @@ function attack(){
         : 0;
 
 
-    const startTime =
+    const start =
         performance.now();
 
 
-    let damageApplied =
+    let hit =
         false;
 
 
@@ -2881,7 +2577,7 @@ function attack(){
 
                 (
                     now -
-                    startTime
+                    start
                 ) /
 
                 CONFIG.SWORD_SPEED,
@@ -2890,10 +2586,6 @@ function attack(){
 
             );
 
-
-        /*
-           0 → 1 → 0
-        */
 
         const swing =
 
@@ -2906,17 +2598,8 @@ function attack(){
 
 
         if(
-            attackMode === 0
+            mode === 0
         ){
-
-            /*
-               ★ 좌우 베기
-            */
-
-            sword.rotation.x =
-
-                swordHomeRotation.x;
-
 
             sword.rotation.z =
 
@@ -2953,9 +2636,6 @@ function attack(){
 
         else{
 
-            /*
-               ★ 위 → 아래 베기
-            */
 
             sword.rotation.x =
 
@@ -2991,17 +2671,12 @@ function attack(){
         }
 
 
-        /*
-           공격 중간에 1번만
-           실제 타격 판정
-        */
-
         if(
             t >= .45 &&
-            !damageApplied
+            !hit
         ){
 
-            damageApplied =
+            hit =
                 true;
 
 
@@ -3055,17 +2730,13 @@ function attack(){
 function damageMonster(){
 
 
-    /*
-       몬스터가 아직 멀리 있으면
-       칼은 휘두르지만 데미지는 없음.
-    */
-
     if(
         !battle ||
         monsterDead
     ){
 
         return;
+
     }
 
 
@@ -3084,9 +2755,9 @@ function damageMonster(){
     updateHP();
 
 
-    /* =================================================
-       ★ 몬스터 맞을 때만 진동
-    ================================================= */
+    /*
+       ★ 적이 맞을 때만 진동
+    */
 
     if(
         navigator.vibrate
@@ -3104,10 +2775,6 @@ function damageMonster(){
 
     }
 
-
-    /* =================================================
-       RED HIT
-    ================================================= */
 
     monsterMaterial.color.set(
         0xff3030
@@ -3143,55 +2810,47 @@ function damageMonster(){
 function showDamageNumber(){
 
 
-    $('damageNumber').animate(
+    $('damageNumber')
+        .animate(
 
-        [
+            [
+
+                {
+                    opacity:0,
+                    transform:
+                        'translate(-50%,15px) scale(.55)'
+                },
+
+                {
+                    opacity:1,
+                    transform:
+                        'translate(-50%,0) scale(1.3)'
+                },
+
+                {
+                    opacity:0,
+                    transform:
+                        'translate(-50%,-55px) scale(1)'
+                }
+
+            ],
 
             {
 
-                opacity:0,
+                duration:430,
 
-                transform:
-                    'translate(-50%,15px) scale(.55)'
-
-            },
-
-            {
-
-                opacity:1,
-
-                transform:
-                    'translate(-50%,0) scale(1.3)'
-
-            },
-
-            {
-
-                opacity:0,
-
-                transform:
-                    'translate(-50%,-55px) scale(1)'
+                easing:
+                    'ease-out'
 
             }
 
-        ],
-
-        {
-
-            duration:430,
-
-            easing:
-                'ease-out'
-
-        }
-
-    );
+        );
 
 }
 
 
 /* =====================================================
-   PLAYER HIT
+   PLAYER DAMAGE
 ===================================================== */
 
 function damagePlayer(){
@@ -3203,6 +2862,7 @@ function damagePlayer(){
     ){
 
         return;
+
     }
 
 
@@ -3222,32 +2882,32 @@ function damagePlayer(){
 
 
     /*
-       ★ 플레이어 피격은
-       진동 없음
+       ★ 내가 맞을 때는 진동 없음
     */
 
 
-    $('damageFlash').animate(
+    $('damageFlash')
+        .animate(
 
-        [
+            [
 
-            {opacity:0},
+                {opacity:0},
 
-            {opacity:.82},
+                {opacity:.82},
 
-            {opacity:.28},
+                {opacity:.28},
 
-            {opacity:0}
+                {opacity:0}
 
-        ],
+            ],
 
-        {
+            {
 
-            duration:300
+                duration:300
 
-        }
+            }
 
-    );
+        );
 
 
     cameraShake =
@@ -3269,6 +2929,7 @@ function triggerMonsterAttack(){
     ){
 
         return;
+
     }
 
 
@@ -3277,6 +2938,7 @@ function triggerMonsterAttack(){
     ){
 
         return;
+
     }
 
 
@@ -3291,11 +2953,7 @@ function triggerMonsterAttack(){
 
 
 /* =====================================================
-   BATTLE START
-
-   ★ BATTLE START 글자 없음
-   ★ 화면 정지 없음
-   ★ NFC 중단 없음
+   BATTLE
 ===================================================== */
 
 function startBattle(){
@@ -3307,6 +2965,7 @@ function startBattle(){
     ){
 
         return;
+
     }
 
 
@@ -3315,9 +2974,9 @@ function startBattle(){
 
 
     /*
-       표시도 없고
-       검도 안 멈추고
-       NFC도 건드리지 않는다.
+       ★ BATTLE START 문구 없음
+       ★ NFC 안 건드림
+       ★ 검 안 멈춤
     */
 
 
@@ -3336,9 +2995,6 @@ function startBattle(){
 
 /* =====================================================
    MONSTER DEAD
-
-   ★ CLEAR 없음
-   ★ 계속 걸어감
 ===================================================== */
 
 function killMonster(){
@@ -3360,18 +3016,11 @@ function killMonster(){
     monsterAttackProgress =
         -1;
 
-
-    /*
-       이후 게임루프에서
-       몬스터가 쓰러지고
-       카메라는 계속 앞으로 이동.
-    */
-
 }
 
 
 /* =====================================================
-   GAME LOOP
+   LOOP
 ===================================================== */
 
 function gameLoop(now){
@@ -3382,16 +3031,6 @@ function gameLoop(now){
     );
 
 
-    if(
-        !renderer ||
-        !scene ||
-        !camera
-    ){
-
-        return;
-    }
-
-
     const dt =
 
         Math.min(
@@ -3400,6 +3039,7 @@ function gameLoop(now){
                 now -
                 lastTime
             ) /
+
             1000,
 
             .05
@@ -3416,19 +3056,14 @@ function gameLoop(now){
     ){
 
 
-        /* =================================================
-           REAL FORWARD MOVEMENT
-        ================================================= */
+        /* ===============================================
+           REAL WALK
+        =============================================== */
 
         if(
             !battle
         ){
 
-
-            /*
-               몬스터가 살아있으면
-               일정 거리 앞에서 전투 시작.
-            */
 
             if(
                 !monsterDead
@@ -3447,6 +3082,7 @@ function gameLoop(now){
                     CONFIG.BATTLE_DISTANCE
                 ){
 
+
                     camera.position.z -=
 
                         CONFIG.WALK_SPEED *
@@ -3456,6 +3092,7 @@ function gameLoop(now){
                 }
 
                 else{
+
 
                     startBattle();
 
@@ -3467,8 +3104,8 @@ function gameLoop(now){
 
 
                 /*
-                   ★ 몬스터 죽은 뒤에는
-                   계속 앞으로.
+                   적이 죽으면
+                   그대로 계속 앞으로.
                 */
 
                 camera.position.z -=
@@ -3482,9 +3119,9 @@ function gameLoop(now){
         }
 
 
-        /* =================================================
+        /* ===============================================
            WALK BOB
-        ================================================= */
+        =============================================== */
 
         walkingPhase +=
 
@@ -3530,9 +3167,9 @@ function gameLoop(now){
         }
 
 
-        /* =================================================
-           MONSTER BREATH
-        ================================================= */
+        /* ===============================================
+           MONSTER BREATHING
+        =============================================== */
 
         if(
             !monsterDead &&
@@ -3555,7 +3192,6 @@ function gameLoop(now){
             monster.scale.set(
 
                 1 -
-
                 (
                     breathe -
                     1
@@ -3571,9 +3207,9 @@ function gameLoop(now){
         }
 
 
-        /* =================================================
+        /* ===============================================
            MONSTER HIT
-        ================================================= */
+        =============================================== */
 
         if(
             monsterHitTimer >
@@ -3613,17 +3249,9 @@ function gameLoop(now){
         }
 
 
-        /* =================================================
+        /* ===============================================
            MONSTER ATTACK
-
-           움츠림
-               ↓
-           플레이어 쪽으로 돌진
-               ↓
-           데미지
-               ↓
-           원위치
-        ================================================= */
+        =============================================== */
 
         if(
             monsterAttackProgress >=
@@ -3642,7 +3270,7 @@ function gameLoop(now){
 
 
             /*
-               살짝 뒤로
+               움츠림
             */
 
             if(
@@ -3674,7 +3302,7 @@ function gameLoop(now){
 
 
             /*
-               앞으로 돌진
+               돌진
             */
 
             else if(
@@ -3711,7 +3339,6 @@ function gameLoop(now){
                 monster.scale.setScalar(
 
                     1 +
-
                     p *
                     .13
 
@@ -3721,7 +3348,7 @@ function gameLoop(now){
 
 
             /*
-               HIT
+               플레이어 맞음
             */
 
             else if(
@@ -3747,7 +3374,7 @@ function gameLoop(now){
 
 
             /*
-               돌아감
+               복귀
             */
 
             else if(
@@ -3799,7 +3426,6 @@ function gameLoop(now){
 
             }
 
-
             else{
 
 
@@ -3826,9 +3452,9 @@ function gameLoop(now){
         }
 
 
-        /* =================================================
-           MONSTER DEAD
-        ================================================= */
+        /* ===============================================
+           DEAD
+        =============================================== */
 
         if(
             monsterDead
@@ -3862,13 +3488,17 @@ function gameLoop(now){
             );
 
 
-            monsterShadow.material.opacity =
+            monsterShadow
+                .material
+                .opacity =
 
                 Math.max(
 
                     0,
 
-                    monsterShadow.material.opacity -
+                    monsterShadow
+                        .material
+                        .opacity -
 
                     dt *
                     .8
@@ -3878,9 +3508,9 @@ function gameLoop(now){
         }
 
 
-        /* =================================================
-           CAMERA SHAKE
-        ================================================= */
+        /* ===============================================
+           SHAKE
+        =============================================== */
 
         if(
             cameraShake >
@@ -3950,6 +3580,7 @@ function onResize(){
     ){
 
         return;
+
     }
 
 
@@ -3975,7 +3606,7 @@ function onResize(){
 
 
 /* =====================================================
-   INITIAL HUD
+   INITIAL HP
 ===================================================== */
 
 updateHP();
