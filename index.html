@@ -21,20 +21,13 @@
 
 :root{
 
-    /*
-       칼 크기
-    */
+    /* 칼 크기 */
     --sword-size:92vh;
 
-    /*
-       칼 오른쪽 위치
-       더 음수 = 더 오른쪽
-    */
+    /* 더 음수 = 칼이 오른쪽 */
     --sword-right:-18vh;
 
-    /*
-       칼 아래 위치
-    */
+    /* 더 음수 = 칼이 아래 */
     --sword-bottom:-17vh;
 
 }
@@ -89,28 +82,24 @@ canvas{
 
     z-index:40;
 
-    right:
-        var(--sword-right);
-
-    bottom:
-        var(--sword-bottom);
+    right:var(--sword-right);
+    bottom:var(--sword-bottom);
 
     width:auto;
-
-    height:
-        var(--sword-size);
+    height:var(--sword-size);
 
     max-width:none;
 
     pointer-events:none;
-
     user-select:none;
 
+    /*
+       손잡고 있는 쪽을 회전 중심으로 사용
+    */
     transform-origin:
         84% 91%;
 
-    will-change:
-        transform;
+    will-change:transform;
 
     filter:
         drop-shadow(
@@ -121,7 +110,7 @@ canvas{
 
 
 /* =====================================================
-   평상시 걸을 때 검 흔들림
+   걸을 때 검 흔들림
 ===================================================== */
 
 #sword.walking{
@@ -140,16 +129,16 @@ canvas{
     from{
 
         transform:
-            translateY(0)
-            rotate(-3deg);
+            translateY(0px)
+            rotate(-4deg);
 
     }
 
     to{
 
         transform:
-            translateY(-7px)
-            rotate(2deg);
+            translateY(-9px)
+            rotate(3deg);
 
     }
 
@@ -170,7 +159,6 @@ canvas{
     right:5%;
 
     display:flex;
-
     gap:12px;
 
     color:white;
@@ -196,8 +184,7 @@ canvas{
 
     overflow:hidden;
 
-    border:
-        2px solid white;
+    border:2px solid white;
 
     border-radius:6px;
 
@@ -237,7 +224,7 @@ canvas{
 
 
 /* =====================================================
-   NFC STATUS
+   NFC
 ===================================================== */
 
 #nfcStatus{
@@ -286,7 +273,7 @@ canvas{
 
 
 /* =====================================================
-   MONSTER COUNTER
+   MONSTER COUNT
 ===================================================== */
 
 #monsterCount{
@@ -473,7 +460,7 @@ canvas{
 
 /* =====================================================
    ★ ANDROID → CHROME
-   절대 제거하지 않는 부분
+   이 부분 유지
 ===================================================== */
 
 #chromeGuide{
@@ -585,9 +572,7 @@ canvas{
 <div id="game">
 
 
-    <!-- =================================================
-         실제 칼+손 이미지
-    ================================================== -->
+    <!-- 실제 칼 + 손 이미지 -->
 
     <img
         id="sword"
@@ -596,12 +581,9 @@ canvas{
     >
 
 
-    <!-- =================================================
-         HUD
-    ================================================== -->
+    <!-- HUD -->
 
     <div id="hud">
-
 
         <div class="unit">
 
@@ -614,7 +596,6 @@ canvas{
                 </span>
 
             </div>
-
 
             <div class="bar">
 
@@ -640,7 +621,6 @@ canvas{
 
             </div>
 
-
             <div class="bar">
 
                 <div
@@ -651,7 +631,6 @@ canvas{
             </div>
 
         </div>
-
 
     </div>
 
@@ -708,7 +687,7 @@ canvas{
     </div>
 
 
-    <!-- CHROME GUIDE -->
+    <!-- CHROME -->
 
     <div id="chromeGuide">
 
@@ -739,12 +718,12 @@ canvas{
         3D WORLD LOADING...
     </div>
 
-
 </div>
 
 
 <!-- =====================================================
-     ★ ANDROID → CHROME
+   ★ Android → Chrome
+   예전에 실제로 작동했던 단순 intent 방식
 ===================================================== -->
 
 <script>
@@ -815,17 +794,17 @@ function isRealChrome(){
 
 
 /* =====================================================
-   Chrome 열기
+   ★ Chrome 열기
 ===================================================== */
 
 function openChrome(){
 
-    const current =
+    const url =
         window.location.href;
 
 
     const clean =
-        current.replace(
+        url.replace(
             /^https?:\/\//i,
             ''
         );
@@ -843,13 +822,7 @@ function openChrome(){
 
         'package=com.android.chrome;' +
 
-        'S.browser_fallback_url=' +
-
-        encodeURIComponent(
-            current
-        ) +
-
-        ';end';
+        'end';
 
 }
 
@@ -889,7 +862,7 @@ document
 
 
 <!-- =====================================================
-     THREE.JS
+   THREE.JS
 ===================================================== -->
 
 <script type="module">
@@ -900,6 +873,8 @@ from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.min.js";
 
 /* =====================================================
    몬스터 이미지
+
+   나중에 PNG 주소를 여기 넣으면 됨
 ===================================================== */
 
 const MONSTER_IMAGES = [
@@ -934,23 +909,20 @@ const CONFIG = {
     NFC_COOLDOWN:1,
 
 
-    /*
+    /* =================================================
        ★★★★★★★★★★★★★★★★★
 
-       검 공격 속도
+       칼 공격속도
 
-       이전:
-       140ms
+       기존 330ms
+       → 460ms
 
-       수정:
-       330ms
-
-       베는 동작이 눈에 확실히 보임.
+       훨씬 눈에 잘 보이도록 변경.
 
        ★★★★★★★★★★★★★★★★★
-    */
+    ================================================= */
 
-    SWORD_SPEED:330,
+    SWORD_SPEED:460,
 
 
     MONSTER_ATTACK_INTERVAL:1800,
@@ -958,10 +930,6 @@ const CONFIG = {
 
     BATTLE_DISTANCE:7,
 
-
-    /*
-       몬스터끼리 멀리 떨어뜨림
-    */
 
     MONSTER_POSITIONS:[
 
@@ -991,14 +959,11 @@ const $ =
 let started =
     false;
 
-
 let gameInitialized =
     false;
 
-
 let nfcStarted =
     false;
-
 
 let lastTag =
     0;
@@ -1064,9 +1029,7 @@ let deathProgress =
     -1;
 
 
-/* =====================================================
-   THREE OBJECTS
-===================================================== */
+/* THREE */
 
 let scene;
 
@@ -1075,19 +1038,23 @@ let camera;
 let renderer;
 
 
-let monster = null;
-
-let monsterMaterial = null;
-
-let monsterShadow = null;
+let monster =
+    null;
 
 
-let monsterHomeZ = 0;
+let monsterMaterial =
+    null;
 
 
-/* =====================================================
-   SWORD
-===================================================== */
+let monsterShadow =
+    null;
+
+
+let monsterHomeZ =
+    0;
+
+
+/* SWORD */
 
 const sword =
     $('sword');
@@ -1328,10 +1295,11 @@ function makeRoadTexture(){
 
 
 /* =====================================================
-   INIT 3D
+   INIT
 ===================================================== */
 
 function init3D(){
+
 
     scene =
         new THREE.Scene();
@@ -1435,11 +1403,8 @@ function init3D(){
 
     const sun =
         new THREE.DirectionalLight(
-
             0xffdda0,
-
             2.2
-
         );
 
 
@@ -1476,7 +1441,8 @@ function init3D(){
 
 
     ground.rotation.x =
-        -Math.PI / 2;
+        -Math.PI /
+        2;
 
 
     ground.position.set(
@@ -1512,7 +1478,8 @@ function init3D(){
 
 
     road.rotation.x =
-        -Math.PI / 2;
+        -Math.PI /
+        2;
 
 
     road.position.set(
@@ -1531,11 +1498,6 @@ function init3D(){
 
     createRocks();
 
-
-    /*
-       첫 번째 몬스터만 생성
-    */
-
     spawnMonster(
         0
     );
@@ -1546,11 +1508,8 @@ function init3D(){
 
 
     window.addEventListener(
-
         'resize',
-
         resizeGame
-
     );
 
 
@@ -1813,9 +1772,7 @@ function createRocks(){
    MONSTER SPAWN
 ===================================================== */
 
-function spawnMonster(
-    index
-){
+function spawnMonster(index){
 
 
     if(
@@ -1861,9 +1818,7 @@ function spawnMonster(
 
 
     const imageURL =
-        MONSTER_IMAGES[
-            index
-        ];
+        MONSTER_IMAGES[index];
 
 
     let texture;
@@ -1945,18 +1900,13 @@ function spawnMonster(
 
         2.5,
 
-        CONFIG.MONSTER_POSITIONS[
-            index
-        ]
+        CONFIG.MONSTER_POSITIONS[index]
 
     );
 
 
     monsterHomeZ =
-
-        CONFIG.MONSTER_POSITIONS[
-            index
-        ];
+        CONFIG.MONSTER_POSITIONS[index];
 
 
     scene.add(
@@ -1989,17 +1939,14 @@ function spawnMonster(
 
 
     monsterShadow.rotation.x =
-        -Math.PI / 2;
+        -Math.PI /
+        2;
 
 
     monsterShadow.position.set(
-
         0,
-
         .025,
-
         monsterHomeZ
-
     );
 
 
@@ -2019,9 +1966,7 @@ function spawnMonster(
    TEMP MONSTER
 ===================================================== */
 
-function createTemporaryMonster(
-    index
-){
+function createTemporaryMonster(index){
 
 
     const canvas =
@@ -2216,14 +2161,11 @@ function updateCounter(){
 /* =====================================================
    ★★★★★★★★★★★★★★★★★★★★★
 
-   새로운 큰 칼 휘두르기
+   새로운 검 공격
 
-   330ms
-
-   1. 살짝 뒤로 당김
-   2. 화면 중앙까지 크게 베기
-   3. 타격점을 지나감
-   4. 빠르게 원위치
+   훨씬 큰 회전각
+   훨씬 큰 이동폭
+   460ms
 
    ★★★★★★★★★★★★★★★★★★★★★
 ===================================================== */
@@ -2246,7 +2188,7 @@ function attack(){
 
 
     /*
-       평상시 흔들림을 잠깐 중지
+       걸음 애니메이션 잠시 중지
     */
 
     sword.classList.remove(
@@ -2269,11 +2211,6 @@ function attack(){
         0;
 
 
-    /*
-       다음 NFC에서는
-       반대 공격
-    */
-
     swordAttackType =
 
         swordAttackType === 0
@@ -2285,8 +2222,13 @@ function attack(){
 
 
     /* =================================================
-       ★ 1번 공격
-       좌 → 중앙으로 크게 옆베기
+       ★★★★★★★★★★★★★★★★★
+
+       1. 대형 옆베기
+
+       이전보다 훨씬 큰 각도
+
+       ★★★★★★★★★★★★★★★★★
     ================================================= */
 
     if(
@@ -2306,75 +2248,87 @@ function attack(){
                 offset:0,
 
                 transform:
-                    'translate(0px,0px) rotate(-3deg) scale(1)'
+                    'translate(0px,0px) rotate(-4deg) scale(1)'
 
             },
 
 
             /*
-               ★ 살짝 뒤로 당김
-
-               공격 준비 동작이 눈에 보이게 함.
+               ★ 공격 전에 오른쪽 뒤로 크게 젖힘
             */
 
             {
 
-                offset:.14,
+                offset:.16,
 
                 transform:
-                    'translate(38px,18px) rotate(-18deg) scale(.98)'
+                    'translate(65px,30px) rotate(-38deg) scale(.97)'
 
             },
 
 
             /*
-               ★ 빠르게 앞으로 들어오기 시작
+               ★ 앞으로 출발
             */
 
             {
 
-                offset:.32,
+                offset:.30,
 
                 transform:
-                    'translate(-35px,-35px) rotate(7deg) scale(1.03)'
+                    'translate(15px,-15px) rotate(-12deg) scale(1.01)'
 
             },
 
 
             /*
-               ★★★★★
-
-               화면 중앙까지 크게 베기
-
-               기존 -115px보다
-               훨씬 크게 움직임.
-
-               ★★★★★
+               ★ 화면 중앙으로 강하게 진입
             */
 
             {
 
-                offset:.53,
+                offset:.47,
 
                 transform:
-                    'translate(-205px,-145px) rotate(67deg) scale(1.12)'
+                    'translate(-150px,-115px) rotate(55deg) scale(1.08)'
 
             },
 
 
             /*
-               타격 후 약간 더 지나감
+               ★★★★★★★★★★★★★
 
-               검이 타격점에서 바로
-               순간이동하지 않게 만듦.
+               최대 베기 지점
+
+               회전각 105도
+               화면 중앙 깊숙이 들어옴
+
+               ★★★★★★★★★★★★★
             */
 
             {
 
-                offset:.67,
+                offset:.60,
 
                 transform:
-                    'translate(-155px,-105px) rotate(51deg) scale(1.09)'
+                    'translate(-265px,-165px) rotate(105deg) scale(1.15)'
+
+            },
+
+
+            /*
+               ★ 타격점을 지나서
+               끝까지 휘두름
+
+               바로 원위치로 튀지 않도록.
+            */
+
+            {
+
+                offset:.72,
+
+                transform:
+                    'translate(-225px,-125px) rotate(88deg) scale(1.12)'
 
             },
 
@@ -2385,10 +2339,24 @@ function attack(){
 
             {
 
-                offset:.82,
+                offset:.84,
 
                 transform:
-                    'translate(-45px,-25px) rotate(13deg) scale(1.03)'
+                    'translate(-100px,-55px) rotate(42deg) scale(1.06)'
+
+            },
+
+
+            /*
+               거의 원위치
+            */
+
+            {
+
+                offset:.94,
+
+                transform:
+                    'translate(-25px,-10px) rotate(8deg) scale(1.02)'
 
             },
 
@@ -2402,7 +2370,7 @@ function attack(){
                 offset:1,
 
                 transform:
-                    'translate(0px,0px) rotate(-3deg) scale(1)'
+                    'translate(0px,0px) rotate(-4deg) scale(1)'
 
             }
 
@@ -2412,8 +2380,14 @@ function attack(){
 
 
     /* =================================================
-       ★ 2번 공격
-       위 → 아래 크게 내려베기
+       ★★★★★★★★★★★★★★★★★
+
+       2. 대형 위 → 아래 내려베기
+
+       머리 위까지 들어 올리고
+       화면 중앙 아래까지 크게 내려침
+
+       ★★★★★★★★★★★★★★★★★
     ================================================= */
 
     else{
@@ -2431,21 +2405,35 @@ function attack(){
                 offset:0,
 
                 transform:
-                    'translate(0px,0px) rotate(-3deg) scale(1)'
+                    'translate(0px,0px) rotate(-4deg) scale(1)'
 
             },
 
 
             /*
-               ★ 칼을 위쪽/뒤쪽으로 들어 올림
+               ★ 뒤로 당김
             */
 
             {
 
-                offset:.16,
+                offset:.14,
 
                 transform:
-                    'translate(45px,-125px) rotate(-48deg) scale(.98)'
+                    'translate(55px,18px) rotate(-25deg) scale(.97)'
+
+            },
+
+
+            /*
+               ★ 칼을 머리 위까지 크게 들어 올림
+            */
+
+            {
+
+                offset:.29,
+
+                transform:
+                    'translate(-20px,-180px) rotate(-82deg) scale(1.02)'
 
             },
 
@@ -2456,48 +2444,44 @@ function attack(){
 
             {
 
-                offset:.34,
+                offset:.43,
 
                 transform:
-                    'translate(-30px,-150px) rotate(-28deg) scale(1.03)'
+                    'translate(-85px,-145px) rotate(-48deg) scale(1.06)'
 
             },
 
 
             /*
-               ★★★★★
-
-               화면 중앙으로 크게 내려베기
-
-               ★★★★★
+               ★ 몬스터 중앙을 관통하는 지점
             */
 
             {
 
-                offset:.55,
+                offset:.58,
 
                 transform:
-                    'translate(-175px,45px) rotate(34deg) scale(1.13)'
+                    'translate(-220px,30px) rotate(42deg) scale(1.15)'
 
             },
 
 
             /*
-               타격점을 지나서 조금 더 내려감
+               ★ 끝까지 강하게 내려침
             */
 
             {
 
-                offset:.68,
+                offset:.70,
 
                 transform:
-                    'translate(-135px,80px) rotate(24deg) scale(1.09)'
+                    'translate(-205px,105px) rotate(58deg) scale(1.12)'
 
             },
 
 
             /*
-               복귀
+               복귀 시작
             */
 
             {
@@ -2505,21 +2489,31 @@ function attack(){
                 offset:.83,
 
                 transform:
-                    'translate(-40px,20px) rotate(5deg) scale(1.03)'
+                    'translate(-100px,55px) rotate(27deg) scale(1.07)'
 
             },
 
 
             /*
-               원위치
+               거의 원위치
             */
+
+            {
+
+                offset:.94,
+
+                transform:
+                    'translate(-25px,12px) rotate(5deg) scale(1.02)'
+
+            },
+
 
             {
 
                 offset:1,
 
                 transform:
-                    'translate(0px,0px) rotate(-3deg) scale(1)'
+                    'translate(0px,0px) rotate(-4deg) scale(1)'
 
             }
 
@@ -2539,10 +2533,16 @@ function attack(){
                 duration:
                     CONFIG.SWORD_SPEED,
 
-                easing:
-                    'cubic-bezier(.16,.74,.22,1)',
+                /*
+                   초반에는 약간 준비하고
+                   베는 순간 가속되는 느낌
+                */
 
-                fill:'none'
+                easing:
+                    'cubic-bezier(.20,.72,.18,1)',
+
+                fill:
+                    'none'
 
             }
 
@@ -2550,10 +2550,9 @@ function attack(){
 
 
     /* =================================================
-       ★ 실제 몬스터 타격
+       ★ 실제 타격 타이밍
 
-       검이 화면 중앙에 들어오는
-       약 53% 지점에서 타격.
+       최대 베기 지점에 맞춤
     ================================================= */
 
     setTimeout(
@@ -2565,13 +2564,13 @@ function attack(){
         },
 
         CONFIG.SWORD_SPEED *
-        .53
+        .58
 
     );
 
 
     /* =================================================
-       공격 종료
+       공격 끝
     ================================================= */
 
     swordAnimation.onfinish =
@@ -2582,11 +2581,6 @@ function attack(){
             swordAttacking =
                 false;
 
-
-            /*
-               다시 걸을 때
-               칼 흔들림 복구
-            */
 
             sword.classList.add(
                 'walking'
@@ -2630,8 +2624,7 @@ function damageMonster(){
 
 
     /*
-       적이 실제로 맞을 때만
-       강한 진동
+       몬스터를 실제로 맞혔을 때만 진동
     */
 
     if(
@@ -2680,7 +2673,7 @@ function damageMonster(){
 
 
 /* =====================================================
-   DAMAGE NUMBER
+   DAMAGE
 ===================================================== */
 
 function showDamage(){
@@ -2704,7 +2697,7 @@ function showDamage(){
                 opacity:1,
 
                 transform:
-                    'translate(-50%,0) scale(1.35)'
+                    'translate(-50%,0px) scale(1.35)'
 
             },
 
@@ -2733,7 +2726,7 @@ function showDamage(){
 
 
 /* =====================================================
-   MONSTER KILLED
+   MONSTER DEAD
 ===================================================== */
 
 function killMonster(){
@@ -2774,11 +2767,6 @@ function nextMonster(){
         currentMonsterIndex +
         1;
 
-
-    /*
-       세 마리 전부 죽었어도
-       게임 종료 없음.
-    */
 
     if(
         next >=
@@ -2915,10 +2903,8 @@ function damagePlayer(){
 
 
     /*
-       플레이어가 맞을 때
-       진동 없음
+       내가 맞을 때 진동 없음
     */
-
 
     $('damageFlash').animate(
 
@@ -2951,7 +2937,9 @@ function damagePlayer(){
 
 /* =====================================================
    BATTLE START
-   글자 없음 / NFC 중단 없음
+
+   글자 없음
+   NFC 안 끊음
 ===================================================== */
 
 function startBattle(){
@@ -2990,10 +2978,6 @@ function startBattle(){
 
 async function startNFC(){
 
-
-    /*
-       Android에서는 반드시 Chrome
-    */
 
     if(
         isAndroid() &&
@@ -3092,12 +3076,6 @@ async function startNFC(){
                     now;
 
 
-                /*
-                   NFC 한 번
-                   =
-                   검 한 번
-                */
-
                 attack();
 
             };
@@ -3148,8 +3126,8 @@ $('startButton')
 
 
         /*
-           ★ Android + Chrome이 아니면
-           무조건 Chrome 안내부터.
+           Android에서 Chrome이 아니면
+           무조건 먼저 Chrome
         */
 
         if(
@@ -3260,7 +3238,6 @@ function gameLoop(now){
                 const distance =
 
                     camera.position.z -
-
                     monster.position.z;
 
 
@@ -3300,7 +3277,7 @@ function gameLoop(now){
 
 
         /* =================================================
-           CAMERA WALK BOB
+           WALK BOB
         ================================================= */
 
         walkPhase +=
@@ -3320,7 +3297,7 @@ function gameLoop(now){
 
 
         /* =================================================
-           BILLBOARD
+           BILLBOARD MONSTER
         ================================================= */
 
         if(
@@ -3345,7 +3322,7 @@ function gameLoop(now){
 
 
         /* =================================================
-           MONSTER BREATH
+           BREATH
         ================================================= */
 
         if(
@@ -3386,7 +3363,7 @@ function gameLoop(now){
 
 
         /* =================================================
-           MONSTER HIT SHAKE
+           MONSTER HIT
         ================================================= */
 
         if(
@@ -3450,7 +3427,7 @@ function gameLoop(now){
 
 
             /*
-               살짝 뒤로
+               움츠림
             */
 
             if(
@@ -3460,7 +3437,6 @@ function gameLoop(now){
 
 
                 const p =
-
                     t /
                     .20;
 
@@ -3482,7 +3458,7 @@ function gameLoop(now){
 
 
             /*
-               앞으로 돌진
+               돌진
             */
 
             else if(
@@ -3518,7 +3494,7 @@ function gameLoop(now){
 
 
             /*
-               HIT
+               플레이어 타격
             */
 
             else if(
@@ -3544,7 +3520,7 @@ function gameLoop(now){
 
 
             /*
-               돌아감
+               복귀
             */
 
             else if(
@@ -3598,7 +3574,7 @@ function gameLoop(now){
 
 
         /* =================================================
-           MONSTER DEATH
+           DEATH
         ================================================= */
 
         if(
@@ -3627,13 +3603,9 @@ function gameLoop(now){
             monster.rotation.z =
 
                 Math.min(
-
                     deathProgress,
-
                     1
-
                 ) *
-
                 1.25;
 
 
@@ -3688,7 +3660,7 @@ function gameLoop(now){
 
 
             /*
-               죽으면서도 계속 전진
+               몬스터 죽는 중에도 계속 전진
             */
 
             camera.position.z -=
@@ -3799,7 +3771,6 @@ updateHP();
 updateCounter();
 
 </script>
-
 
 </body>
 </html>
