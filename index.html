@@ -13,7 +13,7 @@
 <title>PIXEL 3D ADVENTURE</title>
 
 <!-- 기존 게임과 독립적으로 동작하는 QR 엔진 -->
-<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
 <style>
 
@@ -1004,6 +1004,10 @@ canvas{
 #qrLabel{
     display:none;
 }
+
+#chestBurstText{position:absolute;z-index:190;left:50%;top:43%;transform:translate(-50%,-50%);opacity:0;color:#ffe45c;font-size:34px;font-weight:1000;text-shadow:0 3px 0 #9a4c00,0 0 18px #ffd83e;pointer-events:none}
+.chestParticle{position:absolute;z-index:189;left:50%;top:47%;width:12px;height:12px;border-radius:3px;background:#ffd83e;box-shadow:0 0 9px #fff176;pointer-events:none;animation:chestParticleBurst .85s ease-out forwards}
+@keyframes chestParticleBurst{0%{opacity:1;transform:translate(-50%,-50%) scale(.5) rotate(0)}75%{opacity:1}100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1.25) rotate(var(--spin))}}
 </style>
 </head>
 
@@ -1162,6 +1166,7 @@ canvas{
 
         <button id="pauseButton">⏸ 일시정지</button>
         <div id="pauseOverlay">PAUSED</div>
+        <div id="chestBurstText">TREASURE!</div>
 
 
         <!-- START -->
@@ -1914,6 +1919,67 @@ function playEffect(audio,volume){
         }
     }
     catch(error){}
+}
+
+function chestCelebration(){
+    initAudio();
+
+    const text=$("chestBurstText");
+    text.animate(
+        [
+            {opacity:0,transform:"translate(-50%,-35%) scale(.55)"},
+            {opacity:1,transform:"translate(-50%,-50%) scale(1.18)",offset:.24},
+            {opacity:1,transform:"translate(-50%,-50%) scale(1)",offset:.65},
+            {opacity:0,transform:"translate(-50%,-80%) scale(.9)"}
+        ],
+        {duration:1100,easing:"ease-out"}
+    );
+
+    for(let i=0;i<30;i++){
+        const particle=document.createElement("i");
+        particle.className="chestParticle";
+        const angle=Math.random()*Math.PI*2;
+        const distance=90+Math.random()*190;
+        particle.style.setProperty("--dx",Math.cos(angle)*distance+"px");
+        particle.style.setProperty("--dy",Math.sin(angle)*distance+"px");
+        particle.style.setProperty("--spin",(Math.random()*720-360)+"deg");
+        particle.style.background=i%3===0?"#fff176":i%3===1?"#ffb300":"#ff7043";
+        $("playArea").appendChild(particle);
+        setTimeout(function(){particle.remove();},950);
+    }
+
+    if(!audioCtx){return;}
+    const now=audioCtx.currentTime;
+
+    const pop=audioCtx.createBufferSource();
+    const popFilter=audioCtx.createBiquadFilter();
+    const popGain=audioCtx.createGain();
+    pop.buffer=noiseBuffer(.30);
+    popFilter.type="lowpass";
+    popFilter.frequency.setValueAtTime(900,now);
+    popFilter.frequency.exponentialRampToValueAtTime(110,now+.28);
+    popGain.gain.setValueAtTime(.72,now);
+    popGain.gain.exponentialRampToValueAtTime(.0001,now+.30);
+    pop.connect(popFilter);
+    popFilter.connect(popGain);
+    popGain.connect(audioCtx.destination);
+    pop.start(now);
+    pop.stop(now+.31);
+
+    [523.25,659.25,783.99,1046.5].forEach(function(frequency,index){
+        const oscillator=audioCtx.createOscillator();
+        const gain=audioCtx.createGain();
+        const start=now+.08+index*.09;
+        oscillator.type="triangle";
+        oscillator.frequency.value=frequency;
+        gain.gain.setValueAtTime(.0001,start);
+        gain.gain.exponentialRampToValueAtTime(.18,start+.025);
+        gain.gain.exponentialRampToValueAtTime(.0001,start+.20);
+        oscillator.connect(gain);
+        gain.connect(audioCtx.destination);
+        oscillator.start(start);
+        oscillator.stop(start+.22);
+    });
 }
 
 
@@ -5135,7 +5201,18 @@ async function startQR(){
         }
 
         html5QrCode=
-            new Html5Qrcode("reader");
+            new Html5Qrcode(
+                "reader",
+                {
+                    formatsToSupport:[
+                        Html5QrcodeSupportedFormats.QR_CODE
+                    ],
+                    experimentalFeatures:{
+                        useBarCodeDetectorIfSupported:false
+                    },
+                    verbose:false
+                }
+            );
 
         $("statusDot").style.background=
             "#55eaff";
@@ -5172,9 +5249,7 @@ async function startQR(){
                         width:size,
                         height:size
                     };
-                },
-
-                aspectRatio:1.0
+                }
             },
 
             function(decodedText){
@@ -5630,6 +5705,7 @@ $("chestButton")
     "click",
     function(){
         if(gamePaused){return;}
+        chestCelebration();
         removeMapChest();
         playerHP=Math.min(
             CONFIG.PLAYER_HP,
