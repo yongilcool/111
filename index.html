@@ -15,19 +15,13 @@
 <style>
 
 :root{
-
-    /* ===============================
-       칼 크기 / 위치
-    =============================== */
-
     --sword-size:92vh;
 
-    /* 숫자가 더 마이너스면 오른쪽으로 감 */
+    /* 이전보다 오른쪽 */
     --sword-right:-22vh;
 
     --sword-bottom:-17vh;
 }
-
 
 *{
     box-sizing:border-box;
@@ -36,16 +30,11 @@
 
 html,
 body{
-
     margin:0;
-
     width:100%;
     height:100%;
-
     overflow:hidden;
-
     background:#07111d;
-
     font-family:Arial,sans-serif;
 }
 
@@ -54,26 +43,15 @@ body{
     inset:0;
 }
 
-
 #game{
-
     position:absolute;
     inset:0;
-
     overflow:hidden;
-
     background:#07111d;
 }
 
-
-/* =====================================================
-   3D 게임 영역
-===================================================== */
-
 #playArea{
-
     position:absolute;
-
     top:0;
     left:0;
 
@@ -82,23 +60,15 @@ body{
 
     overflow:hidden;
 
-    transition:
-        height .2s ease;
+    transition:height .2s ease;
 }
 
-
-/* QR 모드에서는 위쪽 70%만 게임 */
-
 #game.qr-mode #playArea{
-
     height:70%;
 }
 
-
 canvas{
-
     position:absolute;
-
     inset:0;
 
     width:100%;
@@ -113,26 +83,20 @@ canvas{
 ===================================================== */
 
 #sword{
-
     position:absolute;
 
     z-index:40;
 
     right:var(--sword-right);
-
     bottom:var(--sword-bottom);
 
     width:auto;
-
     height:var(--sword-size);
 
     max-width:none;
 
     pointer-events:none;
 
-    /*
-        손잡이 쪽을 회전 중심으로
-    */
     transform-origin:84% 91%;
 
     will-change:transform;
@@ -146,13 +110,12 @@ canvas{
 
 
 /* =====================================================
-   걸어갈 때 칼
+   걷는 중 칼
 
-   빠르고 크게 좌우로 움직임
+   빠르고 크게 좌우
 ===================================================== */
 
 #sword.walking{
-
     animation:
         swordWalk
         .30s
@@ -161,58 +124,52 @@ canvas{
         alternate;
 }
 
-
 @keyframes swordWalk{
 
     from{
-
         transform:
-            translate(-38px,10px)
-            rotate(-18deg);
+            translate(-34px,8px)
+            rotate(-17deg);
     }
 
     to{
-
         transform:
-            translate(40px,-13px)
-            rotate(18deg);
+            translate(35px,-11px)
+            rotate(17deg);
     }
+
 }
 
 
 /* =====================================================
-   몬스터 앞 전투 대기
+   전투 중 칼
 
-   크게 흔들리지 않고
-   살짝 위아래로만 움직임
+   작게 위아래
 ===================================================== */
 
 #sword.battle-idle{
-
     animation:
         swordBattleIdle
-        .80s
+        .82s
         ease-in-out
         infinite
         alternate;
 }
 
-
 @keyframes swordBattleIdle{
 
     from{
-
         transform:
-            translateY(4px)
+            translateY(3px)
             rotate(-4deg);
     }
 
     to{
-
         transform:
-            translateY(-9px)
+            translateY(-8px)
             rotate(-2deg);
     }
+
 }
 
 
@@ -221,85 +178,55 @@ canvas{
 ===================================================== */
 
 #hud{
-
     position:absolute;
 
     z-index:60;
 
     top:13px;
-
     left:5%;
     right:5%;
 
     display:flex;
-
     gap:12px;
 
     color:white;
 
-    text-shadow:
-        0 2px 4px #000;
+    text-shadow:0 2px 4px #000;
 }
 
-
 .unit{
-
     width:50%;
 }
 
-
 .label{
-
     font-size:12px;
-
     font-weight:900;
-
     margin-bottom:4px;
 }
 
-
 .bar{
-
     width:100%;
-
     height:15px;
 
     overflow:hidden;
 
     border:2px solid white;
-
     border-radius:6px;
 
     background:#180707;
 }
 
-
 .fill{
-
     height:100%;
-
-    transition:
-        width .12s linear;
+    transition:width .12s linear;
 }
-
 
 #playerHP{
-
-    background:
-        linear-gradient(
-            #ff6565,
-            #bf1010
-        );
+    background:linear-gradient(#ff6565,#bf1010);
 }
 
-
 #enemyHP{
-
-    background:
-        linear-gradient(
-            #c669ff,
-            #641aa6
-        );
+    background:linear-gradient(#c669ff,#641aa6);
 }
 
 
@@ -308,42 +235,32 @@ canvas{
 ===================================================== */
 
 #statusBox{
-
     position:absolute;
 
     z-index:70;
 
     top:56px;
-
     left:50%;
 
-    transform:
-        translateX(-50%);
+    transform:translateX(-50%);
 
-    padding:
-        6px 12px;
+    padding:6px 12px;
 
     border-radius:14px;
 
-    background:
-        rgba(5,15,24,.72);
+    background:rgba(5,15,24,.72);
 
-    border:
-        1px solid
-        rgba(255,255,255,.27);
+    border:1px solid rgba(255,255,255,.27);
 
     color:white;
 
     font-size:11px;
-
     font-weight:900;
 
     white-space:nowrap;
 }
 
-
 #statusDot{
-
     display:inline-block;
 
     width:8px;
@@ -358,21 +275,18 @@ canvas{
 
 
 /* =====================================================
-   NFC / QR BUTTON
+   NFC / QR
 ===================================================== */
 
 #modeSwitch{
-
     position:absolute;
 
     z-index:80;
 
     top:88px;
-
     left:50%;
 
-    transform:
-        translateX(-50%);
+    transform:translateX(-50%);
 
     display:flex;
 
@@ -380,23 +294,17 @@ canvas{
 
     border-radius:12px;
 
-    background:
-        rgba(0,0,0,.56);
+    background:rgba(0,0,0,.56);
 
-    border:
-        1px solid
-        rgba(255,255,255,.25);
+    border:1px solid rgba(255,255,255,.25);
 }
 
-
 .modeButton{
-
     border:0;
 
     min-width:72px;
 
-    padding:
-        8px 13px;
+    padding:8px 13px;
 
     border-radius:9px;
 
@@ -405,17 +313,11 @@ canvas{
     color:#ddd;
 
     font-size:12px;
-
     font-weight:900;
-
-    cursor:pointer;
 }
 
-
 .modeButton.active{
-
     background:white;
-
     color:#111;
 }
 
@@ -425,57 +327,47 @@ canvas{
 ===================================================== */
 
 #monsterCount{
-
     position:absolute;
 
     z-index:65;
 
     left:50%;
-
     bottom:25px;
 
-    transform:
-        translateX(-50%);
+    transform:translateX(-50%);
 
-    padding:
-        7px 15px;
+    padding:7px 15px;
 
     border-radius:13px;
 
-    background:
-        rgba(0,0,0,.55);
+    background:rgba(0,0,0,.55);
 
     color:white;
 
     font-size:14px;
-
     font-weight:900;
 }
 
 
 /* =====================================================
-   DAMAGE NUMBER
+   DAMAGE
 ===================================================== */
 
 #damageNumber{
-
     position:absolute;
 
     z-index:75;
 
     left:50%;
-
     top:39%;
 
-    transform:
-        translateX(-50%);
+    transform:translateX(-50%);
 
     opacity:0;
 
     color:white;
 
     font-size:42px;
-
     font-weight:1000;
 
     pointer-events:none;
@@ -485,15 +377,8 @@ canvas{
         0 0 9px red;
 }
 
-
-/* =====================================================
-   PLAYER DAMAGE FLASH
-===================================================== */
-
 #damageFlash{
-
     position:absolute;
-
     inset:0;
 
     z-index:50;
@@ -503,25 +388,19 @@ canvas{
     pointer-events:none;
 
     background:
-
         radial-gradient(
-
             circle,
-
             rgba(255,0,0,0) 28%,
-
             rgba(255,0,0,.58) 100%
-
         );
 }
 
 
 /* =====================================================
-   QR CAMERA
+   QR
 ===================================================== */
 
 #qrPanel{
-
     position:absolute;
 
     z-index:90;
@@ -530,7 +409,6 @@ canvas{
     bottom:0;
 
     width:100%;
-
     height:30%;
 
     display:none;
@@ -539,21 +417,15 @@ canvas{
 
     background:#000;
 
-    border-top:
-        2px solid white;
+    border-top:2px solid white;
 }
 
-
 #game.qr-mode #qrPanel{
-
     display:block;
 }
 
-
 #qrVideo{
-
     position:absolute;
-
     inset:0;
 
     width:100%;
@@ -562,9 +434,7 @@ canvas{
     object-fit:cover;
 }
 
-
 #qrFrame{
-
     position:absolute;
 
     left:50%;
@@ -573,11 +443,9 @@ canvas{
     width:145px;
     height:145px;
 
-    transform:
-        translate(-50%,-50%);
+    transform:translate(-50%,-50%);
 
-    border:
-        3px solid white;
+    border:3px solid white;
 
     border-radius:13px;
 
@@ -588,9 +456,7 @@ canvas{
     pointer-events:none;
 }
 
-
 #qrLine{
-
     position:absolute;
 
     left:10px;
@@ -613,7 +479,6 @@ canvas{
         alternate;
 }
 
-
 @keyframes scanLine{
 
     from{
@@ -623,68 +488,52 @@ canvas{
     to{
         top:122px;
     }
+
 }
 
-
 #qrLabel{
-
     position:absolute;
 
     left:50%;
-
     bottom:6px;
 
-    transform:
-        translateX(-50%);
+    transform:translateX(-50%);
 
-    padding:
-        5px 10px;
+    padding:5px 10px;
 
     border-radius:8px;
 
-    background:
-        rgba(0,0,0,.65);
+    background:rgba(0,0,0,.65);
 
     color:white;
 
     font-size:11px;
-
     font-weight:bold;
 }
 
-
 #qrCanvas{
-
     display:none;
 }
 
 
 /* =====================================================
-   START SCREEN
+   START
 ===================================================== */
 
 #startScreen{
-
     position:absolute;
-
     inset:0;
 
     z-index:300;
 
     display:flex;
-
     align-items:center;
-
     justify-content:center;
 
     background:
-
         linear-gradient(
-
             rgba(5,15,25,.15),
-
             rgba(0,0,0,.72)
-
         );
 
     color:white;
@@ -692,130 +541,84 @@ canvas{
     text-align:center;
 }
 
-
 #startScreen.hidden{
-
     display:none;
 }
 
-
 .startBox{
-
     width:86%;
-
     max-width:380px;
 
-    padding:
-        24px 18px;
+    padding:24px 18px;
 
     border-radius:19px;
 
-    background:
-        rgba(4,13,22,.78);
+    background:rgba(4,13,22,.78);
 
-    border:
-        1px solid
-        rgba(255,255,255,.28);
+    border:1px solid rgba(255,255,255,.28);
 }
 
-
 .startBox h1{
-
-    margin:
-        0 0 10px;
+    margin:0 0 10px;
 
     color:#ffe27b;
 
     font-size:29px;
 }
 
-
 .startBox p{
-
     font-size:13px;
-
     line-height:1.65;
 }
 
-
 #startButton{
-
     width:84%;
 
     margin-top:10px;
 
     border:0;
 
-    padding:
-        15px 20px;
+    padding:15px 20px;
 
     border-radius:11px;
 
     background:
-
         linear-gradient(
-
             #f8a62b,
-
             #b94c08
-
         );
 
     color:white;
 
     font-size:18px;
-
     font-weight:1000;
-
-    cursor:pointer;
 }
 
 
 /* =====================================================
-   ENGINE ERROR
+   LOADING
 ===================================================== */
 
-#engineError{
-
+#loading{
     position:absolute;
-
     inset:0;
 
-    z-index:1000;
+    z-index:250;
 
     display:none;
 
     align-items:center;
-
     justify-content:center;
 
     background:#07111d;
 
     color:white;
 
-    text-align:center;
-
-    padding:25px;
+    font-weight:bold;
 }
 
-
-#engineError.show{
-
+#loading.show{
     display:flex;
-}
-
-
-.errorBox{
-
-    width:90%;
-
-    max-width:380px;
-
-    padding:25px;
-
-    background:#121d27;
-
-    border-radius:18px;
 }
 
 
@@ -824,9 +627,7 @@ canvas{
 ===================================================== */
 
 #gameOver{
-
     position:absolute;
-
     inset:0;
 
     z-index:950;
@@ -834,58 +635,43 @@ canvas{
     display:none;
 
     align-items:center;
-
     justify-content:center;
 
-    background:
-        rgba(35,0,0,.86);
+    background:rgba(35,0,0,.86);
 
     color:white;
 
     text-align:center;
 }
 
-
 #gameOver.show{
-
     display:flex;
 }
 
-
 .gameOverBox{
-
     width:84%;
-
     max-width:360px;
 
-    padding:
-        28px 18px;
+    padding:28px 18px;
 
     border-radius:18px;
 
     background:#150404;
 
-    border:
-        2px solid #ae2b2b;
+    border:2px solid #ae2b2b;
 }
 
-
 .gameOverBox h1{
-
     color:#ff5757;
-
     font-size:42px;
 }
 
-
 #retryButton{
-
     width:80%;
 
     padding:14px;
 
     border:0;
-
     border-radius:10px;
 
     background:#b72626;
@@ -893,19 +679,15 @@ canvas{
     color:white;
 
     font-weight:bold;
-
-    cursor:pointer;
 }
 
 
 /* =====================================================
-   CHROME GUIDE
+   CHROME
 ===================================================== */
 
 #chromeGuide{
-
     position:absolute;
-
     inset:0;
 
     z-index:1200;
@@ -913,49 +695,38 @@ canvas{
     display:none;
 
     align-items:center;
-
     justify-content:center;
 
     padding:22px;
 
-    background:
-        rgba(0,0,0,.93);
+    background:rgba(0,0,0,.93);
 
     color:white;
 
     text-align:center;
 }
 
-
 #chromeGuide.show{
-
     display:flex;
 }
 
-
 .chromeBox{
-
     width:100%;
-
     max-width:360px;
 
-    padding:
-        25px 20px;
+    padding:25px 20px;
 
     border-radius:18px;
 
     background:#101c28;
 }
 
-
 #chromeButton{
-
     width:100%;
 
     padding:15px;
 
     border:0;
-
     border-radius:11px;
 
     background:#4285f4;
@@ -963,10 +734,7 @@ canvas{
     color:white;
 
     font-size:17px;
-
     font-weight:900;
-
-    cursor:pointer;
 }
 
 </style>
@@ -978,300 +746,486 @@ canvas{
 <div id="game">
 
 
-    <!-- ==============================================
-         3D GAME
-    =============================================== -->
+<div id="playArea">
 
-    <div id="playArea">
 
+<img
+    id="sword"
+    src="https://static.wixstatic.com/media/172435_1c16a5d4f8ca44d8a558923200659bb7~mv2.png"
+>
 
-        <!-- 칼 -->
 
-        <img
-            id="sword"
-            src="https://static.wixstatic.com/media/172435_1c16a5d4f8ca44d8a558923200659bb7~mv2.png"
-            alt=""
-        >
+<div id="hud">
 
+<div class="unit">
 
-        <!-- HP -->
+<div class="label">
+HP
+<span id="playerText">100 / 100</span>
+</div>
 
-        <div id="hud">
+<div class="bar">
+<div class="fill" id="playerHP"></div>
+</div>
 
-            <div class="unit">
+</div>
 
-                <div class="label">
 
-                    HP
+<div class="unit">
 
-                    <span id="playerText">
-                        100 / 100
-                    </span>
+<div class="label">
+MONSTER
+<span id="enemyText">100 / 100</span>
+</div>
 
-                </div>
+<div class="bar">
+<div class="fill" id="enemyHP"></div>
+</div>
 
-                <div class="bar">
+</div>
 
-                    <div
-                        class="fill"
-                        id="playerHP"
-                        style="width:100%"
-                    ></div>
+</div>
 
-                </div>
 
-            </div>
+<div id="statusBox">
 
+<span id="statusDot"></span>
 
-            <div class="unit">
+<span id="statusText">
+게임 준비 중
+</span>
 
-                <div class="label">
+</div>
 
-                    MONSTER
 
-                    <span id="enemyText">
-                        100 / 100
-                    </span>
+<div id="modeSwitch">
 
-                </div>
+<button
+    id="nfcButton"
+    class="modeButton active"
+>
+NFC
+</button>
 
-                <div class="bar">
+<button
+    id="qrButton"
+    class="modeButton"
+>
+QR
+</button>
 
-                    <div
-                        class="fill"
-                        id="enemyHP"
-                        style="width:100%"
-                    ></div>
+</div>
 
-                </div>
 
-            </div>
+<div id="damageFlash"></div>
 
-        </div>
+<div id="damageNumber">
+-20
+</div>
 
+<div id="monsterCount">
+☠ 1 / 3
+</div>
 
-        <!-- STATUS -->
 
-        <div id="statusBox">
+<div id="startScreen">
 
-            <span id="statusDot"></span>
+<div class="startBox">
 
-            <span id="statusText">
-                게임 준비 중
-            </span>
+<h1>
+PIXEL ADVENTURE
+</h1>
 
-        </div>
+<p>
+NFC 또는 QR로 공격합니다.<br>
+QR 정답: CHEST_001
+</p>
 
+<!--
+    ★ 중요
 
-        <!-- NFC / QR -->
+    onclick을 module 밖의
+    전역함수에 직접 연결.
 
-        <div id="modeSwitch">
+    이제 module이 늦게 뜨더라도
+    버튼 자체가 죽지 않는다.
+-->
 
-            <button
-                id="nfcButton"
-                class="modeButton active"
-            >
-                NFC
-            </button>
+<button
+    id="startButton"
+    onclick="handleGameStart()"
+>
+GAME START
+</button>
 
-            <button
-                id="qrButton"
-                class="modeButton"
-            >
-                QR
-            </button>
+</div>
 
-        </div>
+</div>
 
 
-        <div id="damageFlash"></div>
-
-
-        <div id="damageNumber">
-            -20
-        </div>
-
-
-        <div id="monsterCount">
-            ☠ 1 / 3
-        </div>
-
-
-        <!-- START -->
-
-        <div id="startScreen">
-
-            <div class="startBox">
-
-                <h1>
-                    PIXEL ADVENTURE
-                </h1>
-
-                <p>
-                    NFC 또는 QR로 공격합니다.
-                    <br>
-                    QR CODE : CHEST_001
-                </p>
-
-                <button id="startButton">
-                    GAME START
-                </button>
-
-            </div>
-
-        </div>
-
-
-    </div>
-
-
-
-    <!-- ==============================================
-         QR CAMERA
-    =============================================== -->
-
-    <div id="qrPanel">
-
-        <video
-            id="qrVideo"
-            autoplay
-            muted
-            playsinline
-        ></video>
-
-
-        <div id="qrFrame">
-
-            <div id="qrLine"></div>
-
-        </div>
-
-
-        <div id="qrLabel">
-            CHEST_001
-        </div>
-
-
-        <canvas id="qrCanvas"></canvas>
-
-    </div>
-
-
-
-    <!-- ==============================================
-         GAME OVER
-    =============================================== -->
-
-    <div id="gameOver">
-
-        <div class="gameOverBox">
-
-            <h1>
-                GAME OVER
-            </h1>
-
-            <p>
-                HP가 모두 소진되었습니다.
-            </p>
-
-            <button id="retryButton">
-                다시 시작
-            </button>
-
-        </div>
-
-    </div>
-
-
-
-    <!-- ==============================================
-         ENGINE ERROR
-    =============================================== -->
-
-    <div id="engineError">
-
-        <div class="errorBox">
-
-            <h2>
-                3D 엔진을 불러오지 못했습니다
-            </h2>
-
-            <p>
-                페이지를 새로고침해주세요.
-            </p>
-
-        </div>
-
-    </div>
-
-
-
-    <!-- ==============================================
-         CHROME
-    =============================================== -->
-
-    <div id="chromeGuide">
-
-        <div class="chromeBox">
-
-            <h2>
-                Chrome으로 연결합니다
-            </h2>
-
-            <p>
-                Android에서는 Chrome으로 실행해주세요.
-                <br><br>
-                NFC 기능을 사용하려면
-                Chrome이 필요합니다.
-            </p>
-
-            <button id="chromeButton">
-                Chrome으로 연결하기
-            </button>
-
-        </div>
-
-    </div>
+<div id="loading">
+게임 시작 중...
+</div>
 
 
 </div>
 
 
+<div id="qrPanel">
+
+<video
+    id="qrVideo"
+    autoplay
+    muted
+    playsinline
+></video>
+
+<div id="qrFrame">
+<div id="qrLine"></div>
+</div>
+
+<div id="qrLabel">
+CHEST_001
+</div>
+
+<canvas id="qrCanvas"></canvas>
+
+</div>
+
+
+<div id="gameOver">
+
+<div class="gameOverBox">
+
+<h1>
+GAME OVER
+</h1>
+
+<p>
+HP가 모두 소진되었습니다.
+</p>
+
+<button id="retryButton">
+다시 시작
+</button>
+
+</div>
+
+</div>
+
+
+<div id="chromeGuide">
+
+<div class="chromeBox">
+
+<h2>
+Chrome으로 연결합니다
+</h2>
+
+<p>
+Android에서는 Chrome으로 실행해주세요.
+</p>
+
+<button
+    id="chromeButton"
+    onclick="openChrome()"
+>
+Chrome으로 연결하기
+</button>
+
+</div>
+
+</div>
+
+
+</div>
+
 
 <!-- =====================================================
-     ★ Three.js r160
+   ★★★★★★★★★★★★★★★★★★★★★
 
-     ES MODULE 사용 안 함
+   이 부분은 THREE.JS와 완전히 독립.
 
-     THREE 전역 객체 사용
-===================================================== -->
+   시작버튼과 Chrome 이동은
+   무조건 작동하도록 함.
 
-<script
-src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js">
-</script>
-
-
-
-<!-- =====================================================
-     MAIN GAME
+   ★★★★★★★★★★★★★★★★★★★★★
 ===================================================== -->
 
 <script>
 
-(function(){
+function isAndroid(){
 
-"use strict";
+    return /Android/i.test(
+        navigator.userAgent || ''
+    );
+
+}
+
+
+function isKakaoBrowser(){
+
+    return /KAKAOTALK|KakaoTalk/i.test(
+        navigator.userAgent || ''
+    );
+
+}
+
+
+function isRealChrome(){
+
+    const ua =
+        navigator.userAgent || '';
+
+
+    if(
+        isKakaoBrowser()
+    ){
+        return false;
+    }
+
+
+    if(
+        /SamsungBrowser|EdgA|OPR/i.test(
+            ua
+        )
+    ){
+        return false;
+    }
+
+
+    return /Chrome/i.test(
+        ua
+    );
+
+}
 
 
 /* =====================================================
-   SHORTCUT
+   ★ 기존 잘 작동했던 Chrome 방식
 ===================================================== */
 
-function $(id){
+function openChrome(){
 
-    return document.getElementById(id);
+    const url =
+        location.href;
+
+
+    const clean =
+        url.replace(
+            /^https?:\/\//i,
+            ''
+        );
+
+
+    location.href =
+
+        'intent://' +
+
+        clean +
+
+        '#Intent;' +
+
+        'scheme=https;' +
+
+        'package=com.android.chrome;' +
+
+        'end';
 
 }
+
+
+/* =====================================================
+   ★★★★★★★★★★★★★★★★★★★★★
+
+   START BUTTON
+
+   module 밖에서 먼저 실행됨.
+
+   ★★★★★★★★★★★★★★★★★★★★★
+===================================================== */
+
+function handleGameStart(){
+
+
+    /*
+       Android + Chrome 아님
+       → 무조건 Chrome부터
+    */
+
+    if(
+        isAndroid() &&
+        !isRealChrome()
+    ){
+
+
+        document
+        .getElementById(
+            'chromeGuide'
+        )
+        .classList
+        .add('show');
+
+
+        return;
+
+    }
+
+
+    /*
+       버튼이 눌렸다는 반응을
+       무조건 먼저 보여준다.
+    */
+
+    document
+    .getElementById(
+        'loading'
+    )
+    .classList
+    .add('show');
+
+
+    /*
+       Three.js module이 아직
+       준비 안 됐을 경우
+    */
+
+    if(
+        typeof window.startRealGame !==
+        'function'
+    ){
+
+
+        document
+        .getElementById(
+            'loading'
+        )
+        .textContent =
+        '3D 엔진 준비 중...';
+
+
+        /*
+           잠깐 기다렸다가 재시도
+        */
+
+        let tries =
+            0;
+
+
+        const timer =
+            setInterval(
+                ()=>{
+
+
+                    tries++;
+
+
+                    if(
+                        typeof window.startRealGame ===
+                        'function'
+                    ){
+
+
+                        clearInterval(
+                            timer
+                        );
+
+
+                        window.startRealGame();
+
+                        return;
+
+                    }
+
+
+                    if(
+                        tries > 30
+                    ){
+
+
+                        clearInterval(
+                            timer
+                        );
+
+
+                        document
+                        .getElementById(
+                            'loading'
+                        )
+                        .classList
+                        .remove('show');
+
+
+                        alert(
+                            '3D 엔진을 불러오지 못했습니다. 페이지를 새로고침해주세요.'
+                        );
+
+                    }
+
+                },
+
+                100
+            );
+
+
+        return;
+
+    }
+
+
+    /*
+       게임 시작
+    */
+
+    window.startRealGame();
+
+}
+
+
+/* =====================================================
+   카톡이면 처음부터 Chrome 안내
+===================================================== */
+
+window.addEventListener(
+    'DOMContentLoaded',
+
+    ()=>{
+
+
+        if(
+            isAndroid() &&
+            !isRealChrome()
+        ){
+
+
+            document
+            .getElementById(
+                'chromeGuide'
+            )
+            .classList
+            .add('show');
+
+        }
+
+    }
+);
+
+</script>
+
+
+<!-- =====================================================
+   THREE
+===================================================== -->
+
+<script type="module">
+
+import * as THREE
+from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.min.js";
+
+
+const $ =
+    id =>
+    document.getElementById(id);
 
 
 /* =====================================================
@@ -1289,21 +1243,8 @@ const CONFIG = {
     MONSTER_DAMAGE:5,
 
 
-    /*
-        걷는 속도
-        이전 느린 버전보다 약 2배
-    */
-
     WALK_SPEED:6.6,
 
-
-    /*
-        칼 휘두르는 시간
-
-        460ms
-        눈으로 휘두르는 장면이
-        확실히 보이도록 함
-    */
 
     SWORD_SPEED:460,
 
@@ -1314,24 +1255,15 @@ const CONFIG = {
     BATTLE_DISTANCE:7,
 
 
-    /*
-        몬스터 세 마리 위치
-
-        서로 멀리 떨어짐
-    */
-
     MONSTER_POSITIONS:[
-
         -34,
-
         -78,
-
         -126
-
     ],
 
 
-    QR_VALUE:"CHEST_001",
+    QR_VALUE:
+        'CHEST_001',
 
 
     MAX_PIXEL_RATIO:1.25,
@@ -1342,13 +1274,9 @@ const CONFIG = {
 };
 
 
-/* =====================================================
-   IMAGES
-===================================================== */
-
 const SKY_IMAGE =
 
-"https://static.wixstatic.com/media/172435_d6012f4ec1594a17858298879561b509~mv2.png";
+'https://static.wixstatic.com/media/172435_d6012f4ec1594a17858298879561b509~mv2.png';
 
 
 /* =====================================================
@@ -1366,13 +1294,9 @@ let battle=false;
 let monsterDead=false;
 
 
-let playerHP=
-    CONFIG.PLAYER_HP;
+let playerHP=100;
 
-
-let enemyHP=
-    CONFIG.MONSTER_HP;
-
+let enemyHP=100;
 
 let monsterIndex=0;
 
@@ -1386,7 +1310,6 @@ let monsterAttackTimer=null;
 let monsterAttackProgress=-1;
 
 let monsterAttackHit=false;
-
 
 let monsterHitTimer=0;
 
@@ -1407,129 +1330,19 @@ let footTimer=0;
 let walkPhase=0;
 
 
-let scene=null;
+let scene;
 
-let camera=null;
+let camera;
 
-let renderer=null;
+let renderer;
 
+let monster;
 
-let monster=null;
+let monsterMaterial;
 
-let monsterMaterial=null;
+let monsterShadow;
 
-let monsterShadow=null;
-
-let monsterHomeZ=0;
-
-
-/* =====================================================
-   ANDROID / CHROME
-===================================================== */
-
-function isAndroid(){
-
-    return /Android/i.test(
-        navigator.userAgent || ""
-    );
-
-}
-
-
-function isKakaoBrowser(){
-
-    return /KAKAOTALK|KakaoTalk/i.test(
-        navigator.userAgent || ""
-    );
-
-}
-
-
-function isRealChrome(){
-
-    const ua=
-        navigator.userAgent || "";
-
-
-    if(isKakaoBrowser()){
-
-        return false;
-    }
-
-
-    if(
-        /SamsungBrowser|EdgA|OPR/i.test(
-            ua
-        )
-    ){
-
-        return false;
-    }
-
-
-    return /Chrome/i.test(
-        ua
-    );
-
-}
-
-
-/* =====================================================
-   ★ CHROME OPEN
-
-   Android에서는 이 기능 절대 제거하지 않음
-===================================================== */
-
-function openChrome(){
-
-    const current=
-        location.href;
-
-
-    const clean=
-
-        current.replace(
-            /^https?:\/\//i,
-            ""
-        );
-
-
-    const scheme=
-
-        current.startsWith("http://")
-        ?
-        "http"
-        :
-        "https";
-
-
-    const intent=
-
-        "intent://" +
-
-        clean +
-
-        "#Intent;" +
-
-        "scheme=" +
-
-        scheme +
-
-        ";" +
-
-        "package=com.android.chrome;" +
-
-        "end";
-
-
-    location.href=
-        intent;
-
-}
-
-
-$("chromeButton").onclick=
-    openChrome;
+let monsterHomeZ;
 
 
 /* =====================================================
@@ -1538,25 +1351,20 @@ $("chromeButton").onclick=
 
 let audioCtx=null;
 
-let bgmStarted=false;
-
 
 function initAudio(){
 
+
     if(audioCtx){
 
-        if(
-            audioCtx.state==="suspended"
-        ){
-
-            audioCtx.resume();
-        }
+        audioCtx.resume();
 
         return;
+
     }
 
 
-    const AC=
+    const AC =
 
         window.AudioContext ||
 
@@ -1565,52 +1373,49 @@ function initAudio(){
 
     if(AC){
 
-        audioCtx=
+        audioCtx =
             new AC();
+
     }
 
 }
 
 
-/* =====================================================
-   NOISE
-===================================================== */
+function noiseBuffer(
+    duration
+){
 
-function noiseBuffer(duration){
 
     if(!audioCtx){
-
         return null;
     }
 
 
-    const size=
+    const size =
 
         Math.floor(
 
             audioCtx.sampleRate *
-
             duration
 
         );
 
 
-    const buffer=
+    const buffer =
 
         audioCtx.createBuffer(
 
             1,
-
             size,
-
             audioCtx.sampleRate
 
         );
 
 
-    const data=
-
-        buffer.getChannelData(0);
+    const data =
+        buffer.getChannelData(
+            0
+        );
 
 
     for(
@@ -1619,8 +1424,9 @@ function noiseBuffer(duration){
         i++
     ){
 
-        data[i]=
+        data[i] =
             Math.random()*2-1;
+
     }
 
 
@@ -1635,8 +1441,8 @@ function noiseBuffer(duration){
 
 function swordSound(){
 
-    if(!audioCtx){
 
+    if(!audioCtx){
         return;
     }
 
@@ -1658,19 +1464,17 @@ function swordSound(){
 
 
     filter.type=
-        "bandpass";
+        'bandpass';
 
 
-    filter.frequency
-    .setValueAtTime(
-        500,
+    filter.frequency.setValueAtTime(
+        600,
         now
     );
 
 
-    filter.frequency
-    .exponentialRampToValueAtTime(
-        3500,
+    filter.frequency.exponentialRampToValueAtTime(
+        3300,
         now+.16
     );
 
@@ -1679,19 +1483,13 @@ function swordSound(){
         audioCtx.createGain();
 
 
-    /*
-        검 소리 크게
-    */
-
-    gain.gain
-    .setValueAtTime(
-        .65,
+    gain.gain.setValueAtTime(
+        .46,
         now
     );
 
 
-    gain.gain
-    .exponentialRampToValueAtTime(
+    gain.gain.exponentialRampToValueAtTime(
         .0001,
         now+.24
     );
@@ -1712,13 +1510,13 @@ function swordSound(){
 
 
 /* =====================================================
-   FOOT SOUND
+   FOOTSTEP SOUND
 ===================================================== */
 
 function footSound(){
 
-    if(!audioCtx){
 
+    if(!audioCtx){
         return;
     }
 
@@ -1739,31 +1537,22 @@ function footSound(){
         audioCtx.createBiquadFilter();
 
 
-    filter.type=
-        "lowpass";
+    filter.type='lowpass';
 
-
-    filter.frequency.value=
-        390;
+    filter.frequency.value=380;
 
 
     const gain=
         audioCtx.createGain();
 
 
-    /*
-        발소리 크게
-    */
-
-    gain.gain
-    .setValueAtTime(
-        .48,
+    gain.gain.setValueAtTime(
+        .28,
         now
     );
 
 
-    gain.gain
-    .exponentialRampToValueAtTime(
+    gain.gain.exponentialRampToValueAtTime(
         .0001,
         now+.10
     );
@@ -1784,13 +1573,13 @@ function footSound(){
 
 
 /* =====================================================
-   MONSTER HIT SOUND
+   HIT SOUND
 ===================================================== */
 
 function hitSound(){
 
-    if(!audioCtx){
 
+    if(!audioCtx){
         return;
     }
 
@@ -1807,33 +1596,28 @@ function hitSound(){
         audioCtx.createGain();
 
 
-    osc.type=
-        "square";
+    osc.type='square';
 
 
-    osc.frequency
-    .setValueAtTime(
+    osc.frequency.setValueAtTime(
         150,
         now
     );
 
 
-    osc.frequency
-    .exponentialRampToValueAtTime(
+    osc.frequency.exponentialRampToValueAtTime(
         55,
         now+.14
     );
 
 
-    gain.gain
-    .setValueAtTime(
+    gain.gain.setValueAtTime(
         .34,
         now
     );
 
 
-    gain.gain
-    .exponentialRampToValueAtTime(
+    gain.gain.exponentialRampToValueAtTime(
         .0001,
         now+.16
     );
@@ -1861,8 +1645,8 @@ function hitSound(){
 
 function playerHitSound(){
 
-    if(!audioCtx){
 
+    if(!audioCtx){
         return;
     }
 
@@ -1879,8 +1663,7 @@ function playerHitSound(){
         audioCtx.createGain();
 
 
-    gain.gain.value=
-        .30;
+    gain.gain.value=.28;
 
 
     src.connect(gain);
@@ -1896,88 +1679,19 @@ function playerHitSound(){
 
 
 /* =====================================================
-   MONSTER DEATH SOUND
-===================================================== */
-
-function deathSound(){
-
-    if(!audioCtx){
-
-        return;
-    }
-
-
-    const now=
-        audioCtx.currentTime;
-
-
-    const osc=
-        audioCtx.createOscillator();
-
-
-    const gain=
-        audioCtx.createGain();
-
-
-    osc.type=
-        "sawtooth";
-
-
-    osc.frequency
-    .setValueAtTime(
-        150,
-        now
-    );
-
-
-    osc.frequency
-    .exponentialRampToValueAtTime(
-        30,
-        now+.5
-    );
-
-
-    gain.gain
-    .setValueAtTime(
-        .22,
-        now
-    );
-
-
-    gain.gain
-    .exponentialRampToValueAtTime(
-        .0001,
-        now+.5
-    );
-
-
-    osc.connect(gain);
-
-    gain.connect(
-        audioCtx.destination
-    );
-
-
-    osc.start();
-
-    osc.stop(
-        now+.52
-    );
-
-}
-
-
-/* =====================================================
    BGM
 ===================================================== */
 
+let bgmStarted=false;
+
+
 function startBGM(){
+
 
     if(
         !audioCtx ||
         bgmStarted
     ){
-
         return;
     }
 
@@ -1989,8 +1703,7 @@ function startBGM(){
         audioCtx.createGain();
 
 
-    master.gain.value=
-        .035;
+    master.gain.value=.04;
 
 
     master.connect(
@@ -2006,20 +1719,14 @@ function startBGM(){
         audioCtx.createOscillator();
 
 
-    osc1.type=
-        "sine";
+    osc1.type='sine';
+
+    osc2.type='triangle';
 
 
-    osc2.type=
-        "triangle";
+    osc1.frequency.value=110;
 
-
-    osc1.frequency.value=
-        110;
-
-
-    osc2.frequency.value=
-        164.8;
+    osc2.frequency.value=164.8;
 
 
     const g1=
@@ -2030,12 +1737,9 @@ function startBGM(){
         audioCtx.createGain();
 
 
-    g1.gain.value=
-        .5;
+    g1.gain.value=.5;
 
-
-    g2.gain.value=
-        .18;
+    g2.gain.value=.18;
 
 
     osc1.connect(g1);
@@ -2056,25 +1760,27 @@ function startBGM(){
 
 
 /* =====================================================
-   PIXEL TEXTURE
+   TEXTURE
 ===================================================== */
 
-function pixelTexture(colors){
+function pixelTexture(
+    colors
+){
+
 
     const canvas=
         document.createElement(
-            "canvas"
+            'canvas'
         );
 
 
     canvas.width=128;
-
     canvas.height=128;
 
 
     const ctx=
         canvas.getContext(
-            "2d"
+            '2d'
         );
 
 
@@ -2090,26 +1796,19 @@ function pixelTexture(colors){
             x+=8
         ){
 
+
             ctx.fillStyle=
 
                 colors[
-
                     Math.floor(
-
-                        Math.random() *
-
+                        Math.random()*
                         colors.length
-
                     )
-
                 ];
 
 
             ctx.fillRect(
-                x,
-                y,
-                8,
-                8
+                x,y,8,8
             );
 
         }
@@ -2117,467 +1816,297 @@ function pixelTexture(colors){
     }
 
 
-    const texture=
-
+    const t=
         new THREE.CanvasTexture(
             canvas
         );
 
 
-    texture.magFilter=
+    t.magFilter=
         THREE.NearestFilter;
 
 
-    texture.minFilter=
+    t.minFilter=
         THREE.NearestFilter;
 
 
-    texture.wrapS=
+    t.wrapS=
         THREE.RepeatWrapping;
 
 
-    texture.wrapT=
+    t.wrapT=
         THREE.RepeatWrapping;
 
 
-    texture.colorSpace=
+    t.colorSpace=
         THREE.SRGBColorSpace;
 
 
-    return texture;
+    return t;
 
 }
 
 
 /* =====================================================
-   INIT THREE
+   INIT 3D
 ===================================================== */
 
 function init3D(){
 
+
+    scene=
+        new THREE.Scene();
+
+
     /*
-        ★ THREE가 실제 존재하는지 확인
+       하늘 이미지
     */
 
-    if(
-        typeof THREE ===
-        "undefined"
-    ){
+    new THREE.TextureLoader()
+    .load(
 
-        $("engineError")
-        .classList
-        .add("show");
+        SKY_IMAGE,
 
-        return false;
-    }
+        texture=>{
 
 
-    try{
+            texture.colorSpace=
+                THREE.SRGBColorSpace;
 
 
-        scene=
-            new THREE.Scene();
+            scene.background=
+                texture;
+
+        },
+
+        undefined,
+
+        ()=>{
 
 
-        /*
-            기본 하늘색을 먼저 지정
-
-            이미지가 늦게 떠도
-            게임 자체는 시작
-        */
-
-        scene.background=
-
-            new THREE.Color(
-                0x87b9d7
-            );
-
-
-        /*
-            하늘 이미지
-
-            실패해도 게임은 계속됨
-        */
-
-        const loader=
-            new THREE.TextureLoader();
-
-
-        loader.load(
-
-            SKY_IMAGE,
-
-
-            function(texture){
-
-                texture.colorSpace=
-                    THREE.SRGBColorSpace;
-
-
-                scene.background=
-                    texture;
-
-            },
-
-
-            undefined,
-
-
-            function(){
-
-                console.log(
-                    "하늘 이미지 로딩 실패 - 기본 하늘 사용"
+            scene.background=
+                new THREE.Color(
+                    0x77b5dd
                 );
 
-            }
+        }
+
+    );
+
+
+    scene.fog=
+
+        new THREE.Fog(
+            0xa5bdc8,
+            22,
+            90
+        );
+
+
+    camera=
+
+        new THREE.PerspectiveCamera(
+
+            67,
+
+            $('#playArea').clientWidth /
+            $('#playArea').clientHeight,
+
+            .1,
+
+            220
 
         );
 
 
-        /*
-            FOG
-        */
-
-        scene.fog=
-
-            new THREE.Fog(
-
-                0xa5bdc8,
-
-                22,
-
-                90
-
-            );
+    camera.position.set(
+        0,
+        2.15,
+        8
+    );
 
 
-        /*
-            CAMERA
-        */
+    renderer=
 
-        const area=
-            $("playArea");
+        new THREE.WebGLRenderer({
 
+            antialias:false,
 
-        camera=
+            powerPreference:
+                'high-performance'
 
-            new THREE.PerspectiveCamera(
-
-                67,
-
-                area.clientWidth /
-                area.clientHeight,
-
-                .1,
-
-                220
-
-            );
+        });
 
 
-        camera.position.set(
+    renderer.setPixelRatio(
 
-            0,
+        Math.min(
 
-            2.15,
+            devicePixelRatio,
 
-            8
+            CONFIG.MAX_PIXEL_RATIO
 
-        );
+        )
 
-
-        /*
-            RENDERER
-        */
-
-        renderer=
-
-            new THREE.WebGLRenderer({
-
-                antialias:false,
-
-                alpha:false,
-
-                powerPreference:
-                    "high-performance"
-
-            });
+    );
 
 
-        renderer.setPixelRatio(
+    renderer.setSize(
 
-            Math.min(
+        $('#playArea').clientWidth,
 
-                window.devicePixelRatio || 1,
+        $('#playArea').clientHeight
 
-                CONFIG.MAX_PIXEL_RATIO
-
-            )
-
-        );
+    );
 
 
-        renderer.setSize(
-
-            area.clientWidth,
-
-            area.clientHeight
-
-        );
+    renderer.outputColorSpace=
+        THREE.SRGBColorSpace;
 
 
-        renderer.outputColorSpace=
-            THREE.SRGBColorSpace;
+    $('#playArea').prepend(
+        renderer.domElement
+    );
 
 
-        /*
-            canvas를 맨 뒤에 삽입
-        */
+    scene.add(
 
-        area.insertBefore(
+        new THREE.HemisphereLight(
+            0xe6f6ff,
+            0x27391f,
+            2.1
+        )
 
-            renderer.domElement,
+    );
 
-            area.firstChild
+
+    /*
+       잔디
+    */
+
+    const grassTexture=
+
+        pixelTexture([
+
+            '#527637',
+            '#668744',
+            '#46692f',
+            '#75944c',
+            '#3c602a'
+
+        ]);
+
+
+    grassTexture.repeat.set(
+        12,
+        35
+    );
+
+
+    const ground=
+
+        new THREE.Mesh(
+
+            new THREE.PlaneGeometry(
+                90,
+                240
+            ),
+
+            new THREE.MeshLambertMaterial({
+
+                map:grassTexture
+
+            })
 
         );
 
 
-        /*
-            LIGHT
-        */
-
-        const hemi=
-
-            new THREE.HemisphereLight(
-
-                0xe6f6ff,
-
-                0x27391f,
-
-                2.1
-
-            );
+    ground.rotation.x=
+        -Math.PI/2;
 
 
-        scene.add(
-            hemi
-        );
+    ground.position.set(
+        0,
+        0,
+        -100
+    );
 
 
-        const directional=
-
-            new THREE.DirectionalLight(
-
-                0xffffff,
-
-                .8
-
-            );
+    scene.add(
+        ground
+    );
 
 
-        directional.position.set(
+    /*
+       길
+    */
 
-            4,
+    const roadTexture=
 
-            10,
+        pixelTexture([
 
-            6
+            '#8a704a',
+            '#977c52',
+            '#745f40',
+            '#a08759',
+            '#68563c'
 
-        );
-
-
-        scene.add(
-            directional
-        );
-
-
-        /*
-            GRASS
-        */
-
-        const grassTexture=
-
-            pixelTexture([
-
-                "#527637",
-
-                "#668744",
-
-                "#46692f",
-
-                "#75944c",
-
-                "#3c602a"
-
-            ]);
+        ]);
 
 
-        grassTexture.repeat.set(
+    roadTexture.repeat.set(
+        2,
+        38
+    );
 
-            12,
 
-            35
+    const road=
+
+        new THREE.Mesh(
+
+            new THREE.PlaneGeometry(
+                7,
+                240
+            ),
+
+            new THREE.MeshLambertMaterial({
+
+                map:roadTexture
+
+            })
 
         );
 
 
-        const ground=
+    road.rotation.x=
+        -Math.PI/2;
 
-            new THREE.Mesh(
 
-                new THREE.PlaneGeometry(
+    road.position.set(
+        0,
+        .012,
+        -100
+    );
 
-                    90,
 
-                    240
+    scene.add(
+        road
+    );
 
-                ),
 
-                new THREE.MeshLambertMaterial({
+    createForest();
 
-                    map:
-                        grassTexture
+    spawnMonster(
+        0
+    );
 
-                })
 
-            );
+    initialized=true;
 
 
-        ground.rotation.x=
-
-            -Math.PI/2;
-
-
-        ground.position.set(
-
-            0,
-
-            0,
-
-            -100
-
-        );
-
-
-        scene.add(
-            ground
-        );
-
-
-        /*
-            ROAD
-        */
-
-        const roadTexture=
-
-            pixelTexture([
-
-                "#8a704a",
-
-                "#977c52",
-
-                "#745f40",
-
-                "#a08759",
-
-                "#68563c"
-
-            ]);
-
-
-        roadTexture.repeat.set(
-
-            2,
-
-            38
-
-        );
-
-
-        const road=
-
-            new THREE.Mesh(
-
-                new THREE.PlaneGeometry(
-
-                    7,
-
-                    240
-
-                ),
-
-                new THREE.MeshLambertMaterial({
-
-                    map:
-                        roadTexture
-
-                })
-
-            );
-
-
-        road.rotation.x=
-
-            -Math.PI/2;
-
-
-        road.position.set(
-
-            0,
-
-            .012,
-
-            -100
-
-        );
-
-
-        scene.add(
-            road
-        );
-
-
-        createForest();
-
-
-        spawnMonster(0);
-
-
-        initialized=true;
-
-
-        lastTime=
-            performance.now();
-
-
-        requestAnimationFrame(
-            loop
-        );
-
-
-        return true;
-
-    }
-
-
-    catch(error){
-
-
-        console.error(
-            "THREE INIT ERROR:",
-            error
-        );
-
-
-        $("engineError")
-        .classList
-        .add("show");
-
-
-        return false;
-
-    }
+    requestAnimationFrame(
+        loop
+    );
 
 }
 
@@ -2588,51 +2117,32 @@ function init3D(){
 
 function createForest(){
 
+
     const trunkGeo=
 
         new THREE.CylinderGeometry(
-
-            .25,
-
-            .38,
-
-            3,
-
-            5
-
+            .25,.38,3,5
         );
 
 
     const leafGeo=
 
         new THREE.ConeGeometry(
-
-            1.6,
-
-            4.5,
-
-            6
-
+            1.6,4.5,6
         );
 
 
     const trunkMat=
 
         new THREE.MeshLambertMaterial({
-
-            color:
-                0x49331f
-
+            color:0x49331f
         });
 
 
     const leafMat=
 
         new THREE.MeshLambertMaterial({
-
-            color:
-                0x315d2f
-
+            color:0x315d2f
         });
 
 
@@ -2642,18 +2152,11 @@ function createForest(){
         z-=5
     ){
 
-        const sides=
-            [-1,1];
-
 
         for(
-            let s=0;
-            s<sides.length;
-            s++
+            const side
+            of [-1,1]
         ){
-
-            const side=
-                sides[s];
 
 
             const tree=
@@ -2663,57 +2166,42 @@ function createForest(){
             const trunk=
 
                 new THREE.Mesh(
-
                     trunkGeo,
-
                     trunkMat
-
                 );
 
 
-            trunk.position.y=
-                1.5;
+            trunk.position.y=1.5;
 
 
-            tree.add(
-                trunk
-            );
+            tree.add(trunk);
 
 
             const leaf=
 
                 new THREE.Mesh(
-
                     leafGeo,
-
                     leafMat
-
                 );
 
 
-            leaf.position.y=
-                4;
+            leaf.position.y=4;
 
 
-            tree.add(
-                leaf
-            );
+            tree.add(leaf);
 
 
             tree.position.set(
 
-                side *
-
+                side*
                 (
-                    5 +
-
+                    5+
                     Math.random()*7
                 ),
 
                 0,
 
-                z +
-
+                z+
                 Math.random()*2
 
             );
@@ -2721,16 +2209,13 @@ function createForest(){
 
             tree.scale.setScalar(
 
-                .7 +
-
+                .7+
                 Math.random()*.6
 
             );
 
 
-            scene.add(
-                tree
-            );
+            scene.add(tree);
 
         }
 
@@ -2740,122 +2225,76 @@ function createForest(){
 
 
 /* =====================================================
-   TEMP MONSTER TEXTURE
+   MONSTER TEXTURE
 ===================================================== */
 
-function temporaryMonster(index){
+function temporaryMonster(
+    index
+){
+
 
     const canvas=
-
         document.createElement(
-            "canvas"
+            'canvas'
         );
 
 
-    canvas.width=
-        128;
+    canvas.width=128;
 
-
-    canvas.height=
-        128;
+    canvas.height=128;
 
 
     const ctx=
-
         canvas.getContext(
-            "2d"
+            '2d'
         );
-
-
-    ctx.clearRect(
-        0,
-        0,
-        128,
-        128
-    );
 
 
     const colors=[
 
-        "#516c3e",
+        '#516c3e',
 
-        "#285b74",
+        '#285b74',
 
-        "#8a3428"
+        '#8a3428'
 
     ];
 
 
     ctx.fillStyle=
-        colors[index] ||
-        colors[0];
+        colors[index];
 
-
-    /*
-        몸
-    */
 
     ctx.fillRect(
-        35,
-        35,
-        58,
-        62
-    );
-
-
-    /*
-        머리
-    */
-
-    ctx.fillRect(
-        40,
-        18,
-        48,
-        40
-    );
-
-
-    /*
-        팔
-    */
-
-    ctx.fillRect(
-        23,
-        50,
-        17,
-        38
+        35,35,58,62
     );
 
 
     ctx.fillRect(
-        88,
-        50,
-        17,
-        38
-    );
-
-
-    /*
-        눈
-    */
-
-    ctx.fillStyle=
-        "#efff88";
-
-
-    ctx.fillRect(
-        48,
-        31,
-        8,
-        8
+        40,18,48,40
     );
 
 
     ctx.fillRect(
-        72,
-        31,
-        8,
-        8
+        23,50,17,38
+    );
+
+
+    ctx.fillRect(
+        88,50,17,38
+    );
+
+
+    ctx.fillStyle='#efff88';
+
+
+    ctx.fillRect(
+        48,31,8,8
+    );
+
+
+    ctx.fillRect(
+        72,31,8,8
     );
 
 
@@ -2870,24 +2309,19 @@ function temporaryMonster(index){
         THREE.NearestFilter;
 
 
-    texture.minFilter=
-        THREE.NearestFilter;
-
-
-    texture.colorSpace=
-        THREE.SRGBColorSpace;
-
-
     return texture;
 
 }
 
 
 /* =====================================================
-   SPAWN MONSTER
+   MONSTER
 ===================================================== */
 
-function spawnMonster(index){
+function spawnMonster(
+    index
+){
+
 
     if(monster){
 
@@ -2907,32 +2341,15 @@ function spawnMonster(index){
     }
 
 
-    monsterIndex=
-        index;
+    monsterIndex=index;
 
+    enemyHP=100;
 
-    enemyHP=
-        CONFIG.MONSTER_HP;
+    monsterDead=false;
 
+    battle=false;
 
-    monsterDead=
-        false;
-
-
-    battle=
-        false;
-
-
-    deathProgress=
-        -1;
-
-
-    monsterAttackProgress=
-        -1;
-
-
-    monsterAttackHit=
-        false;
+    deathProgress=-1;
 
 
     monsterMaterial=
@@ -2952,23 +2369,12 @@ function spawnMonster(index){
         });
 
 
-    /*
-        몬스터 크기
-
-        여기 5.4 / 5.4를 키우면
-        몬스터가 커짐
-    */
-
     monster=
 
         new THREE.Mesh(
 
             new THREE.PlaneGeometry(
-
-                5.4,
-
-                5.4
-
+                5,5
             ),
 
             monsterMaterial
@@ -2978,64 +2384,41 @@ function spawnMonster(index){
 
     monsterHomeZ=
 
-        CONFIG
-        .MONSTER_POSITIONS[
+        CONFIG.MONSTER_POSITIONS[
             index
         ];
 
-
-    /*
-        높이 2.7
-
-        Plane 높이 절반 = 2.7
-
-        즉 아래쪽이 땅 0에 닿음
-
-        ★ 허공에 뜨지 않음
-    */
 
     monster.position.set(
 
         0,
 
-        2.7,
+        2.5,
 
         monsterHomeZ
 
     );
 
 
-    scene.add(
-        monster
-    );
+    scene.add(monster);
 
-
-    /*
-        그림자
-    */
 
     monsterShadow=
 
         new THREE.Mesh(
 
             new THREE.CircleGeometry(
-
-                1.45,
-
+                1.5,
                 18
-
             ),
 
             new THREE.MeshBasicMaterial({
 
-                color:
-                    0x000000,
+                color:0x000000,
 
-                transparent:
-                    true,
+                transparent:true,
 
-                opacity:
-                    .27
+                opacity:.27
 
             })
 
@@ -3043,16 +2426,12 @@ function spawnMonster(index){
 
 
     monsterShadow.rotation.x=
-
         -Math.PI/2;
 
 
     monsterShadow.position.set(
 
-        0,
-
-        .025,
-
+        0,.02,
         monsterHomeZ
 
     );
@@ -3074,67 +2453,50 @@ function spawnMonster(index){
 
 function updateHP(){
 
-    $("playerHP")
-    .style
-    .width=
 
-        playerHP +
-        "%";
+    $('#playerHP').style.width=
+        playerHP+'%';
 
 
-    $("enemyHP")
-    .style
-    .width=
-
-        enemyHP +
-        "%";
+    $('#enemyHP').style.width=
+        enemyHP+'%';
 
 
-    $("playerText")
+    $('#playerText').textContent=
+        playerHP+' / 100';
+
+
+    $('#enemyText').textContent=
+        enemyHP+' / 100';
+
+
+    $('#monsterCount')
     .textContent=
 
-        playerHP +
-        " / " +
-        CONFIG.PLAYER_HP;
-
-
-    $("enemyText")
-    .textContent=
-
-        enemyHP +
-        " / " +
-        CONFIG.MONSTER_HP;
-
-
-    $("monsterCount")
-    .textContent=
-
-        "☠ " +
-
+        '☠ '+
         (
             monsterIndex+1
-        ) +
-
-        " / 3";
+        )+
+        ' / 3';
 
 }
 
 
 /* =====================================================
-   SWORD IDLE
+   SWORD MOTION MODE
 ===================================================== */
 
 function updateSwordIdle(){
 
+
     const sword=
-        $("sword");
+        $('#sword');
 
 
     sword.classList.remove(
 
-        "walking",
-
-        "battle-idle"
+        'walking',
+        'battle-idle'
 
     );
 
@@ -3144,7 +2506,6 @@ function updateSwordIdle(){
         gameOver ||
         swordAttacking
     ){
-
         return;
     }
 
@@ -3152,7 +2513,7 @@ function updateSwordIdle(){
     if(battle){
 
         sword.classList.add(
-            "battle-idle"
+            'battle-idle'
         );
 
     }
@@ -3160,7 +2521,7 @@ function updateSwordIdle(){
     else{
 
         sword.classList.add(
-            "walking"
+            'walking'
         );
 
     }
@@ -3169,36 +2530,34 @@ function updateSwordIdle(){
 
 
 /* =====================================================
-   ATTACK
+   ★ ATTACK
 
-   ★ 바깥쪽 → 안쪽으로 벤다
+   화면 바깥 → 화면 안쪽
 ===================================================== */
 
 function attack(){
+
 
     if(
         !started ||
         gameOver ||
         swordAttacking
     ){
-
         return;
     }
 
 
-    swordAttacking=
-        true;
+    swordAttacking=true;
 
 
     const sword=
-        $("sword");
+        $('#sword');
 
 
     sword.classList.remove(
 
-        "walking",
-
-        "battle-idle"
+        'walking',
+        'battle-idle'
 
     );
 
@@ -3207,10 +2566,7 @@ function attack(){
 
 
     /*
-        ★ 칼을 휘두르는 순간
-        바로 적 데미지
-
-        애니메이션 끝난 뒤가 아님
+       공격 시작 즉시 데미지
     */
 
     if(
@@ -3218,44 +2574,19 @@ function attack(){
         !monsterDead
     ){
 
-        setTimeout(
-
-            function(){
-
-                if(
-                    battle &&
-                    !monsterDead
-                ){
-
-                    damageMonster();
-
-                }
-
-            },
-
-            70
-
-        );
+        damageMonster();
 
     }
 
 
-    /*
-        공격 방향을 번갈아 사용
-    */
-
     const horizontal=
-
         swordType===0;
 
 
     swordType=
-
         horizontal
-        ?
-        1
-        :
-        0;
+        ?1
+        :0;
 
 
     let frames;
@@ -3263,70 +2594,81 @@ function attack(){
 
     if(horizontal){
 
+
         /*
-            오른쪽 바깥에서 시작
+           ★ 오른쪽 바깥 → 안쪽
 
-                    ↓
+           시작:
+           +210px
 
-            화면 중앙 안쪽으로 크게 벰
+           끝:
+           -300px
         */
 
         frames=[
+
 
             {
                 offset:0,
 
                 transform:
-                    "translate(250px,55px) rotate(-105deg) scale(.96)"
+                    'translate(210px,45px) rotate(-100deg) scale(.96)'
             },
+
 
             {
-                offset:.12,
+                offset:.15,
 
                 transform:
-                    "translate(220px,40px) rotate(-92deg) scale(.98)"
+                    'translate(185px,30px) rotate(-86deg) scale(.97)'
             },
+
 
             {
-                offset:.30,
+                offset:.32,
 
                 transform:
-                    "translate(110px,-10px) rotate(-55deg) scale(1)"
+                    'translate(80px,-20px) rotate(-45deg) scale(1)'
             },
+
 
             {
-                offset:.47,
+                offset:.48,
 
                 transform:
-                    "translate(-45px,-80px) rotate(10deg) scale(1.07)"
+                    'translate(-80px,-90px) rotate(20deg) scale(1.07)'
             },
+
 
             {
                 offset:.64,
 
                 transform:
-                    "translate(-220px,-145px) rotate(80deg) scale(1.13)"
+                    'translate(-245px,-150px) rotate(92deg) scale(1.14)'
             },
+
 
             {
-                offset:.76,
+                offset:.75,
 
                 transform:
-                    "translate(-310px,-170px) rotate(115deg) scale(1.16)"
+                    'translate(-310px,-175px) rotate(118deg) scale(1.16)'
             },
+
 
             {
-                offset:.89,
+                offset:.88,
 
                 transform:
-                    "translate(-100px,-55px) rotate(38deg) scale(1.05)"
+                    'translate(-100px,-55px) rotate(40deg) scale(1.06)'
             },
+
 
             {
                 offset:1,
 
                 transform:
-                    "translate(0,0) rotate(-4deg) scale(1)"
+                    'translate(0,0) rotate(-4deg) scale(1)'
             }
 
         ];
@@ -3335,70 +2677,71 @@ function attack(){
 
     else{
 
-        /*
-            오른쪽 위 바깥쪽
-
-                    ↓
-
-            안쪽 아래로 베기
-        */
 
         frames=[
+
 
             {
                 offset:0,
 
                 transform:
-                    "translate(220px,-210px) rotate(-140deg) scale(.96)"
+                    'translate(185px,-190px) rotate(-135deg) scale(.96)'
             },
+
 
             {
-                offset:.14,
+                offset:.16,
 
                 transform:
-                    "translate(180px,-220px) rotate(-122deg) scale(.98)"
+                    'translate(150px,-210px) rotate(-120deg) scale(.97)'
             },
+
 
             {
-                offset:.31,
+                offset:.34,
 
                 transform:
-                    "translate(75px,-165px) rotate(-75deg) scale(1)"
+                    'translate(55px,-155px) rotate(-70deg) scale(1)'
             },
+
 
             {
-                offset:.49,
+                offset:.52,
 
                 transform:
-                    "translate(-75px,-65px) rotate(-15deg) scale(1.07)"
+                    'translate(-105px,-55px) rotate(-5deg) scale(1.08)'
             },
+
 
             {
-                offset:.66,
+                offset:.68,
 
                 transform:
-                    "translate(-225px,40px) rotate(48deg) scale(1.13)"
+                    'translate(-250px,50px) rotate(55deg) scale(1.14)'
             },
+
 
             {
                 offset:.78,
 
                 transform:
-                    "translate(-290px,115px) rotate(75deg) scale(1.16)"
+                    'translate(-285px,120px) rotate(75deg) scale(1.16)'
             },
+
 
             {
-                offset:.90,
+                offset:.9,
 
                 transform:
-                    "translate(-90px,30px) rotate(22deg) scale(1.05)"
+                    'translate(-85px,35px) rotate(25deg) scale(1.05)'
             },
+
 
             {
                 offset:1,
 
                 transform:
-                    "translate(0,0) rotate(-4deg) scale(1)"
+                    'translate(0,0) rotate(-4deg) scale(1)'
             }
 
         ];
@@ -3406,89 +2749,50 @@ function attack(){
     }
 
 
-    /*
-        Web Animations API
-    */
+    swordAnimation=
 
-    if(
-        sword.animate
-    ){
+        sword.animate(
 
-        swordAnimation=
+            frames,
 
-            sword.animate(
+            {
 
-                frames,
+                duration:
+                    CONFIG.SWORD_SPEED,
 
-                {
+                easing:
+                    'cubic-bezier(.18,.70,.18,1)'
 
-                    duration:
-                        CONFIG.SWORD_SPEED,
-
-                    easing:
-                        "cubic-bezier(.18,.70,.18,1)",
-
-                    fill:
-                        "none"
-
-                }
-
-            );
-
-
-        swordAnimation.onfinish=
-
-            function(){
-
-                swordAttacking=
-                    false;
-
-
-                updateSwordIdle();
-
-            };
-
-    }
-
-    else{
-
-        /*
-            혹시 animate 미지원이면
-            공격 기능 자체는 죽지 않음
-        */
-
-        setTimeout(
-
-            function(){
-
-                swordAttacking=
-                    false;
-
-
-                updateSwordIdle();
-
-            },
-
-            CONFIG.SWORD_SPEED
+            }
 
         );
 
-    }
+
+    swordAnimation.onfinish=
+        ()=>{
+
+
+            swordAttacking=false;
+
+
+            updateSwordIdle();
+
+        };
 
 }
 
 
 /* =====================================================
-   MONSTER DAMAGE
+   DAMAGE MONSTER
 ===================================================== */
 
 function damageMonster(){
+
 
     if(
         !battle ||
         monsterDead
     ){
-
         return;
     }
 
@@ -3496,12 +2800,9 @@ function damageMonster(){
     enemyHP=
 
         Math.max(
-
             0,
-
-            enemyHP -
+            enemyHP-
             CONFIG.PLAYER_DAMAGE
-
         );
 
 
@@ -3511,70 +2812,50 @@ function damageMonster(){
     hitSound();
 
 
-    /*
-        ★ 진동은
-        내 칼이 몬스터에 맞았을 때만
-    */
-
     if(
         navigator.vibrate
     ){
 
         navigator.vibrate(
-            [90,25,70]
+            [120,25,110]
         );
 
     }
 
 
-    if(monsterMaterial){
-
-        monsterMaterial
-        .color
-        .set(
-            0xff3030
-        );
-
-    }
+    monsterMaterial
+    .color
+    .set(
+        0xff3030
+    );
 
 
-    monsterHitTimer=
-        .22;
+    monsterHitTimer=.22;
+
+    cameraShake=.22;
 
 
-    cameraShake=
-        .14;
-
-
-    $("damageNumber")
+    $('#damageNumber')
     .animate(
 
         [
 
             {
-
                 opacity:1,
-
                 transform:
-                    "translate(-50%,0) scale(1.3)"
-
+                    'translate(-50%,0) scale(1.3)'
             },
 
             {
-
                 opacity:0,
-
                 transform:
-                    "translate(-50%,-55px) scale(1)"
-
+                    'translate(-50%,-55px) scale(1)'
             }
 
         ],
 
         {
-
             duration:400
-
         }
 
     );
@@ -3590,41 +2871,25 @@ function damageMonster(){
 
 
 /* =====================================================
-   KILL MONSTER
+   KILL
 ===================================================== */
 
 function killMonster(){
 
-    monsterDead=
-        true;
+
+    monsterDead=true;
+
+    battle=false;
+
+    deathProgress=0;
 
 
-    battle=
-        false;
+    clearInterval(
+        monsterAttackTimer
+    );
 
 
-    deathProgress=
-        0;
-
-
-    deathSound();
-
-
-    if(monsterAttackTimer){
-
-        clearInterval(
-            monsterAttackTimer
-        );
-
-
-        monsterAttackTimer=
-            null;
-
-    }
-
-
-    monsterAttackProgress=
-        -1;
+    monsterAttackProgress=-1;
 
 
     updateSwordIdle();
@@ -3633,64 +2898,40 @@ function killMonster(){
 
 
 /* =====================================================
-   NEXT MONSTER
+   NEXT
 ===================================================== */
 
 function nextMonster(){
 
-    const next=
 
+    const next=
         monsterIndex+1;
 
 
-    if(next>=3){
-
-        /*
-            ★ CLEAR 화면 없음
-
-            마지막 몬스터를 죽여도
-            계속 앞으로 걸어감
-        */
-
-        if(monster){
-
-            scene.remove(
-                monster
-            );
+    if(
+        next>=3
+    ){
 
 
-            monster=null;
-        }
+        scene.remove(
+            monster
+        );
 
 
-        if(monsterShadow){
-
-            scene.remove(
-                monsterShadow
-            );
+        monster=null;
 
 
-            monsterShadow=null;
-        }
-
-
-        $("enemyHP")
+        $('#enemyHP')
         .style
-        .width=
-            "0%";
+        .width='0%';
 
 
-        $("enemyText")
-        .textContent=
-            "0 / 100";
+        $('#enemyText')
+        .textContent='0 / 100';
 
 
-        $("monsterCount")
-        .textContent=
-            "☠ 3 / 3";
-
-
-        updateSwordIdle();
+        $('#monsterCount')
+        .textContent='☠ 3 / 3';
 
 
         return;
@@ -3706,45 +2947,31 @@ function nextMonster(){
 
 
 /* =====================================================
-   START BATTLE
+   BATTLE
 ===================================================== */
 
 function startBattle(){
 
+
     if(
         battle ||
-        monsterDead ||
-        gameOver
+        monsterDead
     ){
-
         return;
     }
 
 
-    battle=
-        true;
+    battle=true;
 
 
     updateSwordIdle();
 
 
-    if(monsterAttackTimer){
-
-        clearInterval(
-            monsterAttackTimer
-        );
-
-    }
-
-
     monsterAttackTimer=
 
         setInterval(
-
             triggerMonsterAttack,
-
             CONFIG.MONSTER_ATTACK_INTERVAL
-
         );
 
 }
@@ -3756,12 +2983,12 @@ function startBattle(){
 
 function triggerMonsterAttack(){
 
+
     if(
         !battle ||
         monsterDead ||
         gameOver
     ){
-
         return;
     }
 
@@ -3769,17 +2996,13 @@ function triggerMonsterAttack(){
     if(
         monsterAttackProgress>=0
     ){
-
         return;
     }
 
 
-    monsterAttackProgress=
-        0;
+    monsterAttackProgress=0;
 
-
-    monsterAttackHit=
-        false;
+    monsterAttackHit=false;
 
 }
 
@@ -3790,13 +3013,14 @@ function triggerMonsterAttack(){
 
 function damagePlayer(){
 
+
     playerHP=
 
         Math.max(
 
             0,
 
-            playerHP -
+            playerHP-
             CONFIG.MONSTER_DAMAGE
 
         );
@@ -3808,45 +3032,25 @@ function damagePlayer(){
     playerHitSound();
 
 
-    /*
-        ★ 내가 맞을 때는
-        화면 깜빡임 + 흔들림만
+    $('#damageFlash')
+    .animate(
 
-        진동 없음
-    */
+        [
 
-    if(
-        $("damageFlash").animate
-    ){
+            {opacity:.9},
 
-        $("damageFlash")
-        .animate(
+            {opacity:0}
 
-            [
+        ],
 
-                {
-                    opacity:.9
-                },
+        {
+            duration:330
+        }
 
-                {
-                    opacity:0
-                }
-
-            ],
-
-            {
-
-                duration:330
-
-            }
-
-        );
-
-    }
+    );
 
 
-    cameraShake=
-        .30;
+    cameraShake=.3;
 
 
     if(playerHP<=0){
@@ -3864,37 +3068,26 @@ function damagePlayer(){
 
 function endGame(){
 
-    gameOver=
-        true;
+
+    gameOver=true;
+
+    started=false;
+
+    battle=false;
 
 
-    started=
-        false;
+    clearInterval(
+        monsterAttackTimer
+    );
 
 
-    battle=
-        false;
-
-
-    if(monsterAttackTimer){
-
-        clearInterval(
-            monsterAttackTimer
-        );
-
-
-        monsterAttackTimer=
-            null;
-    }
-
-
-    $("sword")
+    $('#sword')
     .classList
     .remove(
 
-        "walking",
+        'walking',
 
-        "battle-idle"
+        'battle-idle'
 
     );
 
@@ -3902,11 +3095,9 @@ function endGame(){
     stopQR();
 
 
-    $("gameOver")
+    $('#gameOver')
     .classList
-    .add(
-        "show"
-    );
+    .add('show');
 
 }
 
@@ -3917,142 +3108,92 @@ function endGame(){
 
 let nfcStarted=false;
 
-let nfcReader=null;
-
 let lastNFC=0;
 
 
-/*
-    1ms 쿨타임
-
-    실제 Web NFC의 onreading 발생 빈도는
-    브라우저/태그 동작에 의해 제한됨.
-*/
-
 async function startNFC(){
-
-    if(nfcStarted){
-
-        return;
-    }
 
 
     if(
-        !("NDEFReader" in window)
+        !('NDEFReader' in window)
     ){
 
-        $("statusDot")
-        .style
-        .background=
-            "#ff5656";
 
-
-        $("statusText")
+        $('#statusText')
         .textContent=
-            "이 브라우저는 NFC 미지원";
+        'NFC 미지원';
 
 
         return;
+
     }
 
 
     try{
 
-        nfcReader=
 
+        const reader=
             new NDEFReader();
 
 
-        await nfcReader.scan();
+        await reader.scan();
 
 
-        nfcStarted=
-            true;
+        nfcStarted=true;
 
 
-        $("statusDot")
+        $('#statusDot')
         .style
-        .background=
-            "#50ef51";
+        .background='#50ef51';
 
 
-        $("statusText")
+        $('#statusText')
         .textContent=
-            "NFC 대기 중";
+        'NFC 대기 중';
 
 
-        nfcReader.onreading=
-
-            function(){
-
-                if(
-                    inputMode!=="nfc"
-                ){
-
-                    return;
-                }
+        reader.onreading=
+            ()=>{
 
 
                 if(
-                    !started ||
-                    gameOver
+                    inputMode!=='nfc'
                 ){
-
                     return;
                 }
 
 
                 const now=
-                    performance.now();
+                    Date.now();
 
 
                 if(
                     now-lastNFC<1
                 ){
-
                     return;
                 }
 
 
-                lastNFC=
-                    now;
+                lastNFC=now;
 
 
                 attack();
 
             };
 
-
-        nfcReader.onreadingerror=
-
-            function(){
-
-                $("statusText")
-                .textContent=
-                    "NFC 다시 인식해주세요";
-
-            };
-
     }
 
+    catch(e){
 
-    catch(error){
 
         console.error(
-            "NFC:",
-            error
+            e
         );
 
 
-        $("statusDot")
-        .style
-        .background=
-            "#ffb13d";
-
-
-        $("statusText")
+        $('#statusText')
         .textContent=
-            "NFC 권한을 확인해주세요";
+        'NFC 권한 확인';
 
     }
 
@@ -4063,9 +3204,7 @@ async function startNFC(){
    QR
 ===================================================== */
 
-let inputMode=
-    "nfc";
-
+let inputMode='nfc';
 
 let qrStream=null;
 
@@ -4079,92 +3218,19 @@ let detector=null;
 
 
 /* =====================================================
-   LOAD JSQR
-===================================================== */
-
-function loadJsQR(){
-
-    return new Promise(
-
-        function(resolve){
-
-            if(window.jsQR){
-
-                resolve();
-
-                return;
-            }
-
-
-            const script=
-
-                document.createElement(
-                    "script"
-                );
-
-
-            script.src=
-
-                "https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js";
-
-
-            script.onload=
-
-                function(){
-
-                    resolve();
-
-                };
-
-
-            script.onerror=
-
-                function(){
-
-                    resolve();
-
-                };
-
-
-            document.head
-            .appendChild(
-                script
-            );
-
-        }
-
-    );
-
-}
-
-
-/* =====================================================
    START QR
 ===================================================== */
 
 async function startQR(){
 
+
     if(qrRunning){
-
-        return;
-    }
-
-
-    if(
-        !navigator.mediaDevices ||
-        !navigator.mediaDevices.getUserMedia
-    ){
-
-        $("statusText")
-        .textContent=
-            "카메라 미지원";
-
-
         return;
     }
 
 
     try{
+
 
         qrStream=
 
@@ -4177,10 +3243,7 @@ async function startQR(){
                 video:{
 
                     facingMode:{
-
-                        ideal:
-                            "environment"
-
+                        ideal:'environment'
                     }
 
                 }
@@ -4188,53 +3251,35 @@ async function startQR(){
             });
 
 
-        $("qrVideo")
+        $('#qrVideo')
         .srcObject=
-            qrStream;
+        qrStream;
 
 
-        await $("qrVideo")
-        .play();
+        await $('#qrVideo').play();
 
 
-        qrRunning=
-            true;
+        qrRunning=true;
 
-
-        /*
-            BarcodeDetector 우선 사용
-        */
 
         if(
-            "BarcodeDetector"
+            'BarcodeDetector'
             in window
         ){
 
-            try{
 
-                detector=
+            detector=
 
-                    new BarcodeDetector({
+                new BarcodeDetector({
 
-                        formats:[
-                            "qr_code"
-                        ]
+                    formats:[
+                        'qr_code'
+                    ]
 
-                    });
-
-            }
-
-            catch(e){
-
-                detector=null;
-            }
+                });
 
         }
 
-
-        /*
-            없으면 jsQR
-        */
 
         if(!detector){
 
@@ -4243,39 +3288,31 @@ async function startQR(){
         }
 
 
-        $("statusDot")
+        $('#statusDot')
         .style
-        .background=
-            "#55eaff";
+        .background='#55eaff';
 
 
-        $("statusText")
+        $('#statusText')
         .textContent=
-            "QR 대기 중";
+        'QR 대기 중';
 
 
         scanQR();
 
     }
 
+    catch(e){
 
-    catch(error){
 
         console.error(
-            "CAMERA:",
-            error
+            e
         );
 
 
-        $("statusDot")
-        .style
-        .background=
-            "#ffb13d";
-
-
-        $("statusText")
+        $('#statusText')
         .textContent=
-            "카메라 권한이 필요합니다";
+        '카메라 권한 필요';
 
     }
 
@@ -4283,38 +3320,86 @@ async function startQR(){
 
 
 /* =====================================================
-   QR SCAN LOOP
+   JSQR
+===================================================== */
+
+function loadJsQR(){
+
+
+    return new Promise(
+        resolve=>{
+
+
+            if(window.jsQR){
+
+                resolve();
+
+                return;
+            }
+
+
+            const script=
+
+                document
+                .createElement(
+                    'script'
+                );
+
+
+            script.src=
+
+'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+
+
+            script.onload=
+                resolve;
+
+
+            script.onerror=
+                resolve;
+
+
+            document.head
+            .appendChild(
+                script
+            );
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   QR LOOP
 ===================================================== */
 
 async function scanQR(){
 
+
     if(
         !qrRunning ||
-        inputMode!=="qr"
+        inputMode!=='qr'
     ){
-
         return;
     }
 
 
     const video=
-        $("qrVideo");
+        $('#qrVideo');
 
 
-    let detected=
-        false;
+    let detected=false;
 
-
-    /*
-        BarcodeDetector
-    */
 
     if(
         detector &&
         video.readyState>=2
     ){
 
+
         try{
+
 
             const codes=
 
@@ -4324,33 +3409,28 @@ async function scanQR(){
 
 
             for(
-                let i=0;
-                i<codes.length;
-                i++
+                const item
+                of codes
             ){
-
-                const value=
-
-                    String(
-                        codes[i].rawValue || ""
-                    )
-                    .trim()
-                    .toUpperCase();
 
 
                 if(
-                    value===
+                    String(
+                        item.rawValue
+                    )
+                    .trim()
+                    .toUpperCase() ===
                     CONFIG.QR_VALUE
                 ){
 
-                    detected=
-                        true;
+
+                    detected=true;
 
 
                     if(!qrLocked){
 
-                        qrLocked=
-                            true;
+
+                        qrLocked=true;
 
 
                         attack();
@@ -4371,136 +3451,106 @@ async function scanQR(){
     }
 
 
-    /*
-        jsQR fallback
-    */
-
     else if(
         window.jsQR &&
         video.readyState>=2
     ){
 
-        try{
 
-            const canvas=
-                $("qrCanvas");
-
-
-            canvas.width=
-                360;
+        const canvas=
+            $('#qrCanvas');
 
 
-            canvas.height=
-                240;
+        canvas.width=360;
+        canvas.height=240;
 
 
-            const ctx=
+        const ctx=
 
-                canvas.getContext(
-
-                    "2d",
-
-                    {
-
-                        willReadFrequently:
-                            true
-
-                    }
-
-                );
+            canvas
+            .getContext(
+                '2d',
+                {
+                    willReadFrequently:true
+                }
+            );
 
 
-            ctx.drawImage(
+        ctx.drawImage(
 
-                video,
+            video,
 
-                0,
-                0,
+            0,0,
+
+            canvas.width,
+            canvas.height
+
+        );
+
+
+        const data=
+
+            ctx.getImageData(
+
+                0,0,
 
                 canvas.width,
-
                 canvas.height
 
             );
 
 
-            const image=
+        const result=
 
-                ctx.getImageData(
+            window.jsQR(
 
-                    0,
-                    0,
+                data.data,
 
-                    canvas.width,
+                data.width,
 
-                    canvas.height
+                data.height
 
-                );
-
-
-            const result=
-
-                window.jsQR(
-
-                    image.data,
-
-                    image.width,
-
-                    image.height
-
-                );
+            );
 
 
-            if(result){
-
-                const value=
-
-                    String(
-                        result.data || ""
-                    )
-                    .trim()
-                    .toUpperCase();
-
-
-                if(
-                    value===
-                    CONFIG.QR_VALUE
-                ){
-
-                    detected=
-                        true;
+        if(
+            result &&
+            String(
+                result.data
+            )
+            .trim()
+            .toUpperCase() ===
+            CONFIG.QR_VALUE
+        ){
 
 
-                    if(!qrLocked){
-
-                        qrLocked=
-                            true;
+            detected=true;
 
 
-                        attack();
+            if(!qrLocked){
 
-                    }
 
-                }
+                qrLocked=true;
+
+
+                attack();
 
             }
 
         }
 
-        catch(e){}
-
     }
 
 
     /*
-        QR이 카메라에서 사라지면
-        다시 공격 가능
+       QR이 화면에서 없어지면
+       다시 읽을 수 있음
     */
 
     if(!detected){
 
-        qrLocked=
-            false;
+        qrLocked=false;
+
     }
 
 
@@ -4519,163 +3569,109 @@ async function scanQR(){
 
 function stopQR(){
 
-    qrRunning=
-        false;
+
+    qrRunning=false;
 
 
-    if(qrRAF){
-
-        cancelAnimationFrame(
-            qrRAF
-        );
-
-
-        qrRAF=
-            0;
-    }
+    cancelAnimationFrame(
+        qrRAF
+    );
 
 
     if(qrStream){
 
-        const tracks=
 
-            qrStream.getTracks();
-
-
-        for(
-            let i=0;
-            i<tracks.length;
-            i++
-        ){
-
-            tracks[i].stop();
-
-        }
+        qrStream
+        .getTracks()
+        .forEach(
+            t=>t.stop()
+        );
 
     }
 
 
-    qrStream=
-        null;
+    qrStream=null;
 
 
-    $("qrVideo")
-    .srcObject=
-        null;
+    $('#qrVideo')
+    .srcObject=null;
 
 
-    qrLocked=
-        false;
+    qrLocked=false;
 
 }
 
 
 /* =====================================================
-   NFC BUTTON
+   MODE BUTTON
 ===================================================== */
 
-$("nfcButton")
-.addEventListener(
-
-    "click",
-
-    function(){
-
-        inputMode=
-            "nfc";
+$('#nfcButton')
+.onclick=
+    ()=>{
 
 
-        $("game")
+        inputMode='nfc';
+
+
+        $('#game')
         .classList
         .remove(
-            "qr-mode"
+            'qr-mode'
         );
 
 
-        $("nfcButton")
+        $('#nfcButton')
         .classList
-        .add(
-            "active"
-        );
+        .add('active');
 
 
-        $("qrButton")
+        $('#qrButton')
         .classList
-        .remove(
-            "active"
-        );
+        .remove('active');
 
 
         stopQR();
 
 
-        setTimeout(
-            resize,
-            220
-        );
+        resize();
 
 
-        if(nfcStarted){
+        $('#statusText')
+        .textContent=
 
-            $("statusDot")
-            .style
-            .background=
-                "#50ef51";
+            nfcStarted
+            ?
+            'NFC 대기 중'
+            :
+            'NFC 준비 중';
 
-
-            $("statusText")
-            .textContent=
-                "NFC 대기 중";
-
-        }
-
-        else{
-
-            $("statusText")
-            .textContent=
-                "NFC 준비 중";
-
-        }
-
-    }
-
-);
+    };
 
 
-/* =====================================================
-   QR BUTTON
-===================================================== */
-
-$("qrButton")
-.addEventListener(
-
-    "click",
-
-    async function(){
-
-        inputMode=
-            "qr";
+$('#qrButton')
+.onclick=
+    async ()=>{
 
 
-        $("game")
+        inputMode='qr';
+
+
+        $('#game')
         .classList
         .add(
-            "qr-mode"
+            'qr-mode'
         );
 
 
-        $("qrButton")
+        $('#qrButton')
         .classList
-        .add(
-            "active"
-        );
+        .add('active');
 
 
-        $("nfcButton")
+        $('#nfcButton')
         .classList
-        .remove(
-            "active"
-        );
+        .remove('active');
 
 
         setTimeout(
@@ -4686,149 +3682,86 @@ $("qrButton")
 
         await startQR();
 
-    }
-
-);
+    };
 
 
 /* =====================================================
-   GAME START
+   ★★★★★★★★★★★★★★★★★★★★★
+
+   REAL START
+
+   전역으로 노출한다.
+
+   시작버튼은 module 밖에서
+   이 함수를 호출함.
+
+   ★★★★★★★★★★★★★★★★★★★★★
 ===================================================== */
 
-function startGame(){
-
-    /*
-        ★ Android에서 Chrome 아니면
-        게임 시작하지 않고 Chrome으로
-    */
-
-    if(
-        isAndroid() &&
-        !isRealChrome()
-    ){
-
-        $("chromeGuide")
-        .classList
-        .add(
-            "show"
-        );
+window.startRealGame =
+function(){
 
 
-        return;
-    }
-
-
-    /*
-        ★ THREE 존재 확인
-
-        이번에는 기다리는 module 구조 없음
-    */
-
-    if(
-        typeof THREE ===
-        "undefined"
-    ){
-
-        $("engineError")
-        .classList
-        .add(
-            "show"
-        );
-
-
+    if(started){
         return;
     }
 
 
     initAudio();
 
-
     startBGM();
 
 
     /*
-        3D 최초 초기화
+       게임 초기화
     */
 
     if(!initialized){
 
-        const success=
-            init3D();
-
-
-        if(!success){
-
-            return;
-        }
+        init3D();
 
     }
 
 
     /*
-        게임은 즉시 시작
+       ★ 핵심
 
-        NFC scan() 완료를 기다리지 않는다
-    */
+       NFC 완료를 기다리지 않는다.
 
-    started=
-        true;
-
-
-    gameOver=
-        false;
-
-
-    $("startScreen")
-    .classList
-    .add(
-        "hidden"
-    );
-
-
-    updateSwordIdle();
-
-
-    /*
-        NFC는 따로 시작
-
-        NFC 때문에 게임이 멈추지 않음
+       NFC 때문에 시작화면이
+       멈추지 않음.
     */
 
     startNFC();
 
-}
+
+    started=true;
+
+    gameOver=false;
 
 
-/* =====================================================
-   START BUTTON
-===================================================== */
+    $('#loading')
+    .classList
+    .remove('show');
 
-$("startButton")
-.addEventListener(
 
-    "click",
+    $('#startScreen')
+    .classList
+    .add('hidden');
 
-    startGame
 
-);
+    updateSwordIdle();
+
+};
 
 
 /* =====================================================
    RETRY
 ===================================================== */
 
-$("retryButton")
-.addEventListener(
-
-    "click",
-
-    function(){
-
-        location.reload();
-
-    }
-
-);
+$('#retryButton')
+.onclick=
+    ()=>location.reload();
 
 
 /* =====================================================
@@ -4837,15 +3770,10 @@ $("retryButton")
 
 function loop(now){
 
+
     requestAnimationFrame(
         loop
     );
-
-
-    if(!renderer){
-
-        return;
-    }
 
 
     const dt=
@@ -4854,15 +3782,15 @@ function loop(now){
 
             (
                 now-lastTime
-            ) / 1000,
+            )/
+            1000,
 
             .05
 
         );
 
 
-    lastTime=
-        now;
+    lastTime=now;
 
 
     if(
@@ -4870,44 +3798,47 @@ function loop(now){
         !gameOver
     ){
 
-        let walking=
-            false;
+
+        let walking=false;
 
 
-        /* =============================================
+        /*
            WALK
-        ============================================= */
+        */
 
         if(!battle){
+
 
             if(
                 monster &&
                 !monsterDead
             ){
 
+
                 const distance=
 
-                    camera.position.z -
+                    camera.position.z-
                     monster.position.z;
 
 
                 if(
-                    distance >
+                    distance>
                     CONFIG.BATTLE_DISTANCE
                 ){
 
+
                     camera.position.z -=
 
-                        CONFIG.WALK_SPEED *
+                        CONFIG.WALK_SPEED*
                         dt;
 
 
-                    walking=
-                        true;
+                    walking=true;
 
                 }
 
                 else{
+
 
                     startBattle();
 
@@ -4917,42 +3848,37 @@ function loop(now){
 
             else{
 
-                /*
-                    몬스터가 더 없어도
-                    계속 앞으로 걷는다
-                */
 
                 camera.position.z -=
 
-                    CONFIG.WALK_SPEED *
+                    CONFIG.WALK_SPEED*
                     dt;
 
 
-                walking=
-                    true;
+                walking=true;
 
             }
 
         }
 
 
-        /* =============================================
-           FOOTSTEP
-        ============================================= */
+        /*
+           발소리
+        */
 
         if(walking){
 
-            footTimer +=
-                dt;
+
+            footTimer+=dt;
 
 
             if(
-                footTimer >=
+                footTimer>=
                 CONFIG.FOOTSTEP_INTERVAL
             ){
 
-                footTimer=
-                    0;
+
+                footTimer=0;
 
 
                 footSound();
@@ -4963,19 +3889,18 @@ function loop(now){
 
         else{
 
-            footTimer=
-                0;
+            footTimer=0;
+
         }
 
 
-        /* =============================================
-           CAMERA WALK BOB
-        ============================================= */
+        /*
+           WALK BOB
+        */
 
         walkPhase +=
 
-            dt *
-
+            dt*
             (
                 walking
                 ?
@@ -4987,12 +3912,11 @@ function loop(now){
 
         camera.position.y=
 
-            2.15 +
+            2.15+
 
             Math.sin(
                 walkPhase
-            ) *
-
+            )*
             (
                 walking
                 ?
@@ -5002,52 +3926,49 @@ function loop(now){
             );
 
 
-        /* =============================================
+        /*
            MONSTER BILLBOARD
-        ============================================= */
+        */
 
         if(
             monster &&
             !monsterDead
         ){
 
-            monster.lookAt(
 
-                camera.position.x,
+            monster.rotation.y=
 
-                monster.position.y,
+                Math.atan2(
 
-                camera.position.z
+                    camera.position.x-
+                    monster.position.x,
 
-            );
+                    camera.position.z-
+                    monster.position.z
+
+                );
 
         }
 
 
-        /* =============================================
-           MONSTER BREATHING
-
-           위아래로 둥실 뜨는 것이 아니라
-
-           땅에 붙어있는 상태에서
-           Y SCALE만 살짝 늘었다 줄었다.
-        ============================================= */
+        /*
+           BREATH
+        */
 
         if(
             monster &&
             !monsterDead &&
-            monsterAttackProgress<0 &&
-            monsterHitTimer<=0
+            monsterAttackProgress<0
         ){
+
 
             const breathe=
 
-                1 +
+                1+
 
                 Math.sin(
                     now*.003
-                ) *
-
+                )*
                 .025;
 
 
@@ -5061,46 +3982,27 @@ function loop(now){
 
             );
 
-
-            /*
-                밑바닥은 거의 같은 위치 유지
-
-                크기가 늘어날 때
-                중심점도 아주 조금 올림
-            */
-
-            monster.position.y=
-
-                2.7 +
-
-                (
-                    breathe-1
-                ) *
-
-                2.7;
-
         }
 
 
-        /* =============================================
-           MONSTER HIT
-        ============================================= */
+        /*
+           HIT SHAKE
+        */
 
         if(
             monster &&
             monsterHitTimer>0
         ){
 
-            monsterHitTimer -=
-                dt;
+
+            monsterHitTimer-=dt;
 
 
             monster.position.x=
 
                 Math.sin(
                     now*.11
-                ) *
-
+                )*
                 .18;
 
 
@@ -5108,52 +4010,41 @@ function loop(now){
                 monsterHitTimer<=0
             ){
 
-                monster.position.x=
-                    0;
+
+                monster.position.x=0;
 
 
-                if(monsterMaterial){
-
-                    monsterMaterial
-                    .color
-                    .set(
-                        0xffffff
-                    );
-
-                }
+                monsterMaterial
+                .color
+                .set(
+                    0xffffff
+                );
 
             }
 
         }
 
 
-        /* =============================================
+        /*
            MONSTER ATTACK
-
-           뒤로 살짝 빠졌다가
-           플레이어 쪽으로 돌진
-        ============================================= */
+        */
 
         if(
             monster &&
             monsterAttackProgress>=0
         ){
 
-            monsterAttackProgress +=
 
+            monsterAttackProgress +=
                 dt*2.3;
 
 
             const t=
-
                 monsterAttackProgress;
 
 
-            /*
-                뒤로 살짝
-            */
-
             if(t<.2){
+
 
                 monster.position.z=
 
@@ -5170,14 +4061,10 @@ function loop(now){
             }
 
 
-            /*
-                플레이어 쪽 돌진
-            */
-
             else if(t<.52){
 
-                const p=
 
+                const p=
                     (t-.2)/.32;
 
 
@@ -5196,18 +4083,15 @@ function loop(now){
             }
 
 
-            /*
-                플레이어 맞음
-            */
-
             else if(t<.62){
+
 
                 if(
                     !monsterAttackHit
                 ){
 
-                    monsterAttackHit=
-                        true;
+
+                    monsterAttackHit=true;
 
 
                     damagePlayer();
@@ -5217,14 +4101,10 @@ function loop(now){
             }
 
 
-            /*
-                원위치
-            */
-
             else if(t<1){
 
-                const p=
 
+                const p=
                     (t-.62)/.38;
 
 
@@ -5245,72 +4125,55 @@ function loop(now){
 
             else{
 
-                monster.position.z=
 
+                monster.position.z=
                     monsterHomeZ;
 
 
-                monsterAttackProgress=
-                    -1;
+                monsterAttackProgress=-1;
 
 
-                monsterAttackHit=
-                    false;
+                monsterAttackHit=false;
 
             }
 
         }
 
 
-        /* =============================================
-           MONSTER DEATH
-        ============================================= */
+        /*
+           DEATH
+        */
 
         if(
             monster &&
             monsterDead
         ){
 
-            deathProgress +=
 
+            deathProgress +=
                 dt*1.4;
 
-
-            /*
-                옆으로 쓰러짐
-            */
 
             monster.rotation.z=
 
                 Math.min(
-
                     deathProgress,
-
                     1
-
-                ) *
-
+                )*
                 1.25;
 
-
-            /*
-                땅 쪽으로 내려감
-            */
 
             monster.position.y=
 
                 THREE.MathUtils.lerp(
 
-                    2.7,
+                    2.5,
 
                     .95,
 
                     Math.min(
-
                         deathProgress,
-
                         1
-
                     )
 
                 );
@@ -5322,33 +4185,22 @@ function loop(now){
 
                     0,
 
-                    1 -
-
+                    1-
                     deathProgress*.8
 
                 );
 
 
-            /*
-                죽어도 멈추지 않고
-                앞으로 계속 이동
-            */
-
             camera.position.z -=
 
-                CONFIG.WALK_SPEED *
-
+                CONFIG.WALK_SPEED*
                 dt;
 
 
-            /*
-                죽은 뒤 조금 걸어간 후
-                다음 몬스터 생성
-            */
-
             if(
-                deathProgress>1.35
+                deathProgress>1.3
             ){
+
 
                 nextMonster();
 
@@ -5357,22 +4209,21 @@ function loop(now){
         }
 
 
-        /* =============================================
-           CAMERA SHAKE
-        ============================================= */
+        /*
+           SHAKE
+        */
 
         if(cameraShake>0){
 
-            cameraShake -=
-                dt;
+
+            cameraShake-=dt;
 
 
             camera.rotation.z=
 
                 (
                     Math.random()-.5
-                ) *
-
+                )*
                 .032;
 
 
@@ -5380,20 +4231,17 @@ function loop(now){
 
                 (
                     Math.random()-.5
-                ) *
-
+                )*
                 .024;
 
         }
 
         else{
 
-            camera.rotation.z *=
-                .70;
 
+            camera.rotation.z*=.7;
 
-            camera.rotation.x *=
-                .70;
+            camera.rotation.x*=.7;
 
         }
 
@@ -5401,11 +4249,8 @@ function loop(now){
 
 
     renderer.render(
-
         scene,
-
         camera
-
     );
 
 }
@@ -5417,120 +4262,55 @@ function loop(now){
 
 function resize(){
 
+
     if(
         !camera ||
         !renderer
     ){
-
         return;
     }
 
 
     const area=
-        $("playArea");
+        $('#playArea');
 
 
-    const width=
+    const w=
         area.clientWidth;
 
 
-    const height=
+    const h=
         area.clientHeight;
 
 
-    if(
-        width<=0 ||
-        height<=0
-    ){
-
-        return;
-    }
-
-
     camera.aspect=
-
-        width /
-        height;
+        w/h;
 
 
     camera.updateProjectionMatrix();
 
 
     renderer.setSize(
-
-        width,
-
-        height
-
+        w,h
     );
 
 }
 
 
 window.addEventListener(
-
-    "resize",
-
+    'resize',
     resize
-
 );
 
 
 /* =====================================================
-   PAGE START
-
-   ★ Android 카카오톡이면
-     처음부터 Chrome 안내
+   READY
 ===================================================== */
 
-function pageReady(){
+$('#statusText')
+.textContent=
+'게임 준비 완료';
 
-    if(
-        isAndroid() &&
-        !isRealChrome()
-    ){
-
-        $("chromeGuide")
-        .classList
-        .add(
-            "show"
-        );
-
-    }
-
-
-    if(
-        typeof THREE !==
-        "undefined"
-    ){
-
-        $("statusText")
-        .textContent=
-            "3D 엔진 준비 완료";
-
-
-        $("statusDot")
-        .style
-        .background=
-            "#ffd83e";
-
-    }
-
-    else{
-
-        $("statusText")
-        .textContent=
-            "3D 엔진 로딩 실패";
-
-    }
-
-}
-
-
-pageReady();
-
-
-})();
 </script>
 
 </body>
