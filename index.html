@@ -951,8 +951,19 @@ canvas{
 .mapEnemy{position:absolute;width:9px;height:9px;border-radius:50%;background:#ff8a26;transform:translate(-50%,-50%)}
 .mapChest{position:absolute;width:11px;height:9px;background:#111;border:1px solid #fff;transform:translate(-50%,-50%)}
 #mapPlayer{position:absolute;width:13px;height:13px;border:2px solid #fff;border-radius:50%;background:#24b8ff;box-shadow:0 0 9px #24b8ff;transform:translate(-50%,-50%);transition:left .3s,top .3s}
-#directionPanel{position:absolute;z-index:110;left:50%;bottom:72px;transform:translateX(-50%);display:none;width:min(92%,390px);padding:12px;border:2px solid rgba(255,255,255,.8);border-radius:16px;background:rgba(4,13,22,.91);color:#fff;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,.5)}
-#directionPanel.show{display:block}#directionTitle{font-size:14px;font-weight:900;margin-bottom:9px}.directionButtons{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}.directionButton,#chestButton{min-width:82px;padding:11px 12px;border:0;border-radius:11px;background:#fff;color:#111;font-weight:1000;box-shadow:0 3px 0 #999}.directionButton:active,#chestButton:active{transform:translateY(2px);box-shadow:0 1px 0 #777}#chestButton{display:none;background:#ffbd3b;color:#351d00}
+#directionPanel{position:absolute;z-index:110;inset:0;display:none;color:#fff;text-align:center;pointer-events:none}
+#directionPanel.show{display:block}
+#directionTitle{position:absolute;left:50%;top:48%;transform:translate(-50%,-50%);font-size:clamp(24px,7vw,52px);font-weight:1000;white-space:nowrap;text-shadow:0 4px 12px #000,0 0 8px #000}
+.directionButtons{position:absolute;inset:0}
+.directionButton{position:absolute;width:33vw;height:33vw;max-width:190px;max-height:190px;padding:0;border:0;background:transparent;color:#fff;font-size:min(30vw,170px);font-weight:1000;line-height:1;text-shadow:0 6px 10px #000,0 0 12px #000;filter:drop-shadow(0 5px 2px rgba(0,0,0,.55));pointer-events:auto}
+.directionButton.dir-left{left:0;top:50%;transform:translateY(-50%)}
+.directionButton.dir-right{right:0;top:50%;transform:translateY(-50%)}
+.directionButton.dir-back{left:50%;bottom:2%;transform:translateX(-50%)}
+.directionButton.dir-straight{left:50%;top:4%;transform:translateX(-50%)}
+.directionButton:active{color:#55eaff;filter:drop-shadow(0 0 14px #55eaff)}
+#chestButton{display:none !important}
+#turnIndicator{position:absolute;z-index:109;left:50%;top:50%;transform:translate(-50%,-50%);display:none;color:#fff;font-size:min(34vw,190px);font-weight:1000;line-height:1;text-shadow:0 7px 14px #000,0 0 18px #55eaff;pointer-events:none}
+#turnIndicator.show{display:block}
 
 #pauseButton{position:absolute;z-index:170;right:12px;top:92px;padding:9px 12px;border:1px solid rgba(255,255,255,.65);border-radius:11px;background:rgba(4,13,22,.82);color:white;font-size:12px;font-weight:900;box-shadow:0 3px 10px rgba(0,0,0,.35)}
 #pauseOverlay{position:absolute;inset:0;z-index:150;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.42);color:white;font-size:34px;font-weight:1000;text-shadow:0 3px 8px #000;pointer-events:none}
@@ -1241,6 +1252,8 @@ canvas{
             <button id="chestButton">🎁 보물상자 열기</button>
         </div>
 
+        <div id="turnIndicator" aria-hidden="true"></div>
+
         <button id="pauseButton">⏸ 일시정지</button>
         <div id="pauseOverlay">PAUSED</div>
         <div id="chestBurstText">TREASURE!</div>
@@ -1435,7 +1448,7 @@ const CONFIG = {
         이전 느린 버전보다 약 2배
     */
 
-    WALK_SPEED:9.6,
+    WALK_SPEED:14,
 
 
     /*
@@ -1648,6 +1661,7 @@ function updateMapTurn(dt){
         mapHeading=mapTargetHeading;
         mapTurning=false;
         turnFootTimer=0;
+        $("turnIndicator").classList.remove("show");
     }
     else{
         mapHeading+=Math.sign(difference)*step;
@@ -1771,8 +1785,14 @@ function showDirectionChoices(){
         const destination=option.destination;
         const direction=option.direction;
         const button=document.createElement("button");
-        button.className="directionButton";
-        button.textContent=direction.symbol+" "+direction.label;
+        const directionClass=
+            direction.label==="왼쪽" ? "dir-left" :
+            direction.label==="오른쪽" ? "dir-right" :
+            direction.label==="뒤로" ? "dir-back" :
+            "dir-straight";
+        button.className="directionButton "+directionClass;
+        button.textContent=direction.symbol;
+        button.setAttribute("aria-label",direction.label+"으로 이동");
         button.addEventListener("click",function(){
             chooseRoad(destination);
         });
@@ -1805,24 +1825,38 @@ function arriveAtMapPoint(){
 }
 
 function arriveAtChest(){
-    mapPaused=true;
+    /* 길 위의 보물상자는 멈추거나 버튼을 누르지 않고 자동 획득 */
+    mapPaused=false;
     battle=false;
+    chestCelebration();
+    removeMapChest();
+    playerHP=Math.min(
+        CONFIG.PLAYER_HP,
+        playerHP+25
+    );
+    updateHP();
+    mapChestOpened=true;
     updateSwordIdle();
-    $("directionButtons").innerHTML="";
-    $("directionTitle").textContent="보물상자를 발견했습니다!";
-    $("chestButton").style.display="inline-block";
-    $("directionPanel").classList.add("show");
 }
 
 function chooseRoad(destination){
     if(gamePaused){
         return;
     }
+    const chosenDirection=relativeDirection(destination);
     mapDestination=destination;
     mapPaused=false;
     $("directionPanel").classList.remove("show");
     removeMapChest();
     beginMapTurn(destination);
+
+    if(mapTurning){
+        $("turnIndicator").textContent=chosenDirection.symbol;
+        $("turnIndicator").classList.add("show");
+    }
+    else{
+        $("turnIndicator").classList.remove("show");
+    }
 
     mapChestWaiting=!!CHEST_ROADS[roadKey(mapCurrent,destination)];
     mapChestOpened=false;
