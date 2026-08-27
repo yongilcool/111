@@ -1591,7 +1591,7 @@ function swordSound(){
 
 
     src.buffer=
-        noiseBuffer(.25);
+        noiseBuffer(.38);
 
 
     const filter=
@@ -1601,18 +1601,21 @@ function swordSound(){
     filter.type=
         "bandpass";
 
+    filter.Q.value=
+        .75;
+
 
     filter.frequency
     .setValueAtTime(
-        500,
+        4200,
         now
     );
 
 
     filter.frequency
     .exponentialRampToValueAtTime(
-        3500,
-        now+.16
+        650,
+        now+.30
     );
 
 
@@ -1620,21 +1623,24 @@ function swordSound(){
         audioCtx.createGain();
 
 
-    /*
-        검 소리 크게
-    */
-
     gain.gain
     .setValueAtTime(
-        .65,
+        .0001,
         now
     );
 
 
     gain.gain
     .exponentialRampToValueAtTime(
+        .34,
+        now+.035
+    );
+
+
+    gain.gain
+    .exponentialRampToValueAtTime(
         .0001,
-        now+.24
+        now+.34
     );
 
 
@@ -3860,6 +3866,8 @@ let nfcStarted=false;
 
 let nfcReader=null;
 
+let nfcAbortController=null;
+
 let lastNFC=0;
 
 
@@ -3899,12 +3907,20 @@ async function startNFC(){
 
     try{
 
+        /* 이전 스캔이 남아 있으면 완전히 종료 */
+        stopNFC();
+
+        nfcAbortController=
+            new AbortController();
+
         nfcReader=
 
             new NDEFReader();
 
 
-        await nfcReader.scan();
+        await nfcReader.scan({
+            signal:nfcAbortController.signal
+        });
 
 
         nfcStarted=
@@ -4664,6 +4680,16 @@ async function startQR(){
     }
     catch(error){
 
+        nfcStarted=false;
+
+        nfcReader=null;
+
+        nfcAbortController=null;
+
+        if(error && error.name==="AbortError"){
+            return;
+        }
+
         console.error("QR CAMERA ERROR:",error);
 
         qrRunning=false;
@@ -4677,6 +4703,23 @@ async function startQR(){
     finally{
         qrStarting=false;
     }
+}
+
+
+/* QR 카메라와 NFC 하드웨어가 충돌하지 않도록
+   모드를 바꿀 때 Web NFC 세션을 명확하게 종료한다. */
+function stopNFC(){
+
+    if(nfcAbortController){
+        try{
+            nfcAbortController.abort();
+        }
+        catch(error){}
+    }
+
+    nfcAbortController=null;
+    nfcReader=null;
+    nfcStarted=false;
 }
 
 
@@ -4720,7 +4763,7 @@ $("nfcButton")
 
     "click",
 
-    function(){
+    async function(){
 
         inputMode=
             "nfc";
@@ -4747,7 +4790,27 @@ $("nfcButton")
         );
 
 
-        stopQR();
+        $("statusDot")
+        .style
+        .background=
+            "#ffd83e";
+
+
+        $("statusText")
+        .textContent=
+            "NFC 다시 연결 중 · 잠시 기다려주세요";
+
+
+        await stopQR();
+
+
+        /*
+           QR 종료 직후 새 Web NFC 세션을 시작한다.
+           화면에 'NFC 대기 중'이 뜬 다음 태그를 댄다.
+        */
+        stopNFC();
+
+        await startNFC();
 
 
         setTimeout(
@@ -4755,28 +4818,6 @@ $("nfcButton")
             220
         );
 
-
-        if(nfcStarted){
-
-            $("statusDot")
-            .style
-            .background=
-                "#50ef51";
-
-
-            $("statusText")
-            .textContent=
-                "NFC 대기 중";
-
-        }
-
-        else{
-
-            $("statusText")
-            .textContent=
-                "NFC 준비 중";
-
-        }
 
     }
 
@@ -4796,6 +4837,10 @@ $("qrButton")
 
         inputMode=
             "qr";
+
+
+        /* QR 사용 중에는 NFC 세션을 명확히 종료 */
+        stopNFC();
 
 
         $("game")
