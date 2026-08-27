@@ -1,207 +1,31 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#07111d">
 <title>PIXEL 3D ADVENTURE</title>
 <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-<script src='https://unpkg.com/html5-qrcode'></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
 <style>
-:root { --safe-top: env(safe-area-inset-top, 0px); }
-* { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-html,body { margin:0; width:100%; height:100%; overflow:hidden; background:#07111d; font-family:Arial,sans-serif; touch-action:manipulation; }
-button { font:inherit; }
-#game { position:fixed; inset:0; overflow:hidden; background:#07111d; }
-#playArea { position:absolute; inset:0; overflow:hidden; transition:height .2s ease; }
-#game.qr-mode #playArea { height:70%; }
-#stage { position:absolute; inset:0; }
-#stage canvas { display:block; width:100%; height:100%; }
-
-#hud { position:absolute; z-index:30; top:calc(12px + var(--safe-top)); left:5%; right:5%; display:flex; gap:12px; color:#fff; text-shadow:0 2px 4px #000; pointer-events:none; }
-.unit { width:50%; }
-.label { display:flex; justify-content:space-between; font-size:11px; font-weight:900; margin-bottom:4px; }
-.bar { height:15px; overflow:hidden; border:2px solid #fff; border-radius:6px; background:#170707; box-shadow:0 3px 8px #0009; }
-.fill { width:100%; height:100%; transition:width .15s linear; }
-#playerHP { background:linear-gradient(#ff6b6b,#bf1010); }
-#enemyHP { background:linear-gradient(#d47cff,#671baa); }
-#statusBox { position:absolute; z-index:31; top:calc(54px + var(--safe-top)); left:50%; transform:translateX(-50%); padding:6px 12px; border:1px solid #ffffff44; border-radius:14px; background:#050f18c8; color:#fff; font-size:11px; font-weight:900; white-space:nowrap; pointer-events:none; }
-#statusDot { display:inline-block; width:8px; height:8px; margin-right:5px; border-radius:50%; background:#ffd83e; }
-#modeSwitch { position:absolute; z-index:40; top:calc(86px + var(--safe-top)); left:50%; transform:translateX(-50%); display:flex; padding:3px; border:1px solid #ffffff3d; border-radius:12px; background:#0009; }
-.modeButton { min-width:72px; padding:8px 13px; border:0; border-radius:9px; background:transparent; color:#ddd; font-size:12px; font-weight:900; cursor:pointer; }
-.modeButton.active { background:#fff; color:#111; }
-#monsterCount { position:absolute; z-index:31; left:50%; bottom:22px; transform:translateX(-50%); padding:7px 15px; border:1px solid #ffffff3d; border-radius:13px; background:#0009; color:#fff; font-weight:900; pointer-events:none; }
-#message { position:absolute; z-index:32; top:35%; left:50%; transform:translate(-50%,-50%); color:#fff3a1; font-size:clamp(20px,6vw,38px); font-weight:1000; text-align:center; text-shadow:0 3px 0 #7b3800,0 0 12px #000; opacity:0; pointer-events:none; }
-#damageFlash { position:absolute; inset:0; z-index:20; opacity:0; pointer-events:none; background:radial-gradient(circle,transparent 25%,#ff00009a 100%); }
-
-#sword { position:absolute; z-index:25; right:-15vh; bottom:-17vh; width:32vh; height:82vh; transform-origin:72% 88%; pointer-events:none; filter:drop-shadow(0 10px 10px #0008); }
-#sword.walking { animation:swordWalk .32s ease-in-out infinite alternate; }
-#sword.battle { animation:swordIdle .8s ease-in-out infinite alternate; }
-#sword.attacking { animation:swordAttack .34s cubic-bezier(.2,.9,.25,1); }
-@keyframes swordWalk { from{transform:translate(-28px,10px) rotate(-16deg)} to{transform:translate(30px,-11px) rotate(17deg)} }
-@keyframes swordIdle { from{transform:translateY(4px) rotate(-4deg)} to{transform:translateY(-9px) rotate(-1deg)} }
-@keyframes swordAttack { 0%{transform:translate(34vw,10vh) rotate(31deg)} 48%{transform:translate(-22vw,-18vh) rotate(-43deg)} 100%{transform:translate(0,0) rotate(-3deg)} }
-
-#qrPanel { position:absolute; z-index:50; left:0; bottom:0; width:100%; height:30%; display:none; overflow:hidden; border-top:2px solid #fff; background:#000; }
-#game.qr-mode #qrPanel { display:block; }
-#reader { position:absolute; inset:0; width:100%; height:100%; overflow:hidden; background:#000; }
-#reader video { width:100%!important; height:100%!important; object-fit:cover!important; }
-#reader__dashboard { display:none!important; }
-#reader__scan_region { width:100%!important; height:100%!important; }
-#reader__scan_region img { display:none!important; }
-#qrHint { position:absolute; z-index:3; left:50%; top:6px; transform:translateX(-50%); padding:5px 10px; border-radius:8px; background:#000b; color:#fff; font-size:11px; font-weight:900; white-space:nowrap; pointer-events:none; }
-
-.overlay { position:absolute; inset:0; z-index:200; display:flex; align-items:center; justify-content:center; padding:22px; color:#fff; text-align:center; background:linear-gradient(#05132188,#000d); }
-.overlay.hidden { display:none; }
-.card { width:min(380px,90vw); padding:25px 20px; border:1px solid #ffffff47; border-radius:19px; background:#071522eF; box-shadow:0 15px 40px #000a; }
-.card h1 { margin:0 0 10px; color:#ffe27b; font-size:29px; text-shadow:0 3px 0 #683100; }
-.card p { font-size:13px; line-height:1.65; }
-.primary { width:86%; margin-top:10px; padding:15px 20px; border:0; border-radius:11px; color:#fff; background:linear-gradient(#f8a62b,#b94c08); font-size:18px; font-weight:1000; box-shadow:0 4px 0 #6c2904; cursor:pointer; }
-#gameOver { z-index:300; display:none; background:#270000e8; }
-#gameOver.show { display:flex; }
-#gameOver h1 { color:#ff5b5b; font-size:42px; }
-#victory { z-index:290; display:none; background:#061e14e8; }
-#victory.show { display:flex; }
-#chromeGuide { z-index:500; display:none; background:#000f; }
-#chromeGuide.show { display:flex; }
-#chromeButton { background:#4285f4; box-shadow:0 4px 0 #174b9f; }
-#manualAttack { position:absolute; z-index:45; right:15px; bottom:16px; width:66px; height:66px; border:2px solid #fff8; border-radius:50%; background:#b92727dd; color:#fff; font-weight:1000; display:none; }
-@media (hover:hover) and (pointer:fine) { #manualAttack { display:block; } }
+:root{--safe:env(safe-area-inset-top,0px)}*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#07111d;font-family:Arial,sans-serif;touch-action:manipulation}button{font:inherit}#game{position:fixed;inset:0;overflow:hidden;background:#07111d}#playArea{position:absolute;inset:0;overflow:hidden;transition:height .2s}#game.qr-mode #playArea{height:70%}#stage{position:absolute;inset:0}#stage canvas{display:block;width:100%;height:100%}
+#hud{position:absolute;z-index:30;top:calc(12px + var(--safe));left:5%;right:5%;display:flex;gap:12px;color:#fff;text-shadow:0 2px 4px #000;pointer-events:none}.unit{width:50%}.label{display:flex;justify-content:space-between;font-size:11px;font-weight:900;margin-bottom:4px}.bar{height:15px;overflow:hidden;border:2px solid #fff;border-radius:6px;background:#170707;box-shadow:0 3px 8px #0009}.fill{width:100%;height:100%;transition:width .15s}#playerHP{background:linear-gradient(#ff6b6b,#bf1010)}#enemyHP{background:linear-gradient(#d47cff,#671baa)}
+#statusBox{position:absolute;z-index:31;top:calc(54px + var(--safe));left:50%;transform:translateX(-50%);padding:6px 12px;border:1px solid #ffffff44;border-radius:14px;background:#050f18c8;color:#fff;font-size:11px;font-weight:900;white-space:nowrap;pointer-events:none}#statusDot{display:inline-block;width:8px;height:8px;margin-right:5px;border-radius:50%;background:#ffd83e}#modeSwitch{position:absolute;z-index:40;top:calc(86px + var(--safe));left:50%;transform:translateX(-50%);display:flex;padding:3px;border:1px solid #ffffff3d;border-radius:12px;background:#0009}.modeButton{min-width:72px;padding:8px 13px;border:0;border-radius:9px;background:transparent;color:#ddd;font-size:12px;font-weight:900}.modeButton.active{background:#fff;color:#111}#monsterCount{position:absolute;z-index:31;left:50%;bottom:22px;transform:translateX(-50%);padding:7px 15px;border-radius:13px;background:#0009;color:#fff;font-weight:900;pointer-events:none}#message{position:absolute;z-index:32;top:35%;left:50%;transform:translate(-50%,-50%);color:#fff3a1;font-size:clamp(20px,6vw,38px);font-weight:1000;text-align:center;text-shadow:0 3px 0 #7b3800,0 0 12px #000;pointer-events:none}#damageFlash{position:absolute;inset:0;z-index:20;opacity:0;pointer-events:none;background:radial-gradient(circle,transparent 25%,#ff00009a 100%)}
+#sword{position:absolute;z-index:25;right:-22vh;bottom:-17vh;height:92vh;width:auto;max-width:none;transform-origin:84% 91%;pointer-events:none;filter:drop-shadow(0 10px 10px #0008)}#sword.walking{animation:swordWalk .30s ease-in-out infinite alternate}#sword.battle{animation:swordIdle .80s ease-in-out infinite alternate}#sword.attacking{animation:swordAttack .46s cubic-bezier(.2,.9,.25,1)}@keyframes swordWalk{from{transform:translate(-38px,10px) rotate(-18deg)}to{transform:translate(40px,-13px) rotate(18deg)}}@keyframes swordIdle{from{transform:translateY(4px) rotate(-4deg)}to{transform:translateY(-9px) rotate(-2deg)}}@keyframes swordAttack{0%{transform:translate(35vw,10vh) rotate(31deg)}48%{transform:translate(-22vw,-18vh) rotate(-43deg)}100%{transform:translate(0) rotate(-3deg)}}
+#qrPanel{position:absolute;z-index:50;left:0;bottom:0;width:100%;height:30%;display:none;overflow:hidden;border-top:2px solid #fff;background:#000}#game.qr-mode #qrPanel{display:block}#reader{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;background:#000}#reader video{width:100%!important;height:100%!important;object-fit:cover!important}#reader__dashboard{display:none!important}#reader__scan_region{width:100%!important;height:100%!important}#reader__scan_region img{display:none!important}#qrHint{position:absolute;z-index:3;left:50%;top:6px;transform:translateX(-50%);padding:5px 10px;border-radius:8px;background:#000b;color:#fff;font-size:11px;font-weight:900;white-space:nowrap;pointer-events:none}
+.overlay{position:absolute;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:22px;color:#fff;text-align:center;background:linear-gradient(#05132188,#000d)}.overlay.hidden{display:none}.card{width:min(380px,90vw);padding:25px 20px;border:1px solid #ffffff47;border-radius:19px;background:#071522ef;box-shadow:0 15px 40px #000a}.card h1{margin:0 0 10px;color:#ffe27b;font-size:29px;text-shadow:0 3px 0 #683100}.card p{font-size:13px;line-height:1.65}.primary{width:86%;margin-top:10px;padding:15px 20px;border:0;border-radius:11px;color:#fff;background:linear-gradient(#f8a62b,#b94c08);font-size:18px;font-weight:1000;box-shadow:0 4px 0 #6c2904}#gameOver,#victory,#chromeGuide{display:none}#gameOver.show,#victory.show,#chromeGuide.show{display:flex}#gameOver{z-index:300;background:#270000e8}#victory{z-index:290;background:#061e14e8}#chromeGuide{z-index:500;background:#000f}#chromeButton{background:#4285f4;box-shadow:0 4px 0 #174b9f}#manualAttack{position:absolute;z-index:45;right:15px;bottom:16px;width:66px;height:66px;border:2px solid #fff8;border-radius:50%;background:#b92727dd;color:#fff;font-weight:1000;display:none}@media(hover:hover) and (pointer:fine){#manualAttack{display:block}}
 </style>
-</head>
-<body>
-<div id="game">
-  <div id="playArea">
-    <div id="stage"></div>
-    <div id="hud">
-      <div class="unit"><div class="label"><span>PLAYER</span><span id="playerText">100 / 100</span></div><div class="bar"><div class="fill" id="playerHP"></div></div></div>
-      <div class="unit"><div class="label"><span>MONSTER</span><span id="enemyText">100 / 100</span></div><div class="bar"><div class="fill" id="enemyHP"></div></div></div>
-    </div>
-    <div id="statusBox"><span id="statusDot"></span><span id="statusText">게임 준비 중</span></div>
-    <div id="modeSwitch"><button id="nfcButton" class="modeButton active">NFC</button><button id="qrButton" class="modeButton">QR</button></div>
-    <div id="monsterCount">☠ 1 / 3</div>
-    <div id="message"></div><div id="damageFlash"></div>
-    <svg id="sword" viewBox="0 0 220 620" aria-hidden="true">
-      <defs><linearGradient id="blade" x1="0" x2="1"><stop stop-color="#fff"/><stop offset=".45" stop-color="#a9d7e8"/><stop offset="1" stop-color="#567887"/></linearGradient></defs>
-      <path d="M108 15 L151 77 L132 445 L91 445 L71 77 Z" fill="url(#blade)" stroke="#182d39" stroke-width="9"/>
-      <path d="M111 40 L119 405" stroke="#fff" stroke-width="7" opacity=".65"/>
-      <rect x="34" y="430" width="157" height="32" rx="8" fill="#e4b94e" stroke="#573808" stroke-width="9"/>
-      <rect x="91" y="458" width="43" height="125" rx="12" fill="#7b3f21" stroke="#32180d" stroke-width="9"/>
-      <path d="M94 477h37M94 501h37M94 525h37M94 549h37" stroke="#dfbd76" stroke-width="8"/>
-      <circle cx="112" cy="590" r="22" fill="#d99b2b" stroke="#573808" stroke-width="9"/>
-    </svg>
-    <button id="manualAttack" aria-label="테스트 공격">ATTACK</button>
-    <div id="startScreen" class="overlay"><div class="card"><h1>PIXEL ADVENTURE</h1><p>NFC 태그 또는 QR 코드로 몬스터를 공격하세요.<br>QR 코드: <b>CHEST_001</b></p><button id="startButton" class="primary">GAME START</button></div></div>
-  </div>
-  <div id="qrPanel"><div id="reader"></div><div id="qrHint">QR을 네모 안에 맞춰주세요 · CHEST_001</div></div>
-  <div id="gameOver" class="overlay"><div class="card"><h1>GAME OVER</h1><p>HP가 모두 소진되었습니다.</p><button class="primary restartButton">다시 시작</button></div></div>
-  <div id="victory" class="overlay"><div class="card"><h1>VICTORY!</h1><p>세 마리 몬스터를 모두 물리쳤습니다.</p><button class="primary restartButton">다시 시작</button></div></div>
-  <div id="chromeGuide" class="overlay"><div class="card"><h1>Chrome으로 열기</h1><p>카카오톡 인앱 브라우저에서는 NFC와 카메라가 제한될 수 있습니다.</p><button id="chromeButton" class="primary">Chrome 연결</button></div></div>
-</div>
-
+</head><body><div id="game"><div id="playArea"><div id="stage"></div><div id="hud"><div class="unit"><div class="label"><span>PLAYER</span><span id="playerText">100 / 100</span></div><div class="bar"><div class="fill" id="playerHP"></div></div></div><div class="unit"><div class="label"><span>MONSTER</span><span id="enemyText">100 / 100</span></div><div class="bar"><div class="fill" id="enemyHP"></div></div></div></div><div id="statusBox"><span id="statusDot"></span><span id="statusText">게임 준비 중</span></div><div id="modeSwitch"><button id="nfcButton" class="modeButton active">NFC</button><button id="qrButton" class="modeButton">QR</button></div><div id="monsterCount">☠ 1 / 3</div><div id="message"></div><div id="damageFlash"></div><img id="sword" src="https://static.wixstatic.com/media/172435_1c16a5d4f8ca44d8a558923200659bb7~mv2.png" alt="칼"><button id="manualAttack" aria-label="테스트 공격">ATTACK</button><div id="startScreen" class="overlay"><div class="card"><h1>PIXEL ADVENTURE</h1><p>NFC 태그 또는 QR 코드로 몬스터를 공격하세요.<br>QR 코드: <b>CHEST_001</b></p><button id="startButton" class="primary">GAME START</button></div></div></div><div id="qrPanel"><div id="reader"></div><div id="qrHint">QR을 네모 안에 맞춰주세요 · CHEST_001</div></div><div id="gameOver" class="overlay"><div class="card"><h1>GAME OVER</h1><p>HP가 모두 소진되었습니다.</p><button class="primary restartButton">다시 시작</button></div></div><div id="victory" class="overlay"><div class="card"><h1>VICTORY!</h1><p>세 마리 몬스터를 모두 물리쳤습니다.</p><button class="primary restartButton">다시 시작</button></div></div><div id="chromeGuide" class="overlay"><div class="card"><h1>Chrome으로 열기</h1><p>Android 인앱 브라우저에서는 NFC와 카메라가 제한될 수 있습니다.</p><button id="chromeButton" class="primary">Chrome 연결</button></div></div></div>
 <script>
-(function () {
-  'use strict';
-  const $ = id => document.getElementById(id);
-  const CONFIG = { QR_VALUE:'MISSION_CLEAR_1234', MONSTERS:3, PLAYER_HP:100, ENEMY_HP:100, ATTACK_DAMAGE:34, ENEMY_DAMAGE:12, QR_COOLDOWN:850 };
-  let scene, camera, renderer, clock, world, monster;
-  let started=false, gameOver=false, victory=false, walking=false, inBattle=false, attacking=false;
-  let playerHP=CONFIG.PLAYER_HP, enemyHP=CONFIG.ENEMY_HP, monsterIndex=0, walkProgress=0;
-  let enemyTimer=null, audioCtx=null, nfcReader=null, nfcStarted=false;
-  let inputMode='nfc', html5QrCode=null, qrRunning=false, qrStarting=false, lastQRHit=0;
-
-  function setStatus(text,color) { $('statusText').textContent=text; $('statusDot').style.background=color||'#ffd83e'; }
-  function isAndroidKakao() { const ua=navigator.userAgent.toLowerCase(); return ua.includes('android') && (ua.includes('kakaotalk')||ua.includes('kakao')); }
-  function openChrome() {
-    const url=location.href.replace(/^https?:\/\//,'');
-    location.href='intent://'+url+'#Intent;scheme=https;package=com.android.chrome;end';
-  }
-  function box(w,h,d,color,x,y,z,parent) { const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshLambertMaterial({color})); m.position.set(x,y,z); (parent||scene).add(m); return m; }
-  function initThree() {
-    if (renderer) return;
-    scene=new THREE.Scene(); scene.background=new THREE.Color(0x7cc9ef); scene.fog=new THREE.Fog(0x7cc9ef,18,62);
-    camera=new THREE.PerspectiveCamera(63,1,.1,120); camera.position.set(0,3.15,7.4); camera.lookAt(0,1,-4);
-    renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'}); renderer.setPixelRatio(Math.min(devicePixelRatio,1.6)); renderer.outputColorSpace=THREE.SRGBColorSpace; $('stage').appendChild(renderer.domElement);
-    scene.add(new THREE.HemisphereLight(0xd8f3ff,0x42522c,2.15)); const sun=new THREE.DirectionalLight(0xfff1c4,2.25); sun.position.set(-5,10,6); scene.add(sun);
-    world=new THREE.Group(); scene.add(world);
-    box(30,.2,90,0x426b2e,0,-.15,-33,world); box(5.2,.16,90,0xb8905b,0,0,-33,world);
-    for(let i=0;i<28;i++){ const z=-i*3.3; const side=i%2?1:-1; box(1.1,1.1,1.1,0x2f6f35,side*(3.5+(i%3)),.5,z,world); box(.25,1.4,.25,0x70431f,side*(3.5+(i%3)),-.05,z,world); }
-    const mountainMat=new THREE.MeshLambertMaterial({color:0x587995});
-    for(let i=0;i<6;i++){ const cone=new THREE.Mesh(new THREE.ConeGeometry(5+i%2*2,8+i%3,4),mountainMat); cone.position.set((i-2.5)*8,3,-35-i*2); cone.rotation.y=Math.PI/4; scene.add(cone); }
-    spawnMonster(); resize(); clock=new THREE.Clock(); animate();
-  }
-  function spawnMonster() {
-    if(monster) scene.remove(monster); monster=new THREE.Group();
-    const colors=[0x7c35b5,0xd1493f,0x277c50], c=colors[monsterIndex%colors.length];
-    box(2.25,2.15,1.35,c,0,1.35,0,monster); box(1.7,1.5,1.25,c,0,3.05,0,monster);
-    box(.35,.35,.18,0xffffff,-.42,3.22,.68,monster); box(.35,.35,.18,0xffffff,.42,3.22,.68,monster);
-    box(.13,.13,.2,0x160616,-.42,3.22,.78,monster); box(.13,.13,.2,0x160616,.42,3.22,.78,monster);
-    box(.55,.18,.18,0x261015,0,2.73,.7,monster); box(.42,.9,.42,c,-1.28,1.45,0,monster); box(.42,.9,.42,c,1.28,1.45,0,monster);
-    monster.position.set(0,0,-24); scene.add(monster); enemyHP=CONFIG.ENEMY_HP; walkProgress=0; inBattle=false; walking=true; updateHUD(); setSwordState('walking');
-  }
-  function setSwordState(state) { $('sword').className.baseVal=''; if(state) $('sword').classList.add(state); }
-  function startApproach() { walking=true; inBattle=false; walkProgress=0; setSwordState('walking'); setStatus('몬스터에게 접근 중','#ffd83e'); }
-  function reachBattle() { walking=false; inBattle=true; monster.position.z=-7; setSwordState('battle'); setStatus(inputMode==='qr'?'QR 대기 중':'NFC 대기 중','#50ef51'); clearInterval(enemyTimer); enemyTimer=setInterval(enemyAttack,2200); }
-  function updateHUD() {
-    $('playerHP').style.width=Math.max(0,playerHP)+'%'; $('enemyHP').style.width=Math.max(0,enemyHP)+'%';
-    $('playerText').textContent=Math.max(0,playerHP)+' / 100'; $('enemyText').textContent=Math.max(0,enemyHP)+' / 100'; $('monsterCount').textContent='☠ '+Math.min(monsterIndex+1,3)+' / 3';
-  }
-  function showMessage(text) { const el=$('message'); el.textContent=text; el.animate([{opacity:0,transform:'translate(-50%,-30%) scale(.7)'},{opacity:1,transform:'translate(-50%,-50%) scale(1.1)'},{opacity:0,transform:'translate(-50%,-80%) scale(1)'}],{duration:750,easing:'ease-out'}); }
-  function sound(kind) {
-    try { audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended') audioCtx.resume(); const o=audioCtx.createOscillator(),g=audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); const now=audioCtx.currentTime; o.type=kind==='hit'?'square':kind==='hurt'?'sawtooth':'triangle'; o.frequency.setValueAtTime(kind==='hit'?190:kind==='hurt'?95:520,now); o.frequency.exponentialRampToValueAtTime(kind==='hit'?70:kind==='hurt'?45:760,now+.18); g.gain.setValueAtTime(.09,now); g.gain.exponentialRampToValueAtTime(.001,now+.2); o.start(now); o.stop(now+.21); } catch(e){}
-  }
-  function attack() {
-    if(!started||gameOver||victory||!inBattle||attacking) return;
-    attacking=true; setSwordState('attacking'); sound('hit'); enemyHP=Math.max(0,enemyHP-CONFIG.ATTACK_DAMAGE); updateHUD(); showMessage('-'+CONFIG.ATTACK_DAMAGE);
-    if(monster) monster.animateHit=1;
-    setTimeout(()=>{ attacking=false; if(!gameOver&&!victory) setSwordState(inBattle?'battle':'walking'); },360);
-    if(enemyHP<=0) setTimeout(defeatMonster,300);
-  }
-  function enemyAttack() {
-    if(!started||gameOver||victory||!inBattle) return; playerHP=Math.max(0,playerHP-CONFIG.ENEMY_DAMAGE); updateHUD(); sound('hurt'); $('damageFlash').animate([{opacity:0},{opacity:1},{opacity:0}],{duration:420}); if(playerHP<=0) endGame();
-  }
-  function defeatMonster() {
-    if(!inBattle||gameOver||victory) return; inBattle=false; clearInterval(enemyTimer); sound('win'); showMessage('MONSTER DOWN!'); scene.remove(monster); monster=null; monsterIndex++;
-    if(monsterIndex>=CONFIG.MONSTERS) { victory=true; setSwordState(''); setStatus('모든 몬스터 처치!','#ffe65a'); setTimeout(()=>$('victory').classList.add('show'),650); }
-    else setTimeout(()=>{ spawnMonster(); startApproach(); },900);
-  }
-  function endGame() { gameOver=true; inBattle=false; clearInterval(enemyTimer); setSwordState(''); setStatus('GAME OVER','#ff3d3d'); stopQR(); $('gameOver').classList.add('show'); }
-  function resetGame() { clearInterval(enemyTimer); gameOver=false; victory=false; playerHP=100; monsterIndex=0; $('gameOver').classList.remove('show'); $('victory').classList.remove('show'); spawnMonster(); startApproach(); }
-  function animate() {
-    requestAnimationFrame(animate); const dt=Math.min(clock.getDelta(),.04), t=performance.now()*.001;
-    if(started&&walking&&monster){ walkProgress+=dt; monster.position.z=Math.min(-7,-24+walkProgress*5.5); world.position.z=(world.position.z+dt*4)%3.3; if(monster.position.z>=-7) reachBattle(); }
-    if(monster){ monster.position.y=Math.sin(t*3)*.08; monster.rotation.y=Math.sin(t*1.7)*.08; if(monster.animateHit){ monster.position.x=Math.sin(t*45)*.18; monster.animateHit-=dt*5; if(monster.animateHit<=0){monster.animateHit=0;monster.position.x=0;} } }
-    renderer.render(scene,camera);
-  }
-  function resize() { if(!renderer)return; const a=$('playArea'); const w=Math.max(1,a.clientWidth),h=Math.max(1,a.clientHeight); renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); }
-  async function startNFC() {
-    if(nfcStarted) return; if(!('NDEFReader' in window)){ setStatus('NFC 미지원 · QR을 사용하세요','#ffb13d'); return; }
-    try { nfcReader=new NDEFReader(); await nfcReader.scan(); nfcReader.onreading=()=>{ if(inputMode==='nfc') attack(); }; nfcStarted=true; if(inputMode==='nfc') setStatus('NFC 대기 중','#50ef51'); }
-    catch(e){ setStatus('NFC 권한 확인 · QR 사용 가능','#ffb13d'); }
-  }
-  async function startQR() {
-    if(qrRunning||qrStarting) return; qrStarting=true;
-    if(typeof Html5Qrcode==='undefined'){ setStatus('QR 엔진 로딩 실패','#ff5555'); qrStarting=false; return; }
-    try { html5QrCode=html5QrCode||new Html5Qrcode('reader'); await html5QrCode.start({facingMode:'environment'},{fps:10,qrbox:{width:220,height:220},aspectRatio:1.0},decodedText=>{
-      if(inputMode!=='qr'||!started||gameOver||victory) return; const code=String(decodedText||'').trim().toUpperCase(); const now=performance.now(); if(code===CONFIG.QR_VALUE&&now-lastQRHit>=CONFIG.QR_COOLDOWN){ lastQRHit=now; attack(); setStatus('QR 공격!','#55eaff'); setTimeout(()=>{if(inputMode==='qr'&&qrRunning)setStatus('QR 대기 중','#55eaff');},300); }
-    },()=>{}); qrRunning=true; setStatus('QR 대기 중','#55eaff'); }
-    catch(e){ qrRunning=false; setStatus('카메라 권한을 확인하세요','#ffb13d'); }
-    finally { qrStarting=false; }
-  }
-  async function stopQR() { if(!html5QrCode){qrRunning=false;return;} try{if(qrRunning)await html5QrCode.stop();}catch(e){} try{html5QrCode.clear();}catch(e){} html5QrCode=null; qrRunning=false; qrStarting=false; lastQRHit=0; }
-  async function setMode(mode) {
-    inputMode=mode; $('nfcButton').classList.toggle('active',mode==='nfc'); $('qrButton').classList.toggle('active',mode==='qr'); $('game').classList.toggle('qr-mode',mode==='qr'); setTimeout(resize,230);
-    if(mode==='qr') await startQR(); else { await stopQR(); setStatus(nfcStarted?'NFC 대기 중':'NFC 준비 중',nfcStarted?'#50ef51':'#ffd83e'); startNFC(); }
-  }
-  async function startGame() {
-    try { initThree(); audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)(); audioCtx.resume(); started=true; $('startScreen').classList.add('hidden'); startApproach(); await startNFC(); }
-    catch(e){ console.error(e); setStatus('게임 초기화 실패 · 새로고침하세요','#ff5555'); }
-  }
-  $('startButton').addEventListener('click',()=>{ if(isAndroidKakao()) $('chromeGuide').classList.add('show'); else startGame(); });
-  $('chromeButton').addEventListener('click',openChrome); $('nfcButton').addEventListener('click',()=>setMode('nfc')); $('qrButton').addEventListener('click',()=>setMode('qr')); $('manualAttack').addEventListener('click',attack);
-  document.querySelectorAll('.restartButton').forEach(b=>b.addEventListener('click',resetGame)); window.addEventListener('resize',resize); window.addEventListener('orientationchange',()=>setTimeout(resize,250)); document.addEventListener('visibilitychange',()=>{ if(document.hidden&&qrRunning) stopQR(); else if(!document.hidden&&inputMode==='qr'&&started) startQR(); });
-  window.attack=attack;
-})();
-</script>
-</body>
-</html>
+(()=>{'use strict';const $=id=>document.getElementById(id);const C={QR_VALUE:'CHEST_001',PLAYER_HP:100,ENEMY_HP:100,ATTACK_DAMAGE:34,ENEMY_DAMAGE:12,MONSTERS:3,QR_COOLDOWN:650};let scene,camera,renderer,clock,world,monster,started=false,gameOver=false,victory=false,walking=false,inBattle=false,attacking=false,playerHP=100,enemyHP=100,monsterIndex=0,enemyTimer,audioCtx,nfcReader,nfcStarted=false,inputMode='nfc',html5QrCode=null,qrRunning=false,qrStarting=false,lastQRHit=0;
+const status=(t,c='#ffd83e')=>{$('statusText').textContent=t;$('statusDot').style.background=c};function inAndroidWebView(){const u=navigator.userAgent;return /Android/i.test(u)&&(/KAKAOTALK|KakaoTalk|; wv\)|Version\/4\.0.*Chrome/i.test(u))}function openChrome(){const href=location.href,clean=href.replace(/^https?:\/\//i,''),scheme=href.startsWith('http://')?'http':'https';location.href='intent://'+clean+'#Intent;scheme='+scheme+';package=com.android.chrome;end'}
+function box(w,h,d,color,x,y,z,p=scene){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshLambertMaterial({color}));m.position.set(x,y,z);p.add(m);return m}function tree(x,z,s=1){const g=new THREE.Group();box(.48*s,2.7*s,.48*s,0x70431f,0,1.2*s,0,g);box(2.0*s,1.6*s,2.0*s,0x236934,0,3*s,0,g);box(1.45*s,1.35*s,1.45*s,0x358b43,0,4*s,0,g);g.position.set(x,0,z);world.add(g)}
+function initThree(){if(renderer)return;if(!window.THREE)throw Error('Three.js load failed');scene=new THREE.Scene();scene.background=new THREE.Color(0x82c9ed);scene.fog=new THREE.Fog(0x8cc9df,22,72);camera=new THREE.PerspectiveCamera(63,1,.1,140);camera.position.set(0,3.15,7.4);camera.lookAt(0,1,-5);renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.35));renderer.outputColorSpace=THREE.SRGBColorSpace;$('stage').appendChild(renderer.domElement);scene.add(new THREE.HemisphereLight(0xd8f3ff,0x42522c,2.2));const sun=new THREE.DirectionalLight(0xfff1c4,2.3);sun.position.set(-5,10,6);scene.add(sun);world=new THREE.Group();scene.add(world);box(34,.2,120,0x416b2e,0,-.15,-48,world);box(5.4,.16,120,0xb78d58,0,0,-48,world);for(let i=0;i<42;i++){const z=3-i*3.15;tree(-4.1-(i%3)*1.1,z,.78+(i%4)*.08);tree(4.1+(i%3)*1.1,z,.78+((i+2)%4)*.08)}const sky=new THREE.TextureLoader().load('https://static.wixstatic.com/media/172435_d6012f4ec1594a17858298879561b509~mv2.png');sky.colorSpace=THREE.SRGBColorSpace;const dome=new THREE.Mesh(new THREE.SphereGeometry(90,24,16),new THREE.MeshBasicMaterial({map:sky,side:THREE.BackSide}));dome.position.y=10;scene.add(dome);spawnMonster();resize();clock=new THREE.Clock();animate()}
+function spawnMonster(){if(monster)scene.remove(monster);monster=new THREE.Group();const colors=[0x7c35b5,0xd1493f,0x277c50],c=colors[monsterIndex];box(2.25,2.15,1.35,c,0,1.35,0,monster);box(1.7,1.5,1.25,c,0,3.05,0,monster);for(const x of[-.42,.42]){box(.35,.35,.18,0xffffff,x,3.22,.68,monster);box(.13,.13,.2,0x160616,x,3.22,.78,monster)}box(.55,.18,.18,0x261015,0,2.73,.7,monster);box(.42,.9,.42,c,-1.28,1.45,0,monster);box(.42,.9,.42,c,1.28,1.45,0,monster);monster.position.set(0,0,-28);scene.add(monster);enemyHP=100;walking=true;inBattle=false;updateHUD();sword('walking');status('몬스터에게 접근 중')}
+function sword(c){$('sword').className=c||''}function updateHUD(){$('playerHP').style.width=Math.max(0,playerHP)+'%';$('enemyHP').style.width=Math.max(0,enemyHP)+'%';$('playerText').textContent=Math.max(0,playerHP)+' / 100';$('enemyText').textContent=Math.max(0,enemyHP)+' / 100';$('monsterCount').textContent='☠ '+Math.min(monsterIndex+1,3)+' / 3'}function message(t){const e=$('message');e.textContent=t;e.animate([{opacity:0,transform:'translate(-50%,-30%) scale(.7)'},{opacity:1,transform:'translate(-50%,-50%) scale(1.1)'},{opacity:0,transform:'translate(-50%,-80%)'}],{duration:750})}function sound(k){try{audioCtx=audioCtx||new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();const o=audioCtx.createOscillator(),g=audioCtx.createGain(),n=audioCtx.currentTime;o.connect(g);g.connect(audioCtx.destination);o.type=k==='hit'?'square':k==='hurt'?'sawtooth':'triangle';o.frequency.setValueAtTime(k==='hit'?190:k==='hurt'?95:520,n);o.frequency.exponentialRampToValueAtTime(k==='hit'?70:k==='hurt'?45:760,n+.18);g.gain.setValueAtTime(.09,n);g.gain.exponentialRampToValueAtTime(.001,n+.2);o.start(n);o.stop(n+.21)}catch(e){}}
+function reachBattle(){walking=false;inBattle=true;monster.position.z=-7;sword('battle');status(inputMode==='qr'?'QR 대기 중':'NFC 대기 중',inputMode==='qr'?'#55eaff':'#50ef51');clearInterval(enemyTimer);enemyTimer=setInterval(enemyAttack,1800)}function attack(){if(!started||gameOver||victory||!inBattle||attacking)return;attacking=true;sword('attacking');sound('hit');enemyHP=Math.max(0,enemyHP-C.ATTACK_DAMAGE);updateHUD();message('-'+C.ATTACK_DAMAGE);monster.userData.hit=.25;setTimeout(()=>{attacking=false;if(!gameOver&&!victory)sword(inBattle?'battle':'walking')},460);if(enemyHP<=0)setTimeout(defeatMonster,320)}function enemyAttack(){if(!started||gameOver||victory||!inBattle)return;playerHP=Math.max(0,playerHP-C.ENEMY_DAMAGE);updateHUD();sound('hurt');$('damageFlash').animate([{opacity:0},{opacity:1},{opacity:0}],{duration:420});if(playerHP<=0)endGame()}function defeatMonster(){if(!inBattle||gameOver||victory)return;inBattle=false;clearInterval(enemyTimer);sound('win');message('MONSTER DOWN!');scene.remove(monster);monster=null;monsterIndex++;if(monsterIndex>=3){victory=true;sword('');status('모든 몬스터 처치!','#ffe65a');setTimeout(()=>$('victory').classList.add('show'),650)}else setTimeout(spawnMonster,900)}function endGame(){gameOver=true;inBattle=false;clearInterval(enemyTimer);sword('');status('GAME OVER','#ff3d3d');stopQR();$('gameOver').classList.add('show')}function resetGame(){clearInterval(enemyTimer);gameOver=victory=false;playerHP=100;monsterIndex=0;$('gameOver').classList.remove('show');$('victory').classList.remove('show');spawnMonster()}
+function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04),t=performance.now()*.001;if(started&&walking&&monster){monster.position.z=Math.min(-7,monster.position.z+dt*6.6);world.position.z=(world.position.z+dt*4)%3.15;if(monster.position.z>=-7)reachBattle()}if(monster){monster.position.y=Math.sin(t*3)*.08;monster.rotation.y=Math.sin(t*1.7)*.08;if(monster.userData.hit>0){monster.userData.hit-=dt;monster.position.x=Math.sin(t*48)*.2}else monster.position.x=0}renderer.render(scene,camera)}function resize(){if(!renderer)return;const a=$('playArea'),w=Math.max(1,a.clientWidth),h=Math.max(1,a.clientHeight);renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+async function startNFC(){if(nfcStarted)return;if(!('NDEFReader'in window)){status('NFC 미지원 · QR을 사용하세요','#ffb13d');return}try{nfcReader=new NDEFReader();await nfcReader.scan();nfcReader.onreading=()=>{if(inputMode==='nfc')attack()};nfcStarted=true;if(inputMode==='nfc')status('NFC 대기 중','#50ef51')}catch(e){status('NFC 권한 확인 · QR 사용 가능','#ffb13d')}}
+async function startQR(){if(qrRunning||qrStarting)return;qrStarting=true;if(typeof Html5Qrcode==='undefined'){status('QR 엔진 로딩 실패','#ff5555');qrStarting=false;return}try{html5QrCode=new Html5Qrcode('reader');await html5QrCode.start({facingMode:'environment'},{fps:10,qrbox:{width:220,height:220},aspectRatio:1.0},decodedText=>{if(inputMode!=='qr'||!started||gameOver||victory)return;const code=String(decodedText||'').trim().toUpperCase(),now=performance.now();if(code===C.QR_VALUE&&now-lastQRHit>=C.QR_COOLDOWN){lastQRHit=now;attack();status('QR 공격!','#55eaff');setTimeout(()=>{if(inputMode==='qr'&&qrRunning)status('QR 대기 중','#55eaff')},300)}},()=>{});qrRunning=true;status('QR 대기 중','#55eaff')}catch(e){qrRunning=false;status('카메라 권한을 확인하세요','#ffb13d')}finally{qrStarting=false}}async function stopQR(){if(!html5QrCode){qrRunning=false;return}try{if(qrRunning)await html5QrCode.stop()}catch(e){}try{await html5QrCode.clear()}catch(e){}html5QrCode=null;qrRunning=qrStarting=false;lastQRHit=0}async function setMode(m){inputMode=m;$('nfcButton').classList.toggle('active',m==='nfc');$('qrButton').classList.toggle('active',m==='qr');$('game').classList.toggle('qr-mode',m==='qr');setTimeout(resize,230);if(m==='qr')await startQR();else{await stopQR();status(nfcStarted?'NFC 대기 중':'NFC 준비 중',nfcStarted?'#50ef51':'#ffd83e');startNFC()}}
+async function startGame(){try{initThree();audioCtx=audioCtx||new(window.AudioContext||window.webkitAudioContext)();audioCtx.resume();started=true;$('startScreen').classList.add('hidden');await startNFC()}catch(e){console.error(e);status('게임 초기화 실패 · 새로고침하세요','#ff5555')}}$('startButton').onclick=()=>inAndroidWebView()?$('chromeGuide').classList.add('show'):startGame();$('chromeButton').onclick=openChrome;$('nfcButton').onclick=()=>setMode('nfc');$('qrButton').onclick=()=>setMode('qr');$('manualAttack').onclick=attack;document.querySelectorAll('.restartButton').forEach(b=>b.onclick=resetGame);addEventListener('resize',resize);addEventListener('orientationchange',()=>setTimeout(resize,250));document.addEventListener('visibilitychange',()=>{if(document.hidden&&qrRunning)stopQR();else if(!document.hidden&&inputMode==='qr'&&started)startQR()});window.attack=attack})();
+</script></body></html>
