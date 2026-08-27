@@ -565,6 +565,7 @@ canvas{
     overflow:hidden;
 
     background:#000;
+
 }
 
 #reader video{
@@ -4833,6 +4834,24 @@ async function startQR(){
                 /* 미검출은 오류가 아니므로 계속 스캔 */
             }
         );
+
+        /* 라이브러리가 video 스타일을 다시 지정해도
+           좌우 반전이 유지되도록 실제 요소에 직접 적용 */
+        const qrVideoElement=
+            document.querySelector("#reader video");
+
+        if(qrVideoElement){
+            qrVideoElement.style.setProperty(
+                "transform",
+                "scaleX(-1)",
+                "important"
+            );
+            qrVideoElement.style.setProperty(
+                "-webkit-transform",
+                "scaleX(-1)",
+                "important"
+            );
+        }
 
         qrRunning=true;
 
