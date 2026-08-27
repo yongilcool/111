@@ -950,6 +950,35 @@ canvas{
 #mapPlayer{position:absolute;width:13px;height:13px;border:2px solid #fff;border-radius:50%;background:#24b8ff;box-shadow:0 0 9px #24b8ff;transform:translate(-50%,-50%);transition:left .3s,top .3s}
 #directionPanel{position:absolute;z-index:110;left:50%;bottom:72px;transform:translateX(-50%);display:none;width:min(92%,390px);padding:12px;border:2px solid rgba(255,255,255,.8);border-radius:16px;background:rgba(4,13,22,.91);color:#fff;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,.5)}
 #directionPanel.show{display:block}#directionTitle{font-size:14px;font-weight:900;margin-bottom:9px}.directionButtons{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}.directionButton,#chestButton{min-width:82px;padding:11px 12px;border:0;border-radius:11px;background:#fff;color:#111;font-weight:1000;box-shadow:0 3px 0 #999}.directionButton:active,#chestButton:active{transform:translateY(2px);box-shadow:0 1px 0 #777}#chestButton{display:none;background:#ffbd3b;color:#351d00}
+
+/* 간결한 HUD */
+#statusBox,#monsterCount,#enemyText{display:none !important}
+#modeSwitch{top:56px}
+
+/* QR 모드에서도 3D 게임은 전체 화면으로 계속 표시 */
+#game.qr-mode #playArea{height:100%}
+#qrPanel{
+    height:30%;
+    background:rgba(0,0,0,.50);
+    border-top:0;
+    pointer-events:none;
+}
+#reader{
+    inset:auto;
+    left:50%;
+    top:50%;
+    width:min(260px,72vw);
+    height:min(260px,calc(100% - 18px));
+    transform:translate(-50%,-50%);
+    border:4px solid white;
+    border-radius:18px;
+    background:#000;
+    box-shadow:0 0 0 1px rgba(0,0,0,.35);
+}
+#qrLabel{
+    bottom:9px;
+    font-size:10px;
+}
 </style>
 </head>
 
@@ -1120,7 +1149,7 @@ canvas{
                 <p>
                     NFC 또는 QR로 공격합니다.
                     <br>
-                    QR CODE : MISSION_CLEAR_1234
+                    QR CODE : CHEST_001
                 </p>
 
                 <button id="startButton">
@@ -1146,7 +1175,7 @@ canvas{
 
 
         <div id="qrLabel">
-            MISSION_CLEAR_1234
+            CHEST_001
         </div>
 
 
@@ -1327,7 +1356,7 @@ const CONFIG = {
     ],
 
 
-    QR_VALUE:"MISSION_CLEAR_1234",
+    QR_VALUE:"CHEST_001",
 
 
     MAX_PIXEL_RATIO:1.25,
@@ -1567,13 +1596,26 @@ function updateMapPlayerFromCamera(){
     $("mapPlayer").style.top=Math.max(17,Math.min(75,top))+"px";
 }
 
-function directionSymbol(from,to){
-    const a=MAP_POINTS[from];
-    const b=MAP_POINTS[to];
-    if(b.x<a.x){return "←";}
-    if(b.x>a.x){return "→";}
-    if(b.y<a.y){return "↑";}
-    return "↓";
+function relativeDirection(to){
+    const target=MAP_POINTS[to];
+    const dx=target.wx-camera.position.x;
+    const dz=target.wz-camera.position.z;
+    const targetHeading=Math.atan2(-dx,-dz);
+    const difference=normalizeAngle(targetHeading-mapHeading);
+
+    if(Math.abs(difference)<.55){
+        return {symbol:"↑",label:"직진",order:1};
+    }
+
+    if(Math.abs(Math.abs(difference)-Math.PI)<.55){
+        return {symbol:"↓",label:"뒤로",order:3};
+    }
+
+    if(difference>0){
+        return {symbol:"←",label:"왼쪽",order:0};
+    }
+
+    return {symbol:"→",label:"오른쪽",order:2};
 }
 
 function showDirectionChoices(){
@@ -1581,10 +1623,21 @@ function showDirectionChoices(){
     wrap.innerHTML="";
     const links=MAP_LINKS[mapCurrent] || ["TM"];
 
-    links.forEach(function(destination){
+    links.map(function(destination){
+        return {
+            destination:destination,
+            direction:relativeDirection(destination)
+        };
+    })
+    .sort(function(a,b){
+        return a.direction.order-b.direction.order;
+    })
+    .forEach(function(option){
+        const destination=option.destination;
+        const direction=option.direction;
         const button=document.createElement("button");
         button.className="directionButton";
-        button.textContent=directionSymbol(mapCurrent,destination)+" 이동";
+        button.textContent=direction.symbol+" "+direction.label;
         button.addEventListener("click",function(){
             chooseRoad(destination);
         });
@@ -1785,9 +1838,15 @@ const playerHitAudio=
 const enemyHitAudio=
     new Audio("https://static.wixstatic.com/mp3/172435_0452d2de1ba249f4a60a949a8e89640d.mp3");
 
+const bgmAudio=
+    new Audio("https://static.wixstatic.com/mp3/172435_ae6a8c2d703548498735214801665e69.mp3");
+
 swordAudio.preload="auto";
 playerHitAudio.preload="auto";
 enemyHitAudio.preload="auto";
+bgmAudio.preload="auto";
+bgmAudio.loop=true;
+bgmAudio.volume=.5;
 
 function playEffect(audio,volume){
     try{
@@ -2253,6 +2312,20 @@ function deathSound(){
 
 function startBGM(){
 
+    if(bgmStarted){
+        return;
+    }
+
+    bgmStarted=true;
+    bgmAudio.currentTime=0;
+    bgmAudio.volume=.5;
+    const bgmPromise=bgmAudio.play();
+    if(bgmPromise){
+        bgmPromise.catch(function(){});
+    }
+
+    return;
+
     if(
         !audioCtx ||
         bgmStarted
@@ -2489,13 +2562,36 @@ function init3D(){
 
 
             function(texture){
-
-                texture.colorSpace=
-                    THREE.SRGBColorSpace;
-
-
-                scene.background=
-                    texture;
+                /* 원본 하늘 비율을 유지하고 화면 밖만 잘라낸다. */
+                const image=texture.image;
+                const area=$("playArea");
+                const targetAspect=Math.max(
+                    .35,
+                    area.clientWidth/Math.max(1,area.clientHeight)
+                );
+                const skyCanvas=document.createElement("canvas");
+                skyCanvas.width=720;
+                skyCanvas.height=Math.round(720/targetAspect);
+                const skyContext=skyCanvas.getContext("2d");
+                const scale=Math.max(
+                    skyCanvas.width/image.width,
+                    skyCanvas.height/image.height
+                );
+                const drawWidth=image.width*scale;
+                const drawHeight=image.height*scale;
+                skyContext.drawImage(
+                    image,
+                    (skyCanvas.width-drawWidth)/2,
+                    (skyCanvas.height-drawHeight)/2,
+                    drawWidth,
+                    drawHeight
+                );
+                const aspectSky=new THREE.CanvasTexture(skyCanvas);
+                aspectSky.colorSpace=THREE.SRGBColorSpace;
+                aspectSky.minFilter=THREE.LinearFilter;
+                aspectSky.magFilter=THREE.LinearFilter;
+                scene.background=aspectSky;
+                texture.dispose();
 
             },
 
@@ -3566,7 +3662,7 @@ function attack(){
 
             },
 
-            70
+            240
 
         );
 
@@ -3737,6 +3833,34 @@ function attack(){
         ];
 
     }
+
+
+    /*
+       검은 항상 화면 오른쪽 바깥에서 시작해
+       안쪽의 기본 위치로 들어오며 멈춘다.
+    */
+    frames=[
+        {
+            offset:0,
+            transform:"translate(430px,70px) rotate(-118deg) scale(.96)"
+        },
+        {
+            offset:.18,
+            transform:"translate(330px,45px) rotate(-98deg) scale(.98)"
+        },
+        {
+            offset:.48,
+            transform:"translate(150px,-20px) rotate(-58deg) scale(1.02)"
+        },
+        {
+            offset:.76,
+            transform:"translate(25px,-45px) rotate(-16deg) scale(1.04)"
+        },
+        {
+            offset:1,
+            transform:"translate(0,0) rotate(-4deg) scale(1)"
+        }
+    ];
 
 
     /*
@@ -3979,7 +4103,7 @@ function nextMonster(){
     deathProgress=-1;
     mapPaused=false;
     $("enemyHP").style.width="0%";
-    $("enemyText").textContent="길 이동 중";
+    $("enemyText").textContent="";
     updateSwordIdle();
 
 }
@@ -4992,7 +5116,7 @@ async function startQR(){
                         qrRunning
                     ){
                         $("statusText").textContent=
-                            "QR + NFC 대기 중";
+                            "";
                     }
 
                 },300);
@@ -5027,7 +5151,7 @@ async function startQR(){
             "#55eaff";
 
         $("statusText").textContent=
-            "QR + NFC 대기 중";
+            "";
     }
     catch(error){
 
@@ -5666,6 +5790,9 @@ function loop(now){
 
                 .18;
 
+            monster.rotation.z=
+                Math.sin(now*.075)*.16;
+
 
             if(
                 monsterHitTimer<=0
@@ -5673,6 +5800,8 @@ function loop(now){
 
                 monster.position.x=
                     monsterHomeX;
+
+                monster.rotation.z=0;
 
 
                 if(monsterMaterial){
