@@ -959,14 +959,13 @@ canvas{
 #statusBox,#monsterCount,#enemyText{display:none !important}
 #modeSwitch{top:56px}
 
-/* QR 모드에서도 3D 게임은 전체 화면으로 계속 표시 */
-#game.qr-mode #playArea{height:100%}
+/* 안정적으로 작동했던 하단 전체 QR 카메라 구조 */
+#game.qr-mode #playArea{height:70%}
 #qrPanel{
     height:30%;
-    background:transparent;
-    border-top:0;
+    background:#000;
+    border-top:2px solid white;
     pointer-events:none;
-    --qr-window-size:min(220px,68vw,calc(30vh - 16px));
 }
 #reader{
     inset:0;
@@ -977,55 +976,15 @@ canvas{
     transform:none;
     border:0;
     border-radius:0;
-    background:transparent;
+    background:#000;
     box-shadow:none;
 }
 #reader video{
-    opacity:0 !important;
-    transition:opacity .18s ease;
-    clip-path:inset(
-        calc((100% - var(--qr-window-size)) / 2)
-        calc((100% - var(--qr-window-size)) / 2)
-        round 14px
-    );
-}
-#qrPanel.qr-video-ready #reader video{
     opacity:1 !important;
-}
-#qrPanel::before{
-    content:"카메라 연결 중…";
-    position:absolute;
-    z-index:9;
-    left:50%;
-    top:50%;
-    transform:translate(-50%,-50%);
-    color:white;
-    padding:7px 10px;
-    border-radius:9px;
-    background:rgba(0,0,0,.62);
-    font-size:11px;
-    font-weight:900;
-    white-space:nowrap;
-}
-#qrPanel.qr-video-ready::before{
-    display:none;
-}
-#qrPanel::after{
-    content:"";
-    position:absolute;
-    z-index:8;
-    left:50%;
-    top:50%;
-    width:var(--qr-window-size);
-    height:var(--qr-window-size);
-    transform:translate(-50%,-50%);
-    border:4px solid white;
-    border-radius:18px;
-    box-sizing:border-box;
-    pointer-events:none;
+    clip-path:none;
 }
 #qrLabel{
-    display:none;
+    display:block;
 }
 </style>
 </head>
@@ -1897,12 +1856,16 @@ const enemyHitAudio=
 const bgmAudio=
     new Audio("https://static.wixstatic.com/mp3/172435_ae6a8c2d703548498735214801665e69.mp3");
 
+const footstepAudio=
+    new Audio("footstep.wav");
+
 swordAudio.preload="auto";
 playerHitAudio.preload="auto";
 enemyHitAudio.preload="auto";
 bgmAudio.preload="auto";
+footstepAudio.preload="auto";
 bgmAudio.loop=true;
-bgmAudio.volume=.25;
+bgmAudio.volume=.12;
 
 function playEffect(audio,volume){
     try{
@@ -2104,6 +2067,11 @@ function swordSound(){
 
 function footSound(){
 
+    if(footstepAudio.readyState>=2){
+        playEffect(footstepAudio,1.0);
+        return;
+    }
+
     if(!audioCtx){
 
         return;
@@ -2266,7 +2234,7 @@ function hitSound(){
 
 function playerHitSound(){
 
-    playEffect(playerHitAudio,.43);
+    playEffect(playerHitAudio,.21);
 
     return;
 
@@ -2388,7 +2356,7 @@ function startBGM(){
 
     bgmStarted=true;
     bgmAudio.currentTime=0;
-    bgmAudio.volume=.25;
+    bgmAudio.volume=.12;
     const bgmPromise=bgmAudio.play();
     if(bgmPromise){
         bgmPromise.catch(function(){});
@@ -5113,7 +5081,6 @@ async function startQR(){
     }
 
     qrStarting=true;
-    $("qrPanel").classList.remove("qr-video-ready");
 
     try{
 
@@ -5143,9 +5110,7 @@ async function startQR(){
         await html5QrCode.start(
 
             {
-                facingMode:"user",
-                width:{ideal:640},
-                height:{ideal:480}
+                facingMode:"user"
             },
 
             {
@@ -5171,7 +5136,9 @@ async function startQR(){
                         width:size,
                         height:size
                     };
-                }
+                },
+
+                aspectRatio:1.0
             },
 
             function(decodedText){
@@ -5248,12 +5215,6 @@ async function startQR(){
                 "important"
             );
 
-            const videoIsReady=
-                await waitForQRVideoReady(qrVideoElement);
-
-            if(videoIsReady){
-                $("qrPanel").classList.add("qr-video-ready");
-            }
         }
 
         $("statusDot").style.background=
@@ -5263,8 +5224,6 @@ async function startQR(){
             "";
     }
     catch(error){
-
-        $("qrPanel").classList.remove("qr-video-ready");
 
         if(error && error.name==="AbortError"){
             return;
@@ -5304,8 +5263,6 @@ function stopNFC(){
 
 
 async function stopQR(){
-
-    $("qrPanel").classList.remove("qr-video-ready");
 
     if(!html5QrCode){
         qrRunning=false;
