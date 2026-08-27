@@ -5311,29 +5311,9 @@ async function startQR(){
             },
 
             {
-                fps:10,
-
-                /*
-                   기본값은 성공했던 220×220.
-                   카메라 영역이 작은 기기에서만
-                   영역 안에 들어오도록 자동 축소한다.
-                */
-                qrbox:function(viewWidth,viewHeight){
-
-                    const size=Math.max(
-                        160,
-                        Math.min(
-                            300,
-                            viewWidth*.78,
-                            viewHeight-10
-                        )
-                    );
-
-                    return {
-                        width:size,
-                        height:size
-                    };
-                }
+                /* 전면 카메라의 세로 크기 보고값 때문에 qrbox가
+                   작아지는 문제를 피하고 영상 전체를 판독한다. */
+                fps:10
             },
 
             function(decodedText){
