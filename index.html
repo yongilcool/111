@@ -1290,7 +1290,7 @@ const CONFIG = {
         이전 느린 버전보다 약 2배
     */
 
-    WALK_SPEED:6.6,
+    WALK_SPEED:9.6,
 
 
     /*
@@ -1418,19 +1418,23 @@ let monsterShadow=null;
 
 let monsterHomeZ=0;
 
+let monsterHomeX=0;
+
+let mapChestMesh=null;
+
 
 /* =====================================================
    LOOP MAP NAVIGATION
 ===================================================== */
 
 const MAP_POINTS={
-    START:{x:58,y:48},
-    TL:{x:18,y:17},
-    TM:{x:58,y:17},
-    TR:{x:98,y:17},
-    BL:{x:18,y:75},
-    BM:{x:58,y:75},
-    BR:{x:98,y:75}
+    START:{x:58,y:48,wx:0,wz:8},
+    TL:{x:18,y:17,wx:-40,wz:-45},
+    TM:{x:58,y:17,wx:0,wz:-45},
+    TR:{x:98,y:17,wx:40,wz:-45},
+    BL:{x:18,y:75,wx:-40,wz:35},
+    BM:{x:58,y:75,wx:0,wz:35},
+    BR:{x:98,y:75,wx:40,wz:35}
 };
 
 const MAP_LINKS={
@@ -1454,6 +1458,59 @@ let mapTravelEndZ=-24;
 let mapChestWaiting=false;
 let encounterCount=0;
 
+function moveTowardMapTarget(dt){
+    const target=MAP_POINTS[mapDestination];
+    const dx=target.wx-camera.position.x;
+    const dz=target.wz-camera.position.z;
+    const distance=Math.hypot(dx,dz);
+
+    if(distance<.16){
+        camera.position.x=target.wx;
+        camera.position.z=target.wz;
+        return true;
+    }
+
+    const step=Math.min(distance,CONFIG.WALK_SPEED*dt);
+    camera.position.x+=dx/distance*step;
+    camera.position.z+=dz/distance*step;
+    camera.lookAt(target.wx,2.05,target.wz);
+    return false;
+}
+
+function removeMapChest(){
+    if(mapChestMesh){
+        scene.remove(mapChestMesh);
+        mapChestMesh=null;
+    }
+}
+
+function createMapChestAtDestination(){
+    removeMapChest();
+    const start=MAP_POINTS[mapCurrent];
+    const target=MAP_POINTS[mapDestination];
+    mapChestMesh=new THREE.Group();
+    const wood=new THREE.MeshLambertMaterial({color:0x5b2e13});
+    const gold=new THREE.MeshLambertMaterial({color:0xf2b632});
+    const base=new THREE.Mesh(new THREE.BoxGeometry(2.8,1.35,1.8),wood);
+    base.position.y=.72;
+    mapChestMesh.add(base);
+    const lid=new THREE.Mesh(new THREE.BoxGeometry(2.9,.65,1.9),wood);
+    lid.position.y=1.7;
+    mapChestMesh.add(lid);
+    const band=new THREE.Mesh(new THREE.BoxGeometry(.34,2.05,1.94),gold);
+    band.position.y=1.05;
+    mapChestMesh.add(band);
+    const dx=target.wx-start.wx;
+    const dz=target.wz-start.wz;
+    const length=Math.max(.001,Math.hypot(dx,dz));
+    mapChestMesh.position.set(
+        target.wx+dx/length*4.5,
+        0,
+        target.wz+dz/length*4.5
+    );
+    scene.add(mapChestMesh);
+}
+
 function roadKey(a,b){
     return [a,b].sort().join("-");
 }
@@ -1462,6 +1519,13 @@ function updateMapPlayer(point){
     const data=MAP_POINTS[point] || MAP_POINTS.START;
     $("mapPlayer").style.left=data.x+"px";
     $("mapPlayer").style.top=data.y+"px";
+}
+
+function updateMapPlayerFromCamera(){
+    const left=58+camera.position.x;
+    const top=17+(camera.position.z+45)*.725;
+    $("mapPlayer").style.left=Math.max(18,Math.min(98,left))+"px";
+    $("mapPlayer").style.top=Math.max(17,Math.min(75,top))+"px";
 }
 
 function directionSymbol(from,to){
@@ -1525,9 +1589,7 @@ function chooseRoad(destination){
     mapDestination=destination;
     mapPaused=false;
     $("directionPanel").classList.remove("show");
-    camera.position.x=0;
-    camera.position.z=8;
-    mapTravelEndZ=-24;
+    removeMapChest();
 
     mapChestWaiting=!!CHEST_ROADS[roadKey(mapCurrent,destination)];
 
@@ -1537,11 +1599,17 @@ function chooseRoad(destination){
         $("enemyHP").style.width="0%";
         $("enemyText").textContent="보물상자";
         $("monsterCount").textContent="🎁 CHEST";
+        createMapChestAtDestination();
     }
     else{
         spawnMonster(encounterCount%3);
-        monsterHomeZ=-34;
+        const start=MAP_POINTS[mapCurrent];
+        const target=MAP_POINTS[mapDestination];
+        monsterHomeX=start.wx+(target.wx-start.wx)*.62;
+        monsterHomeZ=start.wz+(target.wz-start.wz)*.62;
+        monster.position.x=monsterHomeX;
         monster.position.z=monsterHomeZ;
+        monsterShadow.position.x=monsterHomeX;
         monsterShadow.position.z=monsterHomeZ;
         encounterCount++;
     }
@@ -1896,7 +1964,7 @@ function footSound(){
 
 
     src.buffer=
-        noiseBuffer(.10);
+        noiseBuffer(.14);
 
 
     const filter=
@@ -1908,7 +1976,7 @@ function footSound(){
 
 
     filter.frequency.value=
-        390;
+        480;
 
 
     const gain=
@@ -1921,7 +1989,7 @@ function footSound(){
 
     gain.gain
     .setValueAtTime(
-        .48,
+        .75,
         now
     );
 
@@ -1929,7 +1997,7 @@ function footSound(){
     gain.gain
     .exponentialRampToValueAtTime(
         .0001,
-        now+.10
+        now+.14
     );
 
 
@@ -2600,9 +2668,9 @@ function init3D(){
 
                 new THREE.PlaneGeometry(
 
-                    90,
+                    110,
 
-                    240
+                    320
 
                 ),
 
@@ -2627,7 +2695,7 @@ function init3D(){
 
             0,
 
-            -100
+            -80
 
         );
 
@@ -2708,6 +2776,50 @@ function init3D(){
         scene.add(
             road
         );
+
+
+        /* =============================================
+           실제 순환형 3D MAP
+
+           위/아래 가로길 + 좌/중앙/우 세로길
+        ============================================= */
+
+        const mapRoadMaterial=
+            new THREE.MeshLambertMaterial({
+                map:roadTexture
+            });
+
+        function addMapRoad(width,depth,x,z){
+            const mesh=new THREE.Mesh(
+                new THREE.PlaneGeometry(width,depth),
+                mapRoadMaterial
+            );
+            mesh.rotation.x=-Math.PI/2;
+            mesh.position.set(x,.018,z);
+            scene.add(mesh);
+        }
+
+        addMapRoad(87,7,0,-45);
+        addMapRoad(87,7,0,35);
+        addMapRoad(7,87,-40,-5);
+        addMapRoad(7,87,40,-5);
+        addMapRoad(7,87,0,-5);
+
+        const junctionMaterial=
+            new THREE.MeshLambertMaterial({
+                color:0xb73131
+            });
+
+        ["TL","TM","TR","BL","BM","BR"]
+        .forEach(function(name){
+            const point=MAP_POINTS[name];
+            const pad=new THREE.Mesh(
+                new THREE.BoxGeometry(7.4,.14,7.4),
+                junctionMaterial
+            );
+            pad.position.set(point.wx,.08,point.wz);
+            scene.add(pad);
+        });
 
 
         createForest();
@@ -3148,6 +3260,9 @@ function spawnMonster(index){
         );
 
 
+    monsterHomeX=0;
+
+
     monsterHomeZ=
 
         CONFIG
@@ -3168,7 +3283,7 @@ function spawnMonster(index){
 
     monster.position.set(
 
-        0,
+        monsterHomeX,
 
         2.7,
 
@@ -3221,7 +3336,7 @@ function spawnMonster(index){
 
     monsterShadow.position.set(
 
-        0,
+        monsterHomeX,
 
         .025,
 
@@ -3810,9 +3925,16 @@ function killMonster(){
 
 function nextMonster(){
 
-    /* 적을 쓰러뜨리면 다음 직선으로 자동 진행하지 않고
-       현재 목적지에서 멈춰 다음 방향을 선택한다. */
-    arriveAtMapPoint();
+    /* 적이 사라진 뒤에도 실제 3D 길의 빨간 교차점까지
+       계속 걸어간 다음 방향 선택 화면을 띄운다. */
+    if(monster){scene.remove(monster);monster=null;}
+    if(monsterShadow){scene.remove(monsterShadow);monsterShadow=null;}
+    monsterDead=false;
+    deathProgress=-1;
+    mapPaused=false;
+    $("enemyHP").style.width="0%";
+    $("enemyText").textContent="길 이동 중";
+    updateSwordIdle();
 
 }
 
@@ -5186,6 +5308,7 @@ $("chestButton")
 .addEventListener(
     "click",
     function(){
+        removeMapChest();
         playerHP=Math.min(
             CONFIG.PLAYER_HP,
             playerHP+25
@@ -5272,8 +5395,10 @@ function loop(now){
 
                 const distance=
 
-                    camera.position.z -
-                    monster.position.z;
+                    Math.hypot(
+                        camera.position.x-monster.position.x,
+                        camera.position.z-monster.position.z
+                    );
 
 
                 if(
@@ -5281,10 +5406,21 @@ function loop(now){
                     CONFIG.BATTLE_DISTANCE
                 ){
 
-                    camera.position.z -=
+                    const dx=monster.position.x-camera.position.x;
+                    const dz=monster.position.z-camera.position.z;
+                    const length=Math.max(.001,Math.hypot(dx,dz));
 
-                        CONFIG.WALK_SPEED *
-                        dt;
+                    camera.position.x+=
+                        dx/length*CONFIG.WALK_SPEED*dt;
+
+                    camera.position.z+=
+                        dz/length*CONFIG.WALK_SPEED*dt;
+
+                    camera.lookAt(
+                        monster.position.x,
+                        2.05,
+                        monster.position.z
+                    );
 
 
                     walking=
@@ -5302,25 +5438,18 @@ function loop(now){
 
             else{
 
-                camera.position.z -=
+                walking=!moveTowardMapTarget(dt);
 
-                    CONFIG.WALK_SPEED *
-                    dt;
-
-
-                walking=
-                    true;
-
-
-                /* 보물상자 길의 끝에 도착 */
-                if(camera.position.z<=mapTravelEndZ){
-                    walking=false;
+                if(!walking){
                     arriveAtMapPoint();
                 }
 
             }
 
         }
+
+
+        updateMapPlayerFromCamera();
 
 
         /* =============================================
@@ -5484,6 +5613,8 @@ function loop(now){
 
             monster.position.x=
 
+                monsterHomeX +
+
                 Math.sin(
                     now*.11
                 ) *
@@ -5496,7 +5627,7 @@ function loop(now){
             ){
 
                 monster.position.x=
-                    0;
+                    monsterHomeX;
 
 
                 if(monsterMaterial){
@@ -5536,23 +5667,36 @@ function loop(now){
                 monsterAttackProgress;
 
 
+            const attackDX=
+                camera.position.x-monsterHomeX;
+
+            const attackDZ=
+                camera.position.z-monsterHomeZ;
+
+            const attackLength=
+                Math.max(.001,Math.hypot(attackDX,attackDZ));
+
+            const attackUX=attackDX/attackLength;
+            const attackUZ=attackDZ/attackLength;
+
+
             /*
                 뒤로 살짝
             */
 
             if(t<.2){
 
-                monster.position.z=
-
-                    THREE.MathUtils.lerp(
-
-                        monsterHomeZ,
-
-                        monsterHomeZ-.7,
-
-                        t/.2
-
-                    );
+                const p=t/.2;
+                monster.position.x=THREE.MathUtils.lerp(
+                    monsterHomeX,
+                    monsterHomeX-attackUX*.7,
+                    p
+                );
+                monster.position.z=THREE.MathUtils.lerp(
+                    monsterHomeZ,
+                    monsterHomeZ-attackUZ*.7,
+                    p
+                );
 
             }
 
@@ -5568,17 +5712,16 @@ function loop(now){
                     (t-.2)/.32;
 
 
-                monster.position.z=
-
-                    THREE.MathUtils.lerp(
-
-                        monsterHomeZ-.7,
-
-                        monsterHomeZ+3.8,
-
-                        p
-
-                    );
+                monster.position.x=THREE.MathUtils.lerp(
+                    monsterHomeX-attackUX*.7,
+                    monsterHomeX+attackUX*3.8,
+                    p
+                );
+                monster.position.z=THREE.MathUtils.lerp(
+                    monsterHomeZ-attackUZ*.7,
+                    monsterHomeZ+attackUZ*3.8,
+                    p
+                );
 
             }
 
@@ -5615,17 +5758,16 @@ function loop(now){
                     (t-.62)/.38;
 
 
-                monster.position.z=
-
-                    THREE.MathUtils.lerp(
-
-                        monsterHomeZ+3.8,
-
-                        monsterHomeZ,
-
-                        p
-
-                    );
+                monster.position.x=THREE.MathUtils.lerp(
+                    monsterHomeX+attackUX*3.8,
+                    monsterHomeX,
+                    p
+                );
+                monster.position.z=THREE.MathUtils.lerp(
+                    monsterHomeZ+attackUZ*3.8,
+                    monsterHomeZ,
+                    p
+                );
 
             }
 
@@ -5635,6 +5777,10 @@ function loop(now){
                 monster.position.z=
 
                     monsterHomeZ;
+
+                monster.position.x=
+
+                    monsterHomeX;
 
 
                 monsterAttackProgress=
@@ -5721,11 +5867,7 @@ function loop(now){
                 앞으로 계속 이동
             */
 
-            camera.position.z -=
-
-                CONFIG.WALK_SPEED *
-
-                dt;
+            moveTowardMapTarget(dt);
 
 
             /*
