@@ -13,7 +13,7 @@
 <title>PIXEL 3D ADVENTURE</title>
 
 <!-- 기존 게임과 독립적으로 동작하는 QR 엔진 -->
-<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
 <style>
 
@@ -1006,9 +1006,11 @@ canvas{
     border-radius:18px;
     background:transparent;
     box-sizing:border-box;
-    opacity:1;
+    opacity:0;
     pointer-events:none;
+    transition:opacity .12s linear;
 }
+#qrFocusVideo.ready{opacity:1}
 #qrLabel{
     display:none;
 }
@@ -5246,9 +5248,7 @@ async function startQR(){
                         width:size,
                         height:size
                     };
-                },
-
-                aspectRatio:1.0
+                }
             },
 
             function(decodedText){
@@ -5326,7 +5326,11 @@ async function startQR(){
             );
 
             const focusVideo=$("qrFocusVideo");
+            focusVideo.classList.remove("ready");
             focusVideo.srcObject=qrVideoElement.srcObject;
+            focusVideo.addEventListener("playing",function showQRFocus(){
+                focusVideo.classList.add("ready");
+            },{once:true});
             const focusPromise=focusVideo.play();
             if(focusPromise){
                 focusPromise.catch(function(){});
@@ -5382,6 +5386,7 @@ function stopNFC(){
 async function stopQR(){
 
     const focusVideo=$("qrFocusVideo");
+    focusVideo.classList.remove("ready");
     focusVideo.pause();
     focusVideo.srcObject=null;
 
