@@ -5268,6 +5268,12 @@ let lastWrongQRFeedback=0;
 
 let qrFeedbackTimer=null;
 
+let qrSmallAssistTimer=null;
+
+let qrSmallAssistCanvas=null;
+
+let qrSmallAssistBusy=false;
+
 const QR_ATTACK_COOLDOWN=650;
 
 function showQRFeedback(type,text){
@@ -5297,6 +5303,125 @@ function showQRFeedback(type,text){
         frame.classList.remove("success","error");
         message.classList.remove("show","success","error");
     },900);
+}
+
+function processDecodedQR(decodedText){
+    if(
+        inputMode!=="qr" ||
+        !started ||
+        gameOver
+    ){
+        return;
+    }
+
+    const code=String(decodedText || "")
+        .trim()
+        .toUpperCase();
+
+    if(code!==CONFIG.QR_VALUE){
+        const wrongNow=performance.now();
+
+        if(wrongNow-lastWrongQRFeedback > 900){
+            lastWrongQRFeedback=wrongNow;
+            showQRFeedback("error","잘못된 QR입니다");
+        }
+        return;
+    }
+
+    const now=performance.now();
+
+    if(now-lastQRHit < QR_ATTACK_COOLDOWN){
+        return;
+    }
+
+    if(!attack()){
+        return;
+    }
+
+    lastQRHit=now;
+    showQRFeedback("success","QR 인식 성공!");
+
+    $("statusText").textContent="QR 공격!";
+    setTimeout(function(){
+        if(inputMode==="qr" && qrRunning){
+            $("statusText").textContent="";
+        }
+    },300);
+}
+
+function stopQRSmallAssist(){
+    if(qrSmallAssistTimer){
+        clearInterval(qrSmallAssistTimer);
+        qrSmallAssistTimer=null;
+    }
+    qrSmallAssistBusy=false;
+}
+
+function startQRSmallAssist(){
+    stopQRSmallAssist();
+
+    if(!window.jsQR){
+        return;
+    }
+
+    if(!qrSmallAssistCanvas){
+        qrSmallAssistCanvas=document.createElement("canvas");
+        qrSmallAssistCanvas.width=640;
+        qrSmallAssistCanvas.height=640;
+    }
+
+    let cropStep=0;
+
+    qrSmallAssistTimer=setInterval(function(){
+        if(
+            qrSmallAssistBusy ||
+            !qrRunning ||
+            inputMode!=="qr"
+        ){
+            return;
+        }
+
+        const video=document.querySelector("#reader video");
+        if(!video || video.readyState<2 || !video.videoWidth){
+            return;
+        }
+
+        qrSmallAssistBusy=true;
+
+        try{
+            /* 중앙을 두 단계로 확대해 작은 QR의 모듈을 살린다. */
+            const cropRatio=(cropStep++ % 2===0) ? .72 : .48;
+            const sourceSize=Math.min(video.videoWidth,video.videoHeight)*cropRatio;
+            const sourceX=(video.videoWidth-sourceSize)/2;
+            const sourceY=(video.videoHeight-sourceSize)/2;
+            const ctx=qrSmallAssistCanvas.getContext("2d",{
+                willReadFrequently:true
+            });
+
+            ctx.imageSmoothingEnabled=false;
+            ctx.drawImage(
+                video,
+                sourceX,sourceY,sourceSize,sourceSize,
+                0,0,640,640
+            );
+
+            const image=ctx.getImageData(0,0,640,640);
+            const result=window.jsQR(
+                image.data,
+                image.width,
+                image.height,
+                {inversionAttempts:"attemptBoth"}
+            );
+
+            if(result && result.data){
+                processDecodedQR(result.data);
+            }
+        }
+        catch(e){}
+        finally{
+            qrSmallAssistBusy=false;
+        }
+    },420);
 }
 
 function waitForQRVideoReady(video){
@@ -5386,72 +5511,7 @@ async function startQR(){
             },
 
             function(decodedText){
-
-                if(
-                    inputMode!=="qr" ||
-                    !started ||
-                    gameOver
-                ){
-                    return;
-                }
-
-                const code=String(
-                    decodedText || ""
-                )
-                .trim()
-                .toUpperCase();
-
-                if(code!==CONFIG.QR_VALUE){
-                    const wrongNow=performance.now();
-
-                    if(
-                        wrongNow-lastWrongQRFeedback > 900
-                    ){
-                        lastWrongQRFeedback=wrongNow;
-                        showQRFeedback(
-                            "error",
-                            "잘못된 QR입니다"
-                        );
-                    }
-
-                    return;
-                }
-
-                const now=performance.now();
-
-                if(
-                    now-lastQRHit <
-                    QR_ATTACK_COOLDOWN
-                ){
-                    return;
-                }
-
-                showQRFeedback(
-                    "success",
-                    "QR 인식 성공!"
-                );
-
-                /* NFC와 동일한 기존 공격 함수만 호출 */
-                if(!attack()){
-                    return;
-                }
-
-                lastQRHit=now;
-
-                $("statusText").textContent=
-                    "QR 공격!";
-
-                setTimeout(function(){
-
-                    if(
-                        inputMode==="qr" &&
-                        qrRunning
-                    ){
-                        $("statusText").textContent=
-                            "";
-                    }
-
-                },300);
+                processDecodedQR(decodedText);
             },
 
             function(){
@@ -5490,6 +5550,13 @@ async function startQR(){
             }
 
         }
+
+        /* 기본 QR 엔진은 그대로 두고 작은 QR만 보조 판독한다. */
+        loadJsQR().then(function(){
+            if(qrRunning && inputMode==="qr"){
+                startQRSmallAssist();
+            }
+        });
 
         $("statusDot").style.background=
             "#55eaff";
@@ -5537,6 +5604,8 @@ function stopNFC(){
 
 
 async function stopQR(){
+
+    stopQRSmallAssist();
 
     const focusVideo=$("qrFocusVideo");
     focusVideo.classList.remove("ready");
