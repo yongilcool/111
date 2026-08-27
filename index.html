@@ -1013,7 +1013,7 @@ canvas{
 #qrFocusVideo.ready{opacity:1}
 #qrFrame{
     position:absolute;
-    z-index:9999 !important;
+    z-index:2147483646 !important;
     left:50%;
     top:50%;
     width:var(--qr-focus-size);
@@ -1032,7 +1032,7 @@ canvas{
 #game.qr-mode #qrPanel::after{
     content:"";
     position:absolute;
-    z-index:10000;
+    z-index:2147483646;
     left:50%;
     top:50%;
     width:var(--qr-focus-size);
@@ -1044,6 +1044,40 @@ canvas{
     box-shadow:0 0 0 2px rgba(0,0,0,.3),0 3px 14px rgba(0,0,0,.45);
     pointer-events:none;
 }
+#qrFrame.success,
+#game.qr-mode #qrPanel.qr-success::after{
+    border-color:#38ff70 !important;
+    box-shadow:0 0 8px #38ff70,0 0 25px #38ff70,0 0 45px rgba(56,255,112,.8) !important;
+    animation:qrSuccessFlash .18s steps(2,end) 4;
+}
+#qrFrame.error,
+#game.qr-mode #qrPanel.qr-error::after{
+    border-color:#ff3e3e !important;
+    box-shadow:0 0 8px #ff3e3e,0 0 25px #ff3e3e !important;
+    animation:qrErrorFlash .18s steps(2,end) 4;
+}
+#qrMessage{
+    position:absolute;
+    z-index:2147483647;
+    left:50%;
+    bottom:8px;
+    transform:translateX(-50%) scale(.92);
+    padding:7px 14px;
+    border-radius:999px;
+    background:rgba(5,12,18,.88);
+    color:#fff;
+    font-size:14px;
+    font-weight:1000;
+    white-space:nowrap;
+    opacity:0;
+    transition:opacity .12s,transform .12s;
+    pointer-events:none;
+}
+#qrMessage.show{opacity:1;transform:translateX(-50%) scale(1)}
+#qrMessage.success{color:#55ff82;border:2px solid #38ff70}
+#qrMessage.error{color:#ff7373;border:2px solid #ff3e3e}
+@keyframes qrSuccessFlash{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes qrErrorFlash{0%,100%{opacity:1}50%{opacity:.3}}
 #qrLabel{
     display:none;
 }
@@ -1252,6 +1286,8 @@ canvas{
         <video id="qrFocusVideo" autoplay muted playsinline></video>
 
         <div id="qrFrame" aria-hidden="true"></div>
+
+        <div id="qrMessage" aria-live="polite"></div>
 
 
         <div id="qrLabel">
@@ -5228,7 +5264,40 @@ let html5QrCode=null;
 let qrStarting=false;
 let lastQRHit=0;
 
+let lastWrongQRFeedback=0;
+
+let qrFeedbackTimer=null;
+
 const QR_ATTACK_COOLDOWN=650;
+
+function showQRFeedback(type,text){
+    const panel=$("qrPanel");
+    const frame=$("qrFrame");
+    const message=$("qrMessage");
+
+    panel.classList.remove("qr-success","qr-error");
+    frame.classList.remove("success","error");
+    message.classList.remove("show","success","error");
+
+    /* 같은 종류를 연속 인식해도 애니메이션을 다시 시작한다. */
+    void frame.offsetWidth;
+
+    const success=type==="success";
+    panel.classList.add(success ? "qr-success" : "qr-error");
+    frame.classList.add(success ? "success" : "error");
+    message.textContent=text;
+    message.classList.add("show",success ? "success" : "error");
+
+    if(qrFeedbackTimer){
+        clearTimeout(qrFeedbackTimer);
+    }
+
+    qrFeedbackTimer=setTimeout(function(){
+        panel.classList.remove("qr-success","qr-error");
+        frame.classList.remove("success","error");
+        message.classList.remove("show","success","error");
+    },900);
+}
 
 function waitForQRVideoReady(video){
     return new Promise(function(resolve){
@@ -5333,6 +5402,18 @@ async function startQR(){
                 .toUpperCase();
 
                 if(code!==CONFIG.QR_VALUE){
+                    const wrongNow=performance.now();
+
+                    if(
+                        wrongNow-lastWrongQRFeedback > 900
+                    ){
+                        lastWrongQRFeedback=wrongNow;
+                        showQRFeedback(
+                            "error",
+                            "잘못된 QR입니다"
+                        );
+                    }
+
                     return;
                 }
 
@@ -5344,6 +5425,11 @@ async function startQR(){
                 ){
                     return;
                 }
+
+                showQRFeedback(
+                    "success",
+                    "QR 인식 성공!"
+                );
 
                 /* NFC와 동일한 기존 공격 함수만 호출 */
                 if(!attack()){
