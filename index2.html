@@ -1486,6 +1486,7 @@ function removeMapChest(){
 
 function createMapChestAtDestination(){
     removeMapChest();
+    const start=MAP_POINTS[mapCurrent];
     const target=MAP_POINTS[mapDestination];
     mapChestMesh=new THREE.Group();
     const wood=new THREE.MeshLambertMaterial({color:0x5b2e13});
@@ -1499,7 +1500,14 @@ function createMapChestAtDestination(){
     const band=new THREE.Mesh(new THREE.BoxGeometry(.34,2.05,1.94),gold);
     band.position.y=1.05;
     mapChestMesh.add(band);
-    mapChestMesh.position.set(target.wx,0,target.wz);
+    const dx=target.wx-start.wx;
+    const dz=target.wz-start.wz;
+    const length=Math.max(.001,Math.hypot(dx,dz));
+    mapChestMesh.position.set(
+        target.wx+dx/length*4.5,
+        0,
+        target.wz+dz/length*4.5
+    );
     scene.add(mapChestMesh);
 }
 
@@ -1511,6 +1519,13 @@ function updateMapPlayer(point){
     const data=MAP_POINTS[point] || MAP_POINTS.START;
     $("mapPlayer").style.left=data.x+"px";
     $("mapPlayer").style.top=data.y+"px";
+}
+
+function updateMapPlayerFromCamera(){
+    const left=58+camera.position.x;
+    const top=17+(camera.position.z+45)*.725;
+    $("mapPlayer").style.left=Math.max(18,Math.min(98,left))+"px";
+    $("mapPlayer").style.top=Math.max(17,Math.min(75,top))+"px";
 }
 
 function directionSymbol(from,to){
@@ -1949,7 +1964,7 @@ function footSound(){
 
 
     src.buffer=
-        noiseBuffer(.10);
+        noiseBuffer(.14);
 
 
     const filter=
@@ -1961,7 +1976,7 @@ function footSound(){
 
 
     filter.frequency.value=
-        390;
+        480;
 
 
     const gain=
@@ -1974,7 +1989,7 @@ function footSound(){
 
     gain.gain
     .setValueAtTime(
-        .48,
+        .75,
         now
     );
 
@@ -1982,7 +1997,7 @@ function footSound(){
     gain.gain
     .exponentialRampToValueAtTime(
         .0001,
-        now+.10
+        now+.14
     );
 
 
@@ -2653,9 +2668,9 @@ function init3D(){
 
                 new THREE.PlaneGeometry(
 
-                    90,
+                    110,
 
-                    240
+                    320
 
                 ),
 
@@ -2680,7 +2695,7 @@ function init3D(){
 
             0,
 
-            -100
+            -80
 
         );
 
@@ -3910,9 +3925,16 @@ function killMonster(){
 
 function nextMonster(){
 
-    /* 적을 쓰러뜨리면 다음 직선으로 자동 진행하지 않고
-       현재 목적지에서 멈춰 다음 방향을 선택한다. */
-    arriveAtMapPoint();
+    /* 적이 사라진 뒤에도 실제 3D 길의 빨간 교차점까지
+       계속 걸어간 다음 방향 선택 화면을 띄운다. */
+    if(monster){scene.remove(monster);monster=null;}
+    if(monsterShadow){scene.remove(monsterShadow);monsterShadow=null;}
+    monsterDead=false;
+    deathProgress=-1;
+    mapPaused=false;
+    $("enemyHP").style.width="0%";
+    $("enemyText").textContent="길 이동 중";
+    updateSwordIdle();
 
 }
 
@@ -5286,6 +5308,7 @@ $("chestButton")
 .addEventListener(
     "click",
     function(){
+        removeMapChest();
         playerHP=Math.min(
             CONFIG.PLAYER_HP,
             playerHP+25
@@ -5424,6 +5447,9 @@ function loop(now){
             }
 
         }
+
+
+        updateMapPlayerFromCamera();
 
 
         /* =============================================
@@ -5841,11 +5867,7 @@ function loop(now){
                 앞으로 계속 이동
             */
 
-            camera.position.z -=
-
-                CONFIG.WALK_SPEED *
-
-                dt;
+            moveTowardMapTarget(dt);
 
 
             /*
