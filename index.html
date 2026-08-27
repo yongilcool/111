@@ -959,7 +959,7 @@ canvas{
 #game.qr-mode #playArea{height:100%}
 #qrPanel{
     height:30%;
-    background:rgba(0,0,0,.50);
+    background:transparent;
     border-top:0;
     pointer-events:none;
 }
@@ -967,8 +967,8 @@ canvas{
     inset:auto;
     left:50%;
     top:50%;
-    width:min(260px,72vw);
-    height:min(260px,calc(100% - 18px));
+    width:min(250px,72vw,calc(30vh - 14px));
+    height:min(250px,72vw,calc(30vh - 14px));
     transform:translate(-50%,-50%);
     border:4px solid white;
     border-radius:18px;
@@ -976,8 +976,7 @@ canvas{
     box-shadow:0 0 0 1px rgba(0,0,0,.35);
 }
 #qrLabel{
-    bottom:9px;
-    font-size:10px;
+    display:none;
 }
 </style>
 </head>
@@ -1149,7 +1148,7 @@ canvas{
                 <p>
                     NFC 또는 QR로 공격합니다.
                     <br>
-                    QR CODE : CHEST_001
+                    QR CODE : MISSION_CLEAR_1234
                 </p>
 
                 <button id="startButton">
@@ -1175,7 +1174,7 @@ canvas{
 
 
         <div id="qrLabel">
-            CHEST_001
+            MISSION_CLEAR_1234
         </div>
 
 
@@ -1356,7 +1355,7 @@ const CONFIG = {
     ],
 
 
-    QR_VALUE:"CHEST_001",
+    QR_VALUE:"MISSION_CLEAR_1234",
 
 
     MAX_PIXEL_RATIO:1.25,
@@ -6165,6 +6164,46 @@ window.addEventListener(
     resize
 
 );
+
+
+/* =====================================================
+   화면이 꺼지거나 페이지가 숨겨지면 BGM 정지
+===================================================== */
+
+function pauseBGMWhenHidden(){
+    if(!bgmAudio.paused){
+        bgmAudio.pause();
+    }
+}
+
+function resumeBGMWhenVisible(){
+    if(
+        bgmStarted &&
+        started &&
+        !gameOver &&
+        document.visibilityState==="visible"
+    ){
+        const promise=bgmAudio.play();
+        if(promise){
+            promise.catch(function(){});
+        }
+    }
+}
+
+document.addEventListener(
+    "visibilitychange",
+    function(){
+        if(document.hidden){
+            pauseBGMWhenHidden();
+        }
+        else{
+            resumeBGMWhenVisible();
+        }
+    }
+);
+
+window.addEventListener("pagehide",pauseBGMWhenHidden);
+window.addEventListener("pageshow",resumeBGMWhenVisible);
 
 
 /* =====================================================
