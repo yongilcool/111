@@ -13,7 +13,7 @@
 <title>PIXEL 3D ADVENTURE</title>
 
 <!-- 기존 게임과 독립적으로 동작하는 QR 엔진 -->
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
 
@@ -966,9 +966,10 @@ canvas{
 #game.qr-mode #playArea{height:100%}
 #qrPanel{
     height:30%;
-    background:transparent;
+    background:transparent !important;
     border-top:2px solid white;
     pointer-events:none;
+    isolation:isolate;
     --qr-focus-size:min(220px,68vw,calc(30vh - 14px));
 }
 #reader{
@@ -984,8 +985,13 @@ canvas{
     box-shadow:none;
 }
 #reader video{
+    /* 바깥쪽: 카메라 50% + 뒤의 3D 게임 50% */
     opacity:.5 !important;
     clip-path:none;
+}
+#reader__scan_region,
+#reader__scan_region > div{
+    background:transparent !important;
 }
 #qrFocusVideo{
     position:absolute;
@@ -1000,6 +1006,8 @@ canvas{
     border-radius:18px;
     background:transparent;
     box-sizing:border-box;
+    opacity:1;
+    pointer-events:none;
 }
 #qrLabel{
     display:none;
@@ -5201,18 +5209,7 @@ async function startQR(){
         }
 
         html5QrCode=
-            new Html5Qrcode(
-                "reader",
-                {
-                    formatsToSupport:[
-                        Html5QrcodeSupportedFormats.QR_CODE
-                    ],
-                    experimentalFeatures:{
-                        useBarCodeDetectorIfSupported:false
-                    },
-                    verbose:false
-                }
-            );
+            new Html5Qrcode("reader");
 
         $("statusDot").style.background=
             "#55eaff";
@@ -5249,7 +5246,9 @@ async function startQR(){
                         width:size,
                         height:size
                     };
-                }
+                },
+
+                aspectRatio:1.0
             },
 
             function(decodedText){
