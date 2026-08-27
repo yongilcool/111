@@ -12,6 +12,9 @@
 
 <title>PIXEL 3D ADVENTURE</title>
 
+<!-- 기존 게임과 독립적으로 동작하는 QR 엔진 -->
+<script src="https://unpkg.com/html5-qrcode"></script>
+
 <style>
 
 :root{
@@ -550,7 +553,7 @@ canvas{
 }
 
 
-#qrVideo{
+#reader{
 
     position:absolute;
 
@@ -559,70 +562,28 @@ canvas{
     width:100%;
     height:100%;
 
-    object-fit:cover;
+    overflow:hidden;
+
+    background:#000;
 }
 
-
-#qrFrame{
-
-    position:absolute;
-
-    left:50%;
-    top:50%;
-
-    width:145px;
-    height:145px;
-
-    transform:
-        translate(-50%,-50%);
-
-    border:
-        3px solid white;
-
-    border-radius:13px;
-
-    box-shadow:
-        0 0 0 999px
-        rgba(0,0,0,.22);
-
-    pointer-events:none;
+#reader video{
+    width:100% !important;
+    height:100% !important;
+    object-fit:cover !important;
 }
 
-
-#qrLine{
-
-    position:absolute;
-
-    left:10px;
-    right:10px;
-
-    top:18px;
-
-    height:2px;
-
-    background:#5aff86;
-
-    box-shadow:
-        0 0 10px #5aff86;
-
-    animation:
-        scanLine
-        1.2s
-        ease-in-out
-        infinite
-        alternate;
+#reader__dashboard{
+    display:none !important;
 }
 
+#reader__scan_region{
+    width:100% !important;
+    height:100% !important;
+}
 
-@keyframes scanLine{
-
-    from{
-        top:18px;
-    }
-
-    to{
-        top:122px;
-    }
+#reader__scan_region img{
+    display:none !important;
 }
 
 
@@ -650,12 +611,6 @@ canvas{
     font-size:11px;
 
     font-weight:bold;
-}
-
-
-#qrCanvas{
-
-    display:none;
 }
 
 
@@ -1110,7 +1065,7 @@ canvas{
                 <p>
                     NFC 또는 QR로 공격합니다.
                     <br>
-                    QR CODE : CHEST_001
+                    QR CODE : MISSION_CLEAR_1234
                 </p>
 
                 <button id="startButton">
@@ -1132,27 +1087,13 @@ canvas{
 
     <div id="qrPanel">
 
-        <video
-            id="qrVideo"
-            autoplay
-            muted
-            playsinline
-        ></video>
-
-
-        <div id="qrFrame">
-
-            <div id="qrLine"></div>
-
-        </div>
+        <div id="reader"></div>
 
 
         <div id="qrLabel">
-            CHEST_001
+            MISSION_CLEAR_1234
         </div>
 
-
-        <canvas id="qrCanvas"></canvas>
 
     </div>
 
@@ -1331,7 +1272,7 @@ const CONFIG = {
     ],
 
 
-    QR_VALUE:"CHEST_001",
+    QR_VALUE:"MISSION_CLEAR_1234",
 
 
     MAX_PIXEL_RATIO:1.25,
@@ -3984,15 +3925,11 @@ async function startNFC(){
         nfcReader.onreading=
 
             function(){
-
-                if(
-                    inputMode!=="nfc"
-                ){
-
-                    return;
-                }
-
-
+                /*
+                   NFC 리더는 QR 모드에서도 계속 살아 있다.
+                   입력 모드와 관계없이 NFC 태그가 읽히면
+                   기존 attack()을 호출한다.
+                */
                 if(
                     !started ||
                     gameOver
@@ -4139,10 +4076,10 @@ function loadJsQR(){
 
 
 /* =====================================================
-   START QR
+   LEGACY QR (비활성)
 ===================================================== */
 
-async function startQR(){
+async function unusedLegacyStartQR(){
 
     if(qrRunning){
 
@@ -4283,10 +4220,10 @@ async function startQR(){
 
 
 /* =====================================================
-   QR SCAN LOOP
+   LEGACY QR SCAN LOOP
 ===================================================== */
 
-async function scanQR(){
+async function unusedLegacyScanQR(){
 
     if(
         !qrRunning ||
@@ -4514,10 +4451,10 @@ async function scanQR(){
 
 
 /* =====================================================
-   STOP QR
+   LEGACY QR STOP
 ===================================================== */
 
-function stopQR(){
+function unusedLegacyStopQR(){
 
     qrRunning=
         false;
@@ -4567,6 +4504,210 @@ function stopQR(){
     qrLocked=
         false;
 
+}
+
+
+/* =====================================================
+   HTML5-QRCODE OVERRIDE
+
+   기존 Three.js / NFC / 게임 로직은 그대로 두고
+   QR 입력만 검증된 html5-qrcode 방식으로 교체한다.
+===================================================== */
+
+let html5QrCode=null;
+let qrStarting=false;
+let lastQRHit=0;
+
+const QR_ATTACK_COOLDOWN=650;
+
+
+async function startQR(){
+
+    if(qrRunning || qrStarting){
+        return;
+    }
+
+    if(typeof Html5Qrcode==="undefined"){
+
+        $("statusDot").style.background=
+            "#ff5555";
+
+        $("statusText").textContent=
+            "QR 엔진 로딩 실패";
+
+        return;
+    }
+
+    qrStarting=true;
+
+    try{
+
+        if(html5QrCode){
+            try{
+                if(qrRunning){
+                    await html5QrCode.stop();
+                }
+            }
+            catch(e){}
+
+            try{
+                await html5QrCode.clear();
+            }
+            catch(e){}
+        }
+
+        html5QrCode=
+            new Html5Qrcode("reader");
+
+        $("statusDot").style.background=
+            "#55eaff";
+
+        $("statusText").textContent=
+            "QR 카메라 시작 중";
+
+        await html5QrCode.start(
+
+            {
+                facingMode:"environment"
+            },
+
+            {
+                fps:10,
+
+                /*
+                   기본값은 성공했던 220×220.
+                   카메라 영역이 작은 기기에서만
+                   영역 안에 들어오도록 자동 축소한다.
+                */
+                qrbox:function(viewWidth,viewHeight){
+
+                    const size=Math.max(
+                        120,
+                        Math.min(
+                            220,
+                            viewWidth-24,
+                            viewHeight-24
+                        )
+                    );
+
+                    return {
+                        width:size,
+                        height:size
+                    };
+                },
+
+                aspectRatio:1.0
+            },
+
+            function(decodedText){
+
+                if(
+                    inputMode!=="qr" ||
+                    !started ||
+                    gameOver
+                ){
+                    return;
+                }
+
+                const code=String(
+                    decodedText || ""
+                )
+                .trim()
+                .toUpperCase();
+
+                if(code!==CONFIG.QR_VALUE){
+                    return;
+                }
+
+                const now=performance.now();
+
+                if(
+                    now-lastQRHit <
+                    QR_ATTACK_COOLDOWN
+                ){
+                    return;
+                }
+
+                lastQRHit=now;
+
+                /* NFC와 동일한 기존 공격 함수만 호출 */
+                attack();
+
+                $("statusText").textContent=
+                    "QR 공격!";
+
+                setTimeout(function(){
+
+                    if(
+                        inputMode==="qr" &&
+                        qrRunning
+                    ){
+                        $("statusText").textContent=
+                            "QR + NFC 대기 중";
+                    }
+
+                },300);
+            },
+
+            function(){
+                /* 미검출은 오류가 아니므로 계속 스캔 */
+            }
+        );
+
+        qrRunning=true;
+
+        $("statusDot").style.background=
+            "#55eaff";
+
+        $("statusText").textContent=
+            "QR + NFC 대기 중";
+    }
+    catch(error){
+
+        console.error("QR CAMERA ERROR:",error);
+
+        qrRunning=false;
+
+        $("statusDot").style.background=
+            "#ffb13d";
+
+        $("statusText").textContent=
+            "카메라 권한을 확인해주세요";
+    }
+    finally{
+        qrStarting=false;
+    }
+}
+
+
+async function stopQR(){
+
+    if(!html5QrCode){
+        qrRunning=false;
+        qrStarting=false;
+        return;
+    }
+
+    try{
+        if(qrRunning){
+            await html5QrCode.stop();
+        }
+    }
+    catch(error){
+        console.log("QR STOP:",error);
+    }
+
+    try{
+        await html5QrCode.clear();
+    }
+    catch(error){
+        console.log("QR CLEAR:",error);
+    }
+
+    html5QrCode=null;
+    qrRunning=false;
+    qrStarting=false;
+    lastQRHit=0;
 }
 
 
