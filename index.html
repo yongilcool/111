@@ -951,6 +951,10 @@ canvas{
 #directionPanel{position:absolute;z-index:110;left:50%;bottom:72px;transform:translateX(-50%);display:none;width:min(92%,390px);padding:12px;border:2px solid rgba(255,255,255,.8);border-radius:16px;background:rgba(4,13,22,.91);color:#fff;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,.5)}
 #directionPanel.show{display:block}#directionTitle{font-size:14px;font-weight:900;margin-bottom:9px}.directionButtons{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}.directionButton,#chestButton{min-width:82px;padding:11px 12px;border:0;border-radius:11px;background:#fff;color:#111;font-weight:1000;box-shadow:0 3px 0 #999}.directionButton:active,#chestButton:active{transform:translateY(2px);box-shadow:0 1px 0 #777}#chestButton{display:none;background:#ffbd3b;color:#351d00}
 
+#pauseButton{position:absolute;z-index:170;right:12px;top:92px;padding:9px 12px;border:1px solid rgba(255,255,255,.65);border-radius:11px;background:rgba(4,13,22,.82);color:white;font-size:12px;font-weight:900;box-shadow:0 3px 10px rgba(0,0,0,.35)}
+#pauseOverlay{position:absolute;inset:0;z-index:150;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.42);color:white;font-size:34px;font-weight:1000;text-shadow:0 3px 8px #000;pointer-events:none}
+#pauseOverlay.show{display:flex}
+
 /* 간결한 HUD */
 #statusBox,#monsterCount,#enemyText{display:none !important}
 #modeSwitch{top:56px}
@@ -1133,6 +1137,9 @@ canvas{
             <div id="directionButtons" class="directionButtons"></div>
             <button id="chestButton">🎁 보물상자 열기</button>
         </div>
+
+        <button id="pauseButton">⏸ 일시정지</button>
+        <div id="pauseOverlay">PAUSED</div>
 
 
         <!-- START -->
@@ -1384,6 +1391,8 @@ let started=false;
 let initialized=false;
 
 let gameOver=false;
+
+let gamePaused=false;
 
 let battle=false;
 
@@ -3607,6 +3616,7 @@ function attack(){
     if(
         !started ||
         gameOver ||
+        gamePaused ||
         swordAttacking
     ){
 
@@ -4162,6 +4172,7 @@ function triggerMonsterAttack(){
     if(
         !battle ||
         monsterDead ||
+        gamePaused ||
         gameOver
     ){
 
@@ -5544,7 +5555,8 @@ function loop(now){
 
     if(
         started &&
-        !gameOver
+        !gameOver &&
+        !gamePaused
     ){
 
         let walking=
