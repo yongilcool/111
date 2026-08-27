@@ -924,6 +924,30 @@ canvas{
     cursor:pointer;
 }
 
+#miniMap{
+    position:absolute;
+    z-index:72;
+    right:10px;
+    top:130px;
+    width:116px;
+    height:92px;
+    border:2px solid rgba(255,255,255,.75);
+    border-radius:12px;
+    background:rgba(3,12,18,.72);
+    box-shadow:0 4px 14px rgba(0,0,0,.45);
+    pointer-events:none;
+}
+#miniMap .roadH,#miniMap .roadV{position:absolute;background:#d7b57b;opacity:.85}
+#miniMap .roadH{left:14px;right:14px;height:5px}
+#miniMap .roadV{top:13px;bottom:13px;width:5px}
+#miniMap .top{top:15px}.miniMapBottom{bottom:15px}
+#miniMap .left{left:16px}.miniMapRight{right:16px}.miniMapCenter{left:56px}
+.mapNode{position:absolute;width:11px;height:11px;border:2px solid #fff;border-radius:2px;background:#e53935;transform:translate(-50%,-50%)}
+.mapEnemy{position:absolute;width:9px;height:9px;border-radius:50%;background:#ff8a26;transform:translate(-50%,-50%)}
+.mapChest{position:absolute;width:11px;height:9px;background:#111;border:1px solid #fff;transform:translate(-50%,-50%)}
+#mapPlayer{position:absolute;width:13px;height:13px;border:2px solid #fff;border-radius:50%;background:#24b8ff;box-shadow:0 0 9px #24b8ff;transform:translate(-50%,-50%);transition:left .3s,top .3s}
+#directionPanel{position:absolute;z-index:110;left:50%;bottom:72px;transform:translateX(-50%);display:none;width:min(92%,390px);padding:12px;border:2px solid rgba(255,255,255,.8);border-radius:16px;background:rgba(4,13,22,.91);color:#fff;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,.5)}
+#directionPanel.show{display:block}#directionTitle{font-size:14px;font-weight:900;margin-bottom:9px}.directionButtons{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}.directionButton,#chestButton{min-width:82px;padding:11px 12px;border:0;border-radius:11px;background:#fff;color:#111;font-weight:1000;box-shadow:0 3px 0 #999}.directionButton:active,#chestButton:active{transform:translateY(2px);box-shadow:0 1px 0 #777}#chestButton{display:none;background:#ffbd3b;color:#351d00}
 </style>
 </head>
 
@@ -1049,6 +1073,35 @@ canvas{
 
         <div id="monsterCount">
             ☠ 1 / 3
+        </div>
+
+
+        <!-- 순환형 전체 맵 -->
+        <div id="miniMap" aria-label="전체 맵">
+            <div class="roadH top"></div>
+            <div class="roadH miniMapBottom"></div>
+            <div class="roadV left"></div>
+            <div class="roadV miniMapCenter"></div>
+            <div class="roadV miniMapRight"></div>
+            <i class="mapNode" style="left:18px;top:17px"></i>
+            <i class="mapNode" style="left:58px;top:17px"></i>
+            <i class="mapNode" style="left:98px;top:17px"></i>
+            <i class="mapNode" style="left:18px;top:75px"></i>
+            <i class="mapNode" style="left:58px;top:75px"></i>
+            <i class="mapNode" style="left:98px;top:75px"></i>
+            <i class="mapEnemy" style="left:18px;top:46px"></i>
+            <i class="mapEnemy" style="left:38px;top:75px"></i>
+            <i class="mapEnemy" style="left:78px;top:75px"></i>
+            <i class="mapEnemy" style="left:98px;top:46px"></i>
+            <i class="mapChest" style="left:38px;top:17px"></i>
+            <i class="mapChest" style="left:78px;top:17px"></i>
+            <i id="mapPlayer" style="left:58px;top:48px"></i>
+        </div>
+
+        <div id="directionPanel">
+            <div id="directionTitle">갈 방향을 선택하세요</div>
+            <div id="directionButtons" class="directionButtons"></div>
+            <button id="chestButton">🎁 보물상자 열기</button>
         </div>
 
 
@@ -1365,6 +1418,138 @@ let monsterHomeZ=0;
 
 
 /* =====================================================
+   LOOP MAP NAVIGATION
+===================================================== */
+
+const MAP_POINTS={
+    START:{x:58,y:48},
+    TL:{x:18,y:17},
+    TM:{x:58,y:17},
+    TR:{x:98,y:17},
+    BL:{x:18,y:75},
+    BM:{x:58,y:75},
+    BR:{x:98,y:75}
+};
+
+const MAP_LINKS={
+    TM:["TL","TR","BM"],
+    TL:["TM","BL"],
+    TR:["TM","BR"],
+    BL:["TL","BM"],
+    BM:["BL","BR","TM"],
+    BR:["BM","TR"]
+};
+
+const CHEST_ROADS={
+    "TL-TM":true,
+    "TM-TR":true
+};
+
+let mapCurrent="START";
+let mapDestination="TM";
+let mapPaused=false;
+let mapTravelEndZ=-24;
+let mapChestWaiting=false;
+let encounterCount=0;
+
+function roadKey(a,b){
+    return [a,b].sort().join("-");
+}
+
+function updateMapPlayer(point){
+    const data=MAP_POINTS[point] || MAP_POINTS.START;
+    $("mapPlayer").style.left=data.x+"px";
+    $("mapPlayer").style.top=data.y+"px";
+}
+
+function directionSymbol(from,to){
+    const a=MAP_POINTS[from];
+    const b=MAP_POINTS[to];
+    if(b.x<a.x){return "←";}
+    if(b.x>a.x){return "→";}
+    if(b.y<a.y){return "↑";}
+    return "↓";
+}
+
+function showDirectionChoices(){
+    const wrap=$("directionButtons");
+    wrap.innerHTML="";
+    const links=MAP_LINKS[mapCurrent] || ["TM"];
+
+    links.forEach(function(destination){
+        const button=document.createElement("button");
+        button.className="directionButton";
+        button.textContent=directionSymbol(mapCurrent,destination)+" 이동";
+        button.addEventListener("click",function(){
+            chooseRoad(destination);
+        });
+        wrap.appendChild(button);
+    });
+
+    $("chestButton").style.display="none";
+    $("directionTitle").textContent="갈 방향을 선택하세요";
+    $("directionPanel").classList.add("show");
+}
+
+function arriveAtMapPoint(){
+    mapCurrent=mapDestination;
+    mapPaused=true;
+    battle=false;
+
+    if(monsterAttackTimer){
+        clearInterval(monsterAttackTimer);
+        monsterAttackTimer=null;
+    }
+
+    if(monster){scene.remove(monster);monster=null;}
+    if(monsterShadow){scene.remove(monsterShadow);monsterShadow=null;}
+
+    updateMapPlayer(mapCurrent);
+    updateSwordIdle();
+
+    if(mapChestWaiting){
+        mapChestWaiting=false;
+        $("directionButtons").innerHTML="";
+        $("directionTitle").textContent="보물상자를 발견했습니다!";
+        $("chestButton").style.display="inline-block";
+        $("directionPanel").classList.add("show");
+    }
+    else{
+        showDirectionChoices();
+    }
+}
+
+function chooseRoad(destination){
+    mapDestination=destination;
+    mapPaused=false;
+    $("directionPanel").classList.remove("show");
+    camera.position.x=0;
+    camera.position.z=8;
+    mapTravelEndZ=-24;
+
+    mapChestWaiting=!!CHEST_ROADS[roadKey(mapCurrent,destination)];
+
+    if(mapChestWaiting){
+        if(monster){scene.remove(monster);monster=null;}
+        if(monsterShadow){scene.remove(monsterShadow);monsterShadow=null;}
+        $("enemyHP").style.width="0%";
+        $("enemyText").textContent="보물상자";
+        $("monsterCount").textContent="🎁 CHEST";
+    }
+    else{
+        spawnMonster(encounterCount%3);
+        monsterHomeZ=-34;
+        monster.position.z=monsterHomeZ;
+        monsterShadow.position.z=monsterHomeZ;
+        encounterCount++;
+    }
+
+    updateSwordIdle();
+}
+
+
+
+/* =====================================================
    ANDROID / CHROME
 ===================================================== */
 
@@ -1481,6 +1666,32 @@ let audioCtx=null;
 
 let bgmStarted=false;
 
+const swordAudio=
+    new Audio("https://static.wixstatic.com/mp3/172435_20ca6313da89407d9e48b457ae9d7ebf.mp3");
+
+const playerHitAudio=
+    new Audio("https://static.wixstatic.com/mp3/172435_bfc40efd1e1b4ed7888c27702c93368f.mp3");
+
+const enemyHitAudio=
+    new Audio("https://static.wixstatic.com/mp3/172435_0452d2de1ba249f4a60a949a8e89640d.mp3");
+
+swordAudio.preload="auto";
+playerHitAudio.preload="auto";
+enemyHitAudio.preload="auto";
+
+function playEffect(audio,volume){
+    try{
+        audio.pause();
+        audio.currentTime=0;
+        audio.volume=volume;
+        const promise=audio.play();
+        if(promise){
+            promise.catch(function(){});
+        }
+    }
+    catch(error){}
+}
+
 
 function initAudio(){
 
@@ -1575,6 +1786,10 @@ function noiseBuffer(duration){
 ===================================================== */
 
 function swordSound(){
+
+    playEffect(swordAudio,.78);
+
+    return;
 
     if(!audioCtx){
 
@@ -1736,6 +1951,10 @@ function footSound(){
 
 function hitSound(){
 
+    playEffect(enemyHitAudio,.82);
+
+    return;
+
     if(!audioCtx){
 
         return;
@@ -1807,6 +2026,10 @@ function hitSound(){
 ===================================================== */
 
 function playerHitSound(){
+
+    playEffect(playerHitAudio,.86);
+
+    return;
 
     if(!audioCtx){
 
@@ -3585,69 +3808,9 @@ function killMonster(){
 
 function nextMonster(){
 
-    const next=
-
-        monsterIndex+1;
-
-
-    if(next>=3){
-
-        /*
-            ★ CLEAR 화면 없음
-
-            마지막 몬스터를 죽여도
-            계속 앞으로 걸어감
-        */
-
-        if(monster){
-
-            scene.remove(
-                monster
-            );
-
-
-            monster=null;
-        }
-
-
-        if(monsterShadow){
-
-            scene.remove(
-                monsterShadow
-            );
-
-
-            monsterShadow=null;
-        }
-
-
-        $("enemyHP")
-        .style
-        .width=
-            "0%";
-
-
-        $("enemyText")
-        .textContent=
-            "0 / 100";
-
-
-        $("monsterCount")
-        .textContent=
-            "☠ 3 / 3";
-
-
-        updateSwordIdle();
-
-
-        return;
-
-    }
-
-
-    spawnMonster(
-        next
-    );
+    /* 적을 쓰러뜨리면 다음 직선으로 자동 진행하지 않고
+       현재 목적지에서 멈춰 다음 방향을 선택한다. */
+    arriveAtMapPoint();
 
 }
 
@@ -4999,6 +5162,22 @@ $("startButton")
 );
 
 
+$("chestButton")
+.addEventListener(
+    "click",
+    function(){
+        playerHP=Math.min(
+            CONFIG.PLAYER_HP,
+            playerHP+25
+        );
+        updateHP();
+        $("chestButton").style.display="none";
+        $("directionTitle").textContent="HP +25 · 다음 길을 선택하세요";
+        showDirectionChoices();
+    }
+);
+
+
 /* =====================================================
    RETRY
 ===================================================== */
@@ -5064,7 +5243,7 @@ function loop(now){
            WALK
         ============================================= */
 
-        if(!battle){
+        if(!battle && !mapPaused){
 
             if(
                 monster &&
@@ -5103,11 +5282,6 @@ function loop(now){
 
             else{
 
-                /*
-                    몬스터가 더 없어도
-                    계속 앞으로 걷는다
-                */
-
                 camera.position.z -=
 
                     CONFIG.WALK_SPEED *
@@ -5116,6 +5290,13 @@ function loop(now){
 
                 walking=
                     true;
+
+
+                /* 보물상자 길의 끝에 도착 */
+                if(camera.position.z<=mapTravelEndZ){
+                    walking=false;
+                    arriveAtMapPoint();
+                }
 
             }
 
