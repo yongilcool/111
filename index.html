@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!-- STABLE QR BASELINE 2026-08-28
+     Verified by user: iPhone + iPad + Android.
+     Preserve the QR camera layout, device-specific scan timing,
+     continuous iPhone recognition, and corner sensor frame. -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -5920,7 +5924,41 @@ function startQRSmallAssist(){
         finally{
             qrSmallAssistBusy=false;
         }
-    },isIPhone() ? 140 : (isIOS() ? 160 : 420));
+    },isIPhone() ? 140 : (isIOS() ? 160 : 240));
+}
+
+function tuneAndroidQRCamera(video){
+    if(isIOS() || !video || !video.srcObject){
+        return;
+    }
+
+    /* Android Chrome에서 지원할 때만 연속 초점을 요청한다.
+       미지원 기기에서는 아무 설정도 바꾸지 않는다. */
+    try{
+        if("contentHint" in video){
+            video.contentHint="detail";
+        }
+
+        const tracks=video.srcObject.getVideoTracks();
+        const track=tracks && tracks[0];
+        if(!track || !track.getCapabilities || !track.applyConstraints){
+            return;
+        }
+
+        const capabilities=track.getCapabilities();
+        if(
+            Array.isArray(capabilities.focusMode) &&
+            capabilities.focusMode.indexOf("continuous")>=0
+        ){
+            const focusPromise=track.applyConstraints({
+                advanced:[{focusMode:"continuous"}]
+            });
+            if(focusPromise){
+                focusPromise.catch(function(){});
+            }
+        }
+    }
+    catch(e){}
 }
 
 function waitForQRVideoReady(video){
@@ -6007,7 +6045,9 @@ async function startQR(){
             {
                 /* 전면 카메라의 세로 크기 보고값 때문에 qrbox가
                    작아지는 문제를 피하고 영상 전체를 판독한다. */
-                fps:10
+                /* iPhone/iPad 안정값은 10 그대로 유지하고
+                   Android만 더 자주 판독한다. */
+                fps:isIOS() ? 10 : 18
             },
 
             function(decodedText){
@@ -6028,6 +6068,8 @@ async function startQR(){
             document.querySelector("#reader video");
 
         if(qrVideoElement){
+            tuneAndroidQRCamera(qrVideoElement);
+
             qrVideoElement.style.setProperty(
                 "transform",
                 "scaleX(-1)",
