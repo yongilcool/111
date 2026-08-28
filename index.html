@@ -2950,9 +2950,9 @@ function init3D(){
 
                 0xa5bdc8,
 
-                22,
+                55,
 
-                90
+                130
 
             );
 
@@ -2976,7 +2976,7 @@ function init3D(){
 
                 .1,
 
-                220
+                145
 
             );
 
@@ -3127,9 +3127,9 @@ function init3D(){
 
         grassTexture.repeat.set(
 
-            12,
+            52,
 
-            35
+            52
 
         );
 
@@ -3140,9 +3140,9 @@ function init3D(){
 
                 new THREE.PlaneGeometry(
 
-                    110,
+                    500,
 
-                    320
+                    500
 
                 ),
 
@@ -3167,7 +3167,7 @@ function init3D(){
 
             0,
 
-            -80
+            -10
 
         );
 
@@ -3183,7 +3183,7 @@ function init3D(){
             function(texture){
                 texture.wrapS=THREE.RepeatWrapping;
                 texture.wrapT=THREE.RepeatWrapping;
-                texture.repeat.set(12,35);
+                texture.repeat.set(52,52);
                 texture.colorSpace=THREE.SRGBColorSpace;
                 texture.magFilter=THREE.NearestFilter;
                 texture.minFilter=THREE.NearestMipmapNearestFilter;
@@ -3297,6 +3297,16 @@ function init3D(){
         addMapRoad(7,87,-40,-5);
         addMapRoad(7,87,40,-5);
         addMapRoad(7,87,0,-5);
+
+        /* 갈 수는 없지만 맵이 계속 이어져 보이는 장식용 연장 길 */
+        [-40,0,40].forEach(function(x){
+            addMapRoad(7,105,x,-100);
+            addMapRoad(7,105,x,90);
+        });
+        [-45,35].forEach(function(z){
+            addMapRoad(105,7,-95,z);
+            addMapRoad(105,7,95,z);
+        });
 
         const junctionMaterial=
             new THREE.MeshLambertMaterial({
@@ -3420,6 +3430,10 @@ function createForest(){
         z>-180;
         z-=5
     ){
+
+        if(Math.abs(z+45)<7){
+            continue;
+        }
 
         const sides=
             [-1,1];
@@ -3584,28 +3598,47 @@ function createForest(){
 
             fallbackTrees.forEach(function(tree){scene.remove(tree);});
 
-            for(let z=5;z>-180;z-=5){
-                [-1,1].forEach(function(side){
-                    const material=new THREE.SpriteMaterial({
-                        map:treeTexture,
-                        transparent:true,
-                        alphaTest:.08
-                    });
-                    const tree=new THREE.Sprite(material);
-                    const scale=.78+Math.random()*.55;
-                    const treeHeight=9.2*scale;
-                    tree.position.set(
-                        side*(5+Math.random()*7),
-                        treeHeight/2,
-                        z+Math.random()*2
+            const treeMaterial=new THREE.SpriteMaterial({
+                map:treeTexture,
+                transparent:true,
+                alphaTest:.08,
+                fog:true
+            });
+
+            /* 길 중심선에서는 충분히 떨어뜨리고 숲 칸 내부만 채운다. */
+            for(let z=-135;z<=125;z+=9){
+                for(let x=-125;x<=125;x+=9){
+                    const px=x+(Math.random()-.5)*4.2;
+                    const pz=z+(Math.random()-.5)*4.2;
+                    const verticalRoadDistance=Math.min(
+                        Math.abs(px+40),
+                        Math.abs(px),
+                        Math.abs(px-40)
                     );
+                    const horizontalRoadDistance=Math.min(
+                        Math.abs(pz+45),
+                        Math.abs(pz-35)
+                    );
+
+                    if(
+                        verticalRoadDistance<6.8 ||
+                        horizontalRoadDistance<6.8 ||
+                        Math.random()>.72
+                    ){
+                        continue;
+                    }
+
+                    const tree=new THREE.Sprite(treeMaterial);
+                    const scale=.72+Math.random()*.52;
+                    const treeHeight=9.2*scale;
+                    tree.position.set(px,treeHeight/2,pz);
                     tree.scale.set(
                         treeHeight*(cropWidth/cropHeight),
                         treeHeight,
                         1
                     );
                     scene.add(tree);
-                });
+                }
             }
 
             texture.dispose();
@@ -5618,8 +5651,6 @@ function startQRSmallAssist(){
 
     if(!qrSmallAssistCanvas){
         qrSmallAssistCanvas=document.createElement("canvas");
-        qrSmallAssistCanvas.width=640;
-        qrSmallAssistCanvas.height=640;
     }
 
     let cropStep=0;
@@ -5641,11 +5672,34 @@ function startQRSmallAssist(){
         qrSmallAssistBusy=true;
 
         try{
-            /* 중앙을 두 단계로 확대해 작은 QR의 모듈을 살린다. */
-            const cropRatio=(cropStep++ % 2===0) ? .72 : .48;
-            const sourceSize=Math.min(video.videoWidth,video.videoHeight)*cropRatio;
-            const sourceX=(video.videoWidth-sourceSize)/2;
-            const sourceY=(video.videoHeight-sourceSize)/2;
+            /* Safari에서는 전체 화면과 세 단계 확대를 번갈아 판독한다. */
+            const ratios=isIOS()
+                ? [1,.78,.52,.34]
+                : [1,.72,.48];
+            const cropRatio=ratios[cropStep++ % ratios.length];
+            let sourceX=0;
+            let sourceY=0;
+            let sourceWidth=video.videoWidth;
+            let sourceHeight=video.videoHeight;
+
+            if(cropRatio<1){
+                const sourceSize=
+                    Math.min(video.videoWidth,video.videoHeight)*cropRatio;
+                sourceWidth=sourceSize;
+                sourceHeight=sourceSize;
+                sourceX=(video.videoWidth-sourceSize)/2;
+                sourceY=(video.videoHeight-sourceSize)/2;
+            }
+
+            const targetMax=isIOS() ? 960 : 720;
+            const targetScale=Math.min(
+                1,
+                targetMax/Math.max(sourceWidth,sourceHeight)
+            );
+            const targetWidth=Math.max(320,Math.round(sourceWidth*targetScale));
+            const targetHeight=Math.max(320,Math.round(sourceHeight*targetScale));
+            qrSmallAssistCanvas.width=targetWidth;
+            qrSmallAssistCanvas.height=targetHeight;
             const ctx=qrSmallAssistCanvas.getContext("2d",{
                 willReadFrequently:true
             });
@@ -5653,11 +5707,11 @@ function startQRSmallAssist(){
             ctx.imageSmoothingEnabled=false;
             ctx.drawImage(
                 video,
-                sourceX,sourceY,sourceSize,sourceSize,
-                0,0,640,640
+                sourceX,sourceY,sourceWidth,sourceHeight,
+                0,0,targetWidth,targetHeight
             );
 
-            const image=ctx.getImageData(0,0,640,640);
+            const image=ctx.getImageData(0,0,targetWidth,targetHeight);
             const result=window.jsQR(
                 image.data,
                 image.width,
@@ -5673,7 +5727,7 @@ function startQRSmallAssist(){
         finally{
             qrSmallAssistBusy=false;
         }
-    },420);
+    },isIOS() ? 300 : 420);
 }
 
 function waitForQRVideoReady(video){
