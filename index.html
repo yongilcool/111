@@ -1488,7 +1488,7 @@ const CONFIG = {
 
     MONSTER_HP:100,
 
-    PLAYER_DAMAGE:20,
+    PLAYER_DAMAGE:50,
 
     MONSTER_DAMAGE:5,
 
@@ -1498,7 +1498,7 @@ const CONFIG = {
         이전 느린 버전보다 약 2배
     */
 
-    WALK_SPEED:14,
+    WALK_SPEED:28,
 
 
     /*
@@ -2526,7 +2526,7 @@ function hitSound(){
 
 function playerHitSound(){
 
-    playEffect(playerHitAudio,.21);
+    playEffect(playerHitAudio,.105);
 
     return;
 
@@ -5561,6 +5561,8 @@ let qrSmallAssistBusy=false;
 
 const QR_ATTACK_COOLDOWN=650;
 
+const IOS_QR_ATTACK_COOLDOWN=470;
+
 function showQRFeedback(type,text){
     const panel=$("qrPanel");
     const frame=$("qrFrame");
@@ -5615,7 +5617,11 @@ function processDecodedQR(decodedText){
 
     const now=performance.now();
 
-    if(now-lastQRHit < QR_ATTACK_COOLDOWN){
+    const qrAttackCooldown=isIOS()
+        ? IOS_QR_ATTACK_COOLDOWN
+        : QR_ATTACK_COOLDOWN;
+
+    if(now-lastQRHit < qrAttackCooldown){
         return;
     }
 
@@ -5672,11 +5678,26 @@ function startQRSmallAssist(){
         qrSmallAssistBusy=true;
 
         try{
-            /* Safari에서는 전체 화면과 세 단계 확대를 번갈아 판독한다. */
-            const ratios=isIOS()
-                ? [1,.78,.52,.34]
-                : [1,.72,.48];
-            const cropRatio=ratios[cropStep++ % ratios.length];
+            /* Safari에서는 실제 확대·주변 위치·명암 강화를 순환한다. */
+            const modes=isIOS()
+                ? [
+                    {ratio:1,cx:.5,cy:.5,contrast:false},
+                    {ratio:.78,cx:.5,cy:.5,contrast:false},
+                    {ratio:.52,cx:.5,cy:.5,contrast:false},
+                    {ratio:.34,cx:.5,cy:.5,contrast:false},
+                    {ratio:.52,cx:.34,cy:.5,contrast:true},
+                    {ratio:.52,cx:.66,cy:.5,contrast:true},
+                    {ratio:.52,cx:.5,cy:.34,contrast:true},
+                    {ratio:.52,cx:.5,cy:.66,contrast:true},
+                    {ratio:.34,cx:.5,cy:.5,contrast:true}
+                ]
+                : [
+                    {ratio:1,cx:.5,cy:.5,contrast:false},
+                    {ratio:.72,cx:.5,cy:.5,contrast:false},
+                    {ratio:.48,cx:.5,cy:.5,contrast:false}
+                ];
+            const mode=modes[cropStep++ % modes.length];
+            const cropRatio=mode.ratio;
             let sourceX=0;
             let sourceY=0;
             let sourceWidth=video.videoWidth;
@@ -5687,17 +5708,39 @@ function startQRSmallAssist(){
                     Math.min(video.videoWidth,video.videoHeight)*cropRatio;
                 sourceWidth=sourceSize;
                 sourceHeight=sourceSize;
-                sourceX=(video.videoWidth-sourceSize)/2;
-                sourceY=(video.videoHeight-sourceSize)/2;
+                sourceX=Math.max(
+                    0,
+                    Math.min(
+                        video.videoWidth-sourceSize,
+                        video.videoWidth*mode.cx-sourceSize/2
+                    )
+                );
+                sourceY=Math.max(
+                    0,
+                    Math.min(
+                        video.videoHeight-sourceSize,
+                        video.videoHeight*mode.cy-sourceSize/2
+                    )
+                );
             }
 
-            const targetMax=isIOS() ? 960 : 720;
-            const targetScale=Math.min(
-                1,
-                targetMax/Math.max(sourceWidth,sourceHeight)
-            );
-            const targetWidth=Math.max(320,Math.round(sourceWidth*targetScale));
-            const targetHeight=Math.max(320,Math.round(sourceHeight*targetScale));
+            let targetWidth;
+            let targetHeight;
+
+            if(isIOS() && cropRatio<1){
+                /* 잘라낸 작은 영역을 실제 1100px로 확대해 판독 */
+                targetWidth=1100;
+                targetHeight=1100;
+            }
+            else{
+                const targetMax=isIOS() ? 1500 : 720;
+                const targetScale=Math.min(
+                    1,
+                    targetMax/Math.max(sourceWidth,sourceHeight)
+                );
+                targetWidth=Math.max(320,Math.round(sourceWidth*targetScale));
+                targetHeight=Math.max(320,Math.round(sourceHeight*targetScale));
+            }
             qrSmallAssistCanvas.width=targetWidth;
             qrSmallAssistCanvas.height=targetHeight;
             const ctx=qrSmallAssistCanvas.getContext("2d",{
@@ -5705,6 +5748,9 @@ function startQRSmallAssist(){
             });
 
             ctx.imageSmoothingEnabled=false;
+            ctx.filter=mode.contrast
+                ? "grayscale(1) contrast(1.45)"
+                : "none";
             ctx.drawImage(
                 video,
                 sourceX,sourceY,sourceWidth,sourceHeight,
@@ -5727,7 +5773,7 @@ function startQRSmallAssist(){
         finally{
             qrSmallAssistBusy=false;
         }
-    },isIOS() ? 300 : 420);
+    },isIOS() ? 260 : 420);
 }
 
 function waitForQRVideoReady(video){
