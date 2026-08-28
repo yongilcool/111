@@ -1105,7 +1105,7 @@ canvas{
 }
 #qrFocusVideo{
     position:absolute;
-    z-index:7;
+    z-index:20;
     left:50%;
     top:50%;
     width:var(--qr-focus-size);
@@ -1123,7 +1123,7 @@ canvas{
 #qrFocusVideo.ready{opacity:1}
 #qrFrame{
     position:absolute;
-    z-index:2147483646 !important;
+    z-index:31 !important;
     left:50%;
     top:50%;
     width:var(--qr-focus-size);
@@ -1132,7 +1132,7 @@ canvas{
     border:5px solid white;
     border-radius:18px;
     box-sizing:border-box;
-    box-shadow:0 0 0 2px rgba(0,0,0,.18),0 3px 14px rgba(0,0,0,.35);
+    box-shadow:inset 0 0 0 2px rgba(85,234,255,.85),0 0 0 2px rgba(0,0,0,.35),0 3px 14px rgba(0,0,0,.55);
     pointer-events:none;
     display:block !important;
     visibility:visible !important;
@@ -1142,7 +1142,7 @@ canvas{
 #game.qr-mode #qrPanel::after{
     content:"";
     position:absolute;
-    z-index:2147483646;
+    z-index:30;
     left:50%;
     top:50%;
     width:var(--qr-focus-size);
@@ -1151,7 +1151,7 @@ canvas{
     border:5px solid #fff;
     border-radius:18px;
     box-sizing:border-box;
-    box-shadow:0 0 0 2px rgba(0,0,0,.3),0 3px 14px rgba(0,0,0,.45);
+    box-shadow:inset 0 0 0 2px rgba(85,234,255,.85),0 0 0 2px rgba(0,0,0,.35),0 3px 14px rgba(0,0,0,.55);
     pointer-events:none;
 }
 #qrFrame.success,
@@ -1168,7 +1168,7 @@ canvas{
 }
 #qrMessage{
     position:absolute;
-    z-index:2147483647;
+    z-index:32;
     left:50%;
     bottom:8px;
     transform:translateX(-50%) scale(.92);
@@ -5615,9 +5615,71 @@ let qrSmallAssistCanvas=null;
 
 let qrSmallAssistBusy=false;
 
+let qrContinuousAttackTimer=null;
+
+let lastValidQRSeenAt=0;
+
 const QR_ATTACK_COOLDOWN=650;
 
-const IOS_QR_ATTACK_COOLDOWN=470;
+const IOS_QR_ATTACK_COOLDOWN=350;
+
+function tryQRAttack(){
+    const now=performance.now();
+    const qrAttackCooldown=isIOS()
+        ? IOS_QR_ATTACK_COOLDOWN
+        : QR_ATTACK_COOLDOWN;
+
+    if(now-lastQRHit < qrAttackCooldown){
+        return false;
+    }
+
+    if(!attack()){
+        return false;
+    }
+
+    lastQRHit=now;
+    showQRFeedback("success","QR 인식 성공!");
+
+    $("statusText").textContent="QR 공격!";
+    setTimeout(function(){
+        if(inputMode==="qr" && qrRunning){
+            $("statusText").textContent="";
+        }
+    },300);
+
+    return true;
+}
+
+function stopQRContinuousAttack(){
+    if(qrContinuousAttackTimer){
+        clearInterval(qrContinuousAttackTimer);
+        qrContinuousAttackTimer=null;
+    }
+    lastValidQRSeenAt=0;
+}
+
+function startQRContinuousAttack(){
+    stopQRContinuousAttack();
+
+    /* 이미 안정적인 Android 판독 흐름은 변경하지 않는다. */
+    if(!isIOS()){
+        return;
+    }
+
+    qrContinuousAttackTimer=setInterval(function(){
+        if(
+            inputMode!=="qr" ||
+            !qrRunning ||
+            performance.now()-lastValidQRSeenAt>760
+        ){
+            return;
+        }
+
+        /* QR 판독 시점과 칼 잠금 해제 시점이 겹쳐도
+           잠금이 풀린 직후 다음 공격을 다시 시도한다. */
+        tryQRAttack();
+    },80);
+}
 
 function showQRFeedback(type,text){
     const panel=$("qrPanel");
@@ -5671,29 +5733,8 @@ function processDecodedQR(decodedText){
         return;
     }
 
-    const now=performance.now();
-
-    const qrAttackCooldown=isIOS()
-        ? IOS_QR_ATTACK_COOLDOWN
-        : QR_ATTACK_COOLDOWN;
-
-    if(now-lastQRHit < qrAttackCooldown){
-        return;
-    }
-
-    if(!attack()){
-        return;
-    }
-
-    lastQRHit=now;
-    showQRFeedback("success","QR 인식 성공!");
-
-    $("statusText").textContent="QR 공격!";
-    setTimeout(function(){
-        if(inputMode==="qr" && qrRunning){
-            $("statusText").textContent="";
-        }
-    },300);
+    lastValidQRSeenAt=performance.now();
+    tryQRAttack();
 }
 
 function stopQRSmallAssist(){
@@ -5734,18 +5775,14 @@ function startQRSmallAssist(){
         qrSmallAssistBusy=true;
 
         try{
-            /* Safari 부하를 낮춘 단일 보조 판독 순환. */
+            /* 화면 전체와 중앙 확대를 짧게 반복한다.
+               테두리는 안내용이며 실제 판독 범위를 제한하지 않는다. */
             const modes=isIOS()
                 ? [
                     {ratio:1,cx:.5,cy:.5,contrast:false},
-                    {ratio:.78,cx:.5,cy:.5,contrast:false},
-                    {ratio:.52,cx:.5,cy:.5,contrast:false},
-                    {ratio:.34,cx:.5,cy:.5,contrast:false},
-                    {ratio:.52,cx:.34,cy:.5,contrast:true},
-                    {ratio:.52,cx:.66,cy:.5,contrast:true},
-                    {ratio:.52,cx:.5,cy:.34,contrast:true},
-                    {ratio:.52,cx:.5,cy:.66,contrast:true},
-                    {ratio:.34,cx:.5,cy:.5,contrast:true}
+                    {ratio:.62,cx:.5,cy:.5,contrast:false},
+                    {ratio:.36,cx:.5,cy:.5,contrast:true},
+                    {ratio:.22,cx:.5,cy:.5,contrast:true}
                 ]
                 : [
                     {ratio:1,cx:.5,cy:.5,contrast:false},
@@ -5783,7 +5820,7 @@ function startQRSmallAssist(){
             let targetWidth;
             let targetHeight;
 
-            const targetMax=isIOS() ? 900 : 720;
+            const targetMax=isIOS() ? 640 : 720;
             const targetScale=Math.min(
                 1.35,
                 targetMax/Math.max(sourceWidth,sourceHeight)
@@ -5822,7 +5859,7 @@ function startQRSmallAssist(){
         finally{
             qrSmallAssistBusy=false;
         }
-    },isIOS() ? 350 : 420);
+    },isIOS() ? 160 : 420);
 }
 
 function waitForQRVideoReady(video){
@@ -5921,6 +5958,7 @@ async function startQR(){
         );
 
         qrRunning=true;
+        startQRContinuousAttack();
 
         /* 라이브러리가 video 스타일을 다시 지정해도
            좌우 반전이 유지되도록 실제 요소에 직접 적용 */
@@ -6007,6 +6045,7 @@ function stopNFC(){
 async function stopQR(){
 
     stopQRSmallAssist();
+    stopQRContinuousAttack();
 
     const focusVideo=$("qrFocusVideo");
     focusVideo.classList.remove("ready");
