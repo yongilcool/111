@@ -5714,11 +5714,6 @@ function stopQRContinuousAttack(){
 function startQRContinuousAttack(){
     stopQRContinuousAttack();
 
-    /* 이미 안정적인 Android 판독 흐름은 변경하지 않는다. */
-    if(!isIOS()){
-        return;
-    }
-
     qrContinuousAttackTimer=setInterval(function(){
         if(
             inputMode!=="qr" ||
@@ -5728,7 +5723,7 @@ function startQRContinuousAttack(){
             return;
         }
 
-        /* QR 판독 시점과 칼 잠금 해제 시점이 겹쳐도
+        /* 모든 기기에서 QR 판독 시점과 칼 잠금 해제 시점이 겹쳐도
            잠금이 풀린 직후 다음 공격을 다시 시도한다. */
         tryQRAttack();
     },80);
