@@ -953,14 +953,20 @@ canvas{
 #mapPlayer{position:absolute;width:13px;height:13px;border:2px solid #fff;border-radius:50%;background:#24b8ff;box-shadow:0 0 9px #24b8ff;transform:translate(-50%,-50%);transition:left .3s,top .3s}
 #directionPanel{position:absolute;z-index:110;inset:0;display:none;color:#fff;text-align:center;pointer-events:none}
 #directionPanel.show{display:block}
-#directionTitle{position:absolute;left:50%;top:48%;transform:translate(-50%,-50%);font-size:clamp(24px,7vw,52px);font-weight:1000;white-space:nowrap;text-shadow:0 4px 12px #000,0 0 8px #000}
+#directionTitle{display:none}
 .directionButtons{position:absolute;inset:0}
-.directionButton{position:absolute;width:33vw;height:33vw;max-width:190px;max-height:190px;padding:0;border:0;background:transparent;color:#fff;font-size:min(30vw,170px);font-weight:1000;line-height:1;text-shadow:0 6px 10px #000,0 0 12px #000;filter:drop-shadow(0 5px 2px rgba(0,0,0,.55));pointer-events:auto}
-.directionButton.dir-left{left:0;top:50%;transform:translateY(-50%)}
-.directionButton.dir-right{right:0;top:50%;transform:translateY(-50%)}
-.directionButton.dir-back{left:50%;bottom:2%;transform:translateX(-50%)}
-.directionButton.dir-straight{left:50%;top:4%;transform:translateX(-50%)}
-.directionButton:active{color:#55eaff;filter:drop-shadow(0 0 14px #55eaff)}
+.directionButton{position:absolute;width:min(27vw,160px);height:min(30vw,178px);padding:0;border:0;background:#512a64;font-size:0;filter:drop-shadow(0 6px 3px rgba(0,0,0,.65));pointer-events:auto}
+.directionButton::after{content:"";position:absolute;inset:9%;background:linear-gradient(135deg,#74efff 0 25%,#20c9ef 26% 62%,#1689cf 63% 100%)}
+.directionButton.dir-left{left:1%;top:55%;transform:translateY(-50%);clip-path:polygon(100% 10%,38% 50%,100% 90%,72% 100%,0 50%,72% 0)}
+.directionButton.dir-left::after{clip-path:polygon(100% 10%,38% 50%,100% 90%,72% 100%,0 50%,72% 0)}
+.directionButton.dir-right{right:1%;top:55%;transform:translateY(-50%);clip-path:polygon(0 10%,62% 50%,0 90%,28% 100%,100% 50%,28% 0)}
+.directionButton.dir-right::after{clip-path:polygon(0 10%,62% 50%,0 90%,28% 100%,100% 50%,28% 0)}
+.directionButton.dir-back{left:50%;bottom:3%;transform:translateX(-50%);clip-path:polygon(10% 0,50% 62%,90% 0,100% 28%,50% 100%,0 28%)}
+.directionButton.dir-back::after{clip-path:polygon(10% 0,50% 62%,90% 0,100% 28%,50% 100%,0 28%)}
+.directionButton.dir-straight{left:50%;top:24%;transform:translateX(-50%);clip-path:polygon(10% 100%,50% 38%,90% 100%,100% 72%,50% 0,0 72%)}
+.directionButton.dir-straight::after{clip-path:polygon(10% 100%,50% 38%,90% 100%,100% 72%,50% 0,0 72%)}
+.directionButton:active{filter:drop-shadow(0 0 18px #55eaff);scale:.94}
+#game.qr-mode .directionButton.dir-back{bottom:31%}
 #chestButton{display:none !important}
 #turnIndicator{position:absolute;z-index:109;left:50%;top:50%;transform:translate(-50%,-50%);display:none;color:#fff;font-size:min(34vw,190px);font-weight:1000;line-height:1;text-shadow:0 7px 14px #000,0 0 18px #55eaff;pointer-events:none}
 #turnIndicator.show{display:block}
@@ -974,17 +980,17 @@ canvas{
 #modeSwitch{top:56px}
 
 /* 따뜻한 판타지 RPG풍 HUD: 참고작의 분위기만 사용 */
-#hud{top:10px;left:3%;right:3%;gap:10px;text-shadow:0 2px 2px #3b170d}
+#hud{top:10px;left:3%;right:48%;gap:10px;text-shadow:0 2px 2px #3b170d}
 .unit{padding:6px 8px 8px;border:2px solid #6d3923;border-radius:12px;background:linear-gradient(#b9774f,#754127);box-shadow:inset 0 0 0 2px #d9a477,0 4px 0 rgba(55,24,13,.55)}
 .label{font-size:12px;color:#fff3d5;letter-spacing:.4px}
 .bar{height:17px;border:3px solid #61331f;border-radius:10px;background:#2c1712;box-shadow:inset 0 2px 4px rgba(0,0,0,.6),0 0 0 2px #d7a67b}
 #playerHP{background:linear-gradient(#ff5147,#c51e18 58%,#8e120e)}
 #enemyHP{background:linear-gradient(#ff7b49,#db3425 58%,#921a15)}
-#modeSwitch{border:2px solid #60321f;background:linear-gradient(#9b6040,#613923);box-shadow:inset 0 0 0 2px #d5a074,0 3px 0 rgba(49,20,10,.55)}
+#modeSwitch{top:82px;border:2px solid #60321f;background:linear-gradient(#9b6040,#613923);box-shadow:inset 0 0 0 2px #d5a074,0 3px 0 rgba(49,20,10,.55)}
 .modeButton{color:#ffe9c8}
 .modeButton.active{background:#f4d5a8;color:#532b1b;box-shadow:inset 0 0 0 2px #fff0ce}
-#pauseButton{border:2px solid #6b3924;background:linear-gradient(#a66a47,#653a25);color:#fff0d4;box-shadow:inset 0 0 0 2px #d7a176,0 3px 0 rgba(52,22,11,.55)}
-#miniMap{border:3px solid #6c3b25;background:rgba(70,38,25,.85);box-shadow:inset 0 0 0 2px #d3a273,0 5px 12px rgba(0,0,0,.5)}
+#pauseButton{left:8px;right:auto;top:82px;border:2px solid #6b3924;background:linear-gradient(#a66a47,#653a25);color:#fff0d4;box-shadow:inset 0 0 0 2px #d7a176,0 3px 0 rgba(52,22,11,.55)}
+#miniMap{top:8px;right:8px;border:3px solid #6c3b25;background:rgba(70,38,25,.85);box-shadow:inset 0 0 0 2px #d3a273,0 5px 12px rgba(0,0,0,.5)}
 
 /* 아이폰은 QR 전용 */
 #game.ios-qr #nfcButton{display:none}
@@ -992,6 +998,23 @@ canvas{
 
 /* 피격 시 화면 가장자리에 강한 붉은 윤곽 */
 #damageFlash{z-index:145;background:radial-gradient(ellipse at center,rgba(255,30,20,0) 34%,rgba(255,28,18,.28) 55%,rgba(205,0,0,.84) 83%,rgba(145,0,0,.98) 100%);box-shadow:inset 0 0 45px 18px rgba(255,20,12,.82),inset 0 0 10px 5px rgba(255,175,110,.5)}
+
+/* 전투 중에만 몬스터 체력 표시 */
+#hud .unit:nth-child(2){display:none}
+#game.in-battle #hud .unit:nth-child(2){display:block;position:fixed;z-index:61;top:105px;left:50%;width:min(48%,300px);transform:translateX(-50%)}
+#game:not(.in-battle) #hud .unit:first-child{width:min(58%,360px)}
+
+/* 이후 모든 캐릭터 대화에 공통으로 사용할 상단 말칸 */
+#dialogueBox{position:absolute;z-index:108;left:4%;right:4%;top:118px;display:none;min-height:62px;padding:16px 48px 15px 18px;box-sizing:border-box;border:4px solid #70462c;border-radius:14px;background:linear-gradient(#ffe5b1,#efc983);color:#3c2417;font-size:clamp(17px,4.8vw,28px);font-weight:900;line-height:1.35;box-shadow:inset 0 0 0 3px #fff0c8,0 5px 0 rgba(70,37,20,.45)}
+#dialogueBox.show{display:block}
+#dialogueNext{position:absolute;right:17px;bottom:10px;width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-top:13px solid #765038;animation:dialogueBlink .7s steps(2,end) infinite}
+@keyframes dialogueBlink{50%{opacity:.15;transform:translateY(4px)}}
+
+/* 왼쪽 아래 인벤토리 버튼 */
+#inventoryButton{position:absolute;z-index:160;left:10px;bottom:10px;width:68px;height:68px;border:3px solid #6c3b25;border-radius:13px;background:linear-gradient(#ad704c,#663b27);color:#fff2d2;font-size:31px;box-shadow:inset 0 0 0 3px #d9a476,0 4px 0 rgba(52,22,11,.58)}
+#inventoryButton small{display:block;font-size:10px;font-weight:1000;margin-top:-2px}
+#inventoryPanel{position:absolute;z-index:159;left:10px;bottom:87px;display:none;width:155px;min-height:82px;padding:12px;border:3px solid #6c3b25;border-radius:13px;background:linear-gradient(#f8ddb0,#d8ae75);color:#4a291a;font-weight:900;box-shadow:inset 0 0 0 3px #fff0ca,0 5px 12px rgba(0,0,0,.45)}
+#inventoryPanel.show{display:block}
 
 /* QR 바깥은 게임 50% + 카메라 50%, 중앙은 카메라 100% */
 #game.qr-mode #playArea{height:100%}
@@ -1266,6 +1289,11 @@ canvas{
             <i id="mapPlayer" style="left:58px;top:48px"></i>
         </div>
 
+        <div id="dialogueBox" role="status">
+            <span id="dialogueText">길이 갈라져 있어. 어디로 가야 할까?</span>
+            <i id="dialogueNext" aria-hidden="true"></i>
+        </div>
+
         <div id="directionPanel">
             <div id="directionTitle">갈 방향을 선택하세요</div>
             <div id="directionButtons" class="directionButtons"></div>
@@ -1275,6 +1303,8 @@ canvas{
         <div id="turnIndicator" aria-hidden="true"></div>
 
         <button id="pauseButton">⏸ 일시정지</button>
+        <button id="inventoryButton" aria-label="인벤토리 열기">🎒<small>아이템</small></button>
+        <div id="inventoryPanel">인벤토리<br><span style="font-size:12px">획득한 아이템이 여기에 표시됩니다.</span></div>
         <div id="pauseOverlay">PAUSED</div>
         <div id="chestBurstText">TREASURE!</div>
 
@@ -1829,6 +1859,9 @@ function showDirectionChoices(){
 
     $("chestButton").style.display="none";
     $("directionTitle").textContent="갈 방향을 선택하세요";
+    $("dialogueText").textContent=
+        "길이 갈라져 있어. 어디로 가야 할까?";
+    $("dialogueBox").classList.add("show");
     $("directionPanel").classList.add("show");
 }
 
@@ -1875,6 +1908,7 @@ function chooseRoad(destination){
     mapDestination=destination;
     mapPaused=false;
     $("directionPanel").classList.remove("show");
+    $("dialogueBox").classList.remove("show");
     removeMapChest();
     beginMapTurn(destination);
 
@@ -3496,6 +3530,10 @@ function createForest(){
             context.drawImage(image,0,0);
 
             /* 흰 배경만 투명하게 만들어 게임 숲에 자연스럽게 합성 */
+            let minX=canvas.width;
+            let minY=canvas.height;
+            let maxX=0;
+            let maxY=0;
             try{
                 const pixels=context.getImageData(0,0,canvas.width,canvas.height);
                 for(let i=0;i<pixels.data.length;i+=4){
@@ -3506,12 +3544,40 @@ function createForest(){
                     ){
                         pixels.data[i+3]=0;
                     }
+                    else{
+                        const pixelIndex=i/4;
+                        const x=pixelIndex%canvas.width;
+                        const y=Math.floor(pixelIndex/canvas.width);
+                        minX=Math.min(minX,x);
+                        minY=Math.min(minY,y);
+                        maxX=Math.max(maxX,x);
+                        maxY=Math.max(maxY,y);
+                    }
                 }
                 context.putImageData(pixels,0,0);
             }
             catch(e){}
 
-            const treeTexture=new THREE.CanvasTexture(canvas);
+            if(maxX<minX || maxY<minY){
+                minX=0;
+                minY=0;
+                maxX=canvas.width-1;
+                maxY=canvas.height-1;
+            }
+
+            /* 이미지 속 실제 나무 영역만 잘라 원래 가로세로 비율 유지 */
+            const cropCanvas=document.createElement("canvas");
+            const cropWidth=Math.max(1,maxX-minX+1);
+            const cropHeight=Math.max(1,maxY-minY+1);
+            cropCanvas.width=cropWidth;
+            cropCanvas.height=cropHeight;
+            cropCanvas.getContext("2d").drawImage(
+                canvas,
+                minX,minY,cropWidth,cropHeight,
+                0,0,cropWidth,cropHeight
+            );
+
+            const treeTexture=new THREE.CanvasTexture(cropCanvas);
             treeTexture.colorSpace=THREE.SRGBColorSpace;
             treeTexture.magFilter=THREE.NearestFilter;
             treeTexture.minFilter=THREE.NearestFilter;
@@ -3527,12 +3593,17 @@ function createForest(){
                     });
                     const tree=new THREE.Sprite(material);
                     const scale=.78+Math.random()*.55;
+                    const treeHeight=9.2*scale;
                     tree.position.set(
                         side*(5+Math.random()*7),
-                        4.6*scale,
+                        treeHeight/2,
                         z+Math.random()*2
                     );
-                    tree.scale.set(6.2*scale,9.2*scale,1);
+                    tree.scale.set(
+                        treeHeight*(cropWidth/cropHeight),
+                        treeHeight,
+                        1
+                    );
                     scene.add(tree);
                 });
             }
@@ -4489,6 +4560,8 @@ function killMonster(){
     battle=
         false;
 
+    $("game").classList.remove("in-battle");
+
 
     deathProgress=
         0;
@@ -4530,6 +4603,7 @@ function nextMonster(){
     if(monster){scene.remove(monster);monster=null;}
     if(monsterShadow){scene.remove(monsterShadow);monsterShadow=null;}
     monsterDead=false;
+    $("game").classList.remove("in-battle");
     deathProgress=-1;
     mapPaused=false;
     $("enemyHP").style.width="0%";
@@ -4557,6 +4631,8 @@ function startBattle(){
 
     battle=
         true;
+
+    $("game").classList.add("in-battle");
 
 
     updateSwordIdle();
@@ -4725,6 +4801,8 @@ function endGame(){
 
     battle=
         false;
+
+    $("game").classList.remove("in-battle");
 
 
     if(monsterAttackTimer){
@@ -6105,6 +6183,15 @@ $("pauseButton")
 .addEventListener(
     "click",
     toggleGamePause
+);
+
+$("inventoryButton")
+.addEventListener(
+    "click",
+    function(){
+        if(!started || gameOver){return;}
+        $("inventoryPanel").classList.toggle("show");
+    }
 );
 
 
