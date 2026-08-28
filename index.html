@@ -1080,7 +1080,9 @@ canvas{
     border-top:2px solid white;
     pointer-events:none;
     isolation:isolate;
-    --qr-focus-size:min(300px,78vw,calc(30vh - 10px));
+    /* QR이 영상 끝까지 차서 필수 여백이 잘리지 않도록
+       실제로 잘 읽히는 기존 안내 영역의 80%만 표시한다. */
+    --qr-focus-size:min(240px,62vw,calc(24vh - 8px));
 }
 #reader{
     inset:0;
