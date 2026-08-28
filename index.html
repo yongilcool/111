@@ -2169,14 +2169,6 @@ function isIOS(){
     );
 }
 
-function isIPhone(){
-    /* iPadOS의 데스크톱형 MacIntel 표시는 제외하고
-       실제 iPhone/iPod에만 별도 QR 수치를 적용한다. */
-    return /iPhone|iPod/i.test(
-        navigator.userAgent || ""
-    );
-}
-
 function chestCelebration(){
     initAudio();
 
@@ -5787,17 +5779,7 @@ function startQRSmallAssist(){
         try{
             /* 화면 전체와 중앙 확대를 짧게 반복한다.
                테두리는 안내용이며 실제 판독 범위를 제한하지 않는다. */
-            const modes=isIPhone()
-                ? [
-                    {ratio:1,cx:.5,cy:.5,contrast:false},
-                    {ratio:.80,cx:.5,cy:.5,contrast:false},
-                    {ratio:.62,cx:.5,cy:.5,contrast:false},
-                    {ratio:.48,cx:.5,cy:.5,contrast:false},
-                    {ratio:.36,cx:.5,cy:.5,contrast:true},
-                    {ratio:.28,cx:.5,cy:.5,contrast:true},
-                    {ratio:.22,cx:.5,cy:.5,contrast:true}
-                ]
-                : isIOS()
+            const modes=isIOS()
                 ? [
                     {ratio:1,cx:.5,cy:.5,contrast:false},
                     {ratio:.62,cx:.5,cy:.5,contrast:false},
@@ -5840,9 +5822,7 @@ function startQRSmallAssist(){
             let targetWidth;
             let targetHeight;
 
-            const targetMax=isIPhone()
-                ? 720
-                : (isIOS() ? 640 : 720);
+            const targetMax=isIOS() ? 640 : 720;
             const targetScale=Math.min(
                 1.35,
                 targetMax/Math.max(sourceWidth,sourceHeight)
@@ -5881,7 +5861,7 @@ function startQRSmallAssist(){
         finally{
             qrSmallAssistBusy=false;
         }
-    },isIPhone() ? 140 : (isIOS() ? 160 : 420));
+    },isIOS() ? 160 : 420);
 }
 
 function waitForQRVideoReady(video){
@@ -5949,7 +5929,6 @@ async function startQR(){
             catch(e){}
         }
 
-        /* 첨부된 아이패드 정상 작동 파일의 생성 방식을 유지한다. */
         html5QrCode=
             new Html5Qrcode("reader");
 
