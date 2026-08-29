@@ -1723,7 +1723,7 @@ const CONFIG = {
 
     MONSTER_HP:100,
 
-    PLAYER_DAMAGE:50,
+    PLAYER_DAMAGE:25,
 
     MONSTER_DAMAGE:5,
 
@@ -1747,7 +1747,7 @@ const CONFIG = {
     SWORD_SPEED:400,
 
 
-    MONSTER_ATTACK_INTERVAL:1800,
+    MONSTER_ATTACK_INTERVAL:900,
 
 
     BATTLE_DISTANCE:7,
@@ -1943,8 +1943,9 @@ const MONSTER_CHASE_SPEED=4.5;
 const WOLF_ASSET_URL="https://static.wixstatic.com/media/172435_acaa7e55cedb42448b78a3c8f6c2e356~mv2.png";
 const WORLD_BOUNDS={minX:-86,maxX:86,minZ:-105,maxZ:82};
 const GYRO_MONSTER_POSITIONS=[
-    {x:0,z:-34},
     {x:-40,z:-5},
+    {x:-20,z:35},
+    {x:20,z:35},
     {x:40,z:-5}
 ];
 
@@ -1958,6 +1959,8 @@ let joystickY=0;
 let joystickPointerId=null;
 let wolfAggroActive=false;
 let playerKnockbackRemaining=0;
+let wolfWasInAttackRange=false;
+let wolfSentinels=[];
 let gyroHasOrientation=false;
 let gyroRawQuaternion=null;
 let gyroReferenceQuaternion=null;
@@ -3863,6 +3866,7 @@ function init3D(){
 
 
         spawnMonster(0);
+        createWolfSentinels();
 
 
         initialized=true;
@@ -4335,9 +4339,51 @@ function temporaryMonster(index){
    SPAWN MONSTER
 ===================================================== */
 
+function removeWolfSentinel(index){
+    const sentinel=wolfSentinels[index];
+    if(!sentinel){return;}
+    scene.remove(sentinel);
+    if(sentinel.material){sentinel.material.dispose();}
+    wolfSentinels[index]=null;
+}
+
+function createWolfSentinels(){
+    wolfSentinels.forEach(function(sentinel,index){
+        if(sentinel){removeWolfSentinel(index);}
+    });
+    wolfSentinels=[];
+
+    const texture=new THREE.TextureLoader().load(WOLF_ASSET_URL);
+    texture.colorSpace=THREE.SRGBColorSpace;
+    texture.magFilter=THREE.NearestFilter;
+    texture.minFilter=THREE.LinearFilter;
+
+    GYRO_MONSTER_POSITIONS.forEach(function(position,index){
+        if(index===monsterIndex){return;}
+        const material=new THREE.SpriteMaterial({
+            map:texture,
+            color:0x81758f,
+            transparent:true,
+            alphaTest:.06,
+            depthTest:true,
+            depthWrite:true,
+            fog:true
+        });
+        const sentinel=new THREE.Sprite(material);
+        sentinel.position.set(position.x,2.7,position.z);
+        sentinel.scale.set(5.4,5.4,1);
+        sentinel.renderOrder=0;
+        sentinel.userData.wolfIndex=index;
+        scene.add(sentinel);
+        wolfSentinels[index]=sentinel;
+    });
+}
+
 function spawnMonster(index){
     wolfAggroActive=false;
     playerKnockbackRemaining=0;
+    wolfWasInAttackRange=false;
+    removeWolfSentinel(index);
 
     if(monster){
 
@@ -4581,7 +4627,7 @@ function updateHP(){
             monsterIndex+1
         ) +
 
-        " / 3";
+        " / " + GYRO_MONSTER_POSITIONS.length;
 
 }
 
@@ -5300,10 +5346,28 @@ function startBattle(){
 function exitBattleByPlayer(){
     if(!battle){return;}
     battleExitSuppressed=true;
+    wolfWasInAttackRange=false;
     stopBattleForDistance();
 }
 
 function triggerMonsterAttack(){
+
+    const attackDistance=
+        monster
+            ? Math.hypot(
+                camera.position.x-monsterHomeX,
+                camera.position.z-monsterHomeZ
+            )
+            : Infinity;
+
+    if(
+        !battle &&
+        wolfAggroActive &&
+        attackDistance<=MONSTER_ATTACK_DISTANCE+.35
+    ){
+        battleExitSuppressed=false;
+        startBattle();
+    }
 
     if(
         !battle ||
@@ -5311,10 +5375,7 @@ function triggerMonsterAttack(){
         gamePaused ||
         gameOver ||
         !monster ||
-        Math.hypot(
-            camera.position.x-monsterHomeX,
-            camera.position.z-monsterHomeZ
-        )>MONSTER_ATTACK_DISTANCE+.35
+        attackDistance>MONSTER_ATTACK_DISTANCE+.35
     ){
 
         return;
@@ -6175,6 +6236,7 @@ let qrSmallAssistCanvas=null;
 let qrSmallAssistBusy=false;
 
 let qrContinuousAttackTimer=null;
+let qrAutofocusWatchTimer=null;
 
 let lastValidQRSeenAt=0;
 
@@ -6462,6 +6524,46 @@ function tuneAndroidQRCamera(video){
     catch(e){}
 }
 
+function stopAndroidAutofocusWatch(){
+    if(qrAutofocusWatchTimer){
+        clearInterval(qrAutofocusWatchTimer);
+        qrAutofocusWatchTimer=null;
+    }
+}
+
+function resetAndroidQRAutofocus(video){
+    if(isIOS() || !video || !video.srcObject){return;}
+    try{
+        const track=video.srcObject.getVideoTracks()[0];
+        if(!track || !track.getCapabilities || !track.applyConstraints){return;}
+        const modes=track.getCapabilities().focusMode || [];
+        if(Array.isArray(modes) && modes.indexOf("single-shot")>=0){
+            Promise.resolve(track.applyConstraints({
+                advanced:[{focusMode:"single-shot"}]
+            })).catch(function(){}).finally(function(){
+                setTimeout(function(){tuneAndroidQRCamera(video);},260);
+            });
+        }
+        else{
+            tuneAndroidQRCamera(video);
+        }
+    }
+    catch(error){}
+}
+
+function startAndroidAutofocusWatch(video){
+    stopAndroidAutofocusWatch();
+    if(isIOS()){return;}
+    setTimeout(function(){
+        if(qrRunning){resetAndroidQRAutofocus(video);}
+    },2300);
+    qrAutofocusWatchTimer=setInterval(function(){
+        if(qrRunning && inputMode==="qr"){
+            resetAndroidQRAutofocus(video);
+        }
+    },2800);
+}
+
 function waitForQRVideoReady(video){
     return new Promise(function(resolve){
         function checkFrame(){
@@ -6568,6 +6670,7 @@ async function startQR(){
 
         if(qrVideoElement){
             tuneAndroidQRCamera(qrVideoElement);
+            startAndroidAutofocusWatch(qrVideoElement);
             if(!isIOS()){
                 setTimeout(function(){
                     if(qrRunning){tuneAndroidQRCamera(qrVideoElement);}
@@ -6657,6 +6760,7 @@ async function stopQR(){
 
     stopQRSmallAssist();
     stopQRContinuousAttack();
+    stopAndroidAutofocusWatch();
 
     const focusVideo=$("qrFocusVideo");
     focusVideo.classList.remove("ready");
@@ -7422,7 +7526,6 @@ function loop(now){
 
                 if(
                     wolfAggroActive &&
-                    !battleExitSuppressed &&
                     gyroMonsterDistance<=MONSTER_AGGRO_DISTANCE &&
                     gyroMonsterDistance>MONSTER_ATTACK_DISTANCE &&
                     monsterAttackProgress<0
@@ -7447,6 +7550,14 @@ function loop(now){
                         monsterShadow.position.z=monsterHomeZ;
                     }
                 }
+
+                const wolfInAttackRange=
+                    wolfAggroActive &&
+                    gyroMonsterDistance<=MONSTER_ATTACK_DISTANCE+.35;
+                if(wolfInAttackRange && !wolfWasInAttackRange){
+                    triggerMonsterAttack();
+                }
+                wolfWasInAttackRange=wolfInAttackRange;
             }
 
         }
@@ -7640,7 +7751,6 @@ function loop(now){
             const wolfWalking=
                 gyroEnabled &&
                 wolfAggroActive &&
-                !battleExitSuppressed &&
                 wolfDistance<=MONSTER_AGGRO_DISTANCE &&
                 wolfDistance>MONSTER_ATTACK_DISTANCE;
             const walkWave=wolfWalking ? Math.sin(now*.016) : 0;
@@ -7749,7 +7859,7 @@ function loop(now){
 
             monsterAttackProgress +=
 
-                dt*2.3;
+                dt*4.6;
 
 
             const t=
