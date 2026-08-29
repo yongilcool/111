@@ -1065,7 +1065,7 @@ canvas{
     --qr-focus-size:min(40vw,25.2vh);
 }
 
-/* 자이로 대신 사용하는 왼쪽 아래 4방향 패드 */
+/* 자이로 대신 사용하는 왼쪽 아래 아날로그 스틱 */
 #game.control-experiment #gyroControls,
 #game.control-experiment.qr-mode #gyroControls{
     left:10px;
@@ -1078,14 +1078,41 @@ canvas{
 #game.control-experiment #gyroMoveButtons{
     display:block;
     position:relative;
-    width:220px;
-    height:220px;
+    width:210px;
+    height:210px;
     pointer-events:auto;
+}
+#virtualJoystick{
+    position:absolute;
+    inset:0;
+    border:5px solid rgba(45,113,155,.85);
+    border-radius:50%;
+    background:radial-gradient(circle,rgba(35,91,128,.35) 0 30%,rgba(16,50,76,.24) 31% 67%,rgba(61,169,222,.25) 68% 70%,rgba(5,23,38,.18) 71%);
+    box-shadow:inset 0 0 22px rgba(46,195,255,.38),0 7px 18px rgba(0,0,0,.4);
+    touch-action:none;
+    pointer-events:auto;
+    -webkit-user-select:none;
+    user-select:none;
+}
+#joystickKnob{
+    position:absolute;
+    left:50%;
+    top:50%;
+    width:82px;
+    height:82px;
+    transform:translate(-50%,-50%);
+    border:4px solid #143e5b;
+    border-radius:50%;
+    background:radial-gradient(circle at 38% 30%,#75d9ff,#297db2 56%,#123d60 100%);
+    box-shadow:inset 0 0 0 4px rgba(184,237,255,.3),0 6px 13px rgba(0,0,0,.55),0 0 13px rgba(52,196,255,.65);
+    pointer-events:none;
+    will-change:transform;
 }
 #game.control-experiment #forwardButton,
 #game.control-experiment #backwardButton,
 #game.control-experiment #leftButton,
 #game.control-experiment #rightButton{
+    display:none;
     position:absolute;
     width:84px;
     height:84px;
@@ -1120,6 +1147,7 @@ canvas{
 #game.control-experiment.qr-mode #modeSwitch{left:auto;right:10px;bottom:calc(36% + 14px);transform:none}
 @media (max-width:430px){
     #game.control-experiment #gyroMoveButtons{width:190px;height:190px}
+    #joystickKnob{width:76px;height:76px}
     #game.control-experiment #forwardButton,#game.control-experiment #backwardButton,#game.control-experiment #leftButton,#game.control-experiment #rightButton{width:76px;height:76px;min-width:76px;min-height:76px}
     #game.control-experiment #forwardButton{left:57px;top:0}
     #game.control-experiment #leftButton{left:0;top:57px}
@@ -1503,6 +1531,9 @@ html.ios-device #qrPanel{
                 <button id="gyroRecenterButton" class="gyroSmallButton">◎ 정면 재설정</button>
             </div>
             <div id="gyroMoveButtons">
+                <div id="virtualJoystick" role="application" aria-label="이동 및 회전 스틱">
+                    <div id="joystickKnob" aria-hidden="true"></div>
+                </div>
                 <button id="forwardButton" aria-label="바라보는 방향으로 전진">전진</button>
                 <button id="leftButton" aria-label="왼쪽으로 회전">왼쪽</button>
                 <button id="rightButton" aria-label="오른쪽으로 회전">오른쪽</button>
@@ -1916,6 +1947,9 @@ let gyroForwardPressed=false;
 let gyroBackwardPressed=false;
 let controlLeftPressed=false;
 let controlRightPressed=false;
+let joystickX=0;
+let joystickY=0;
+let joystickPointerId=null;
 let gyroHasOrientation=false;
 let gyroRawQuaternion=null;
 let gyroReferenceQuaternion=null;
@@ -2009,26 +2043,27 @@ function isInsidePlayableRoad(x,z){
 }
 
 function moveGyroPlayer(dt){
-    if(controlLeftPressed){
+    const turnInput=joystickPointerId!==null
+        ? joystickX
+        : (controlLeftPressed ? -1 : (controlRightPressed ? 1 : 0));
+    if(turnInput!==0){
         gyroViewHeading=normalizeAngle(
-            gyroViewHeading+CONTROL_TURN_SPEED*dt
-        );
-    }
-    if(controlRightPressed){
-        gyroViewHeading=normalizeAngle(
-            gyroViewHeading-CONTROL_TURN_SPEED*dt
+            gyroViewHeading-CONTROL_TURN_SPEED*dt*turnInput
         );
     }
 
+    const moveInput=joystickPointerId!==null
+        ? -joystickY
+        : (gyroForwardPressed ? 1 : (gyroBackwardPressed ? -1 : 0));
+
     if(
         !gyroEnabled ||
-        (!gyroForwardPressed && !gyroBackwardPressed)
+        Math.abs(moveInput)<.08
     ){
         return false;
     }
 
-    const moveDirection=gyroBackwardPressed ? -1 : 1;
-    const distance=GYRO_WALK_SPEED*dt*moveDirection;
+    const distance=GYRO_WALK_SPEED*dt*moveInput;
     const nextX=camera.position.x-Math.sin(gyroViewHeading)*distance;
     const nextZ=camera.position.z-Math.cos(gyroViewHeading)*distance;
 
@@ -6955,6 +6990,58 @@ function setControlTurn(direction,pressed,event){
         setControlTurn(direction,false);
     });
 });
+
+function updateVirtualJoystick(event){
+    const base=$("virtualJoystick");
+    const knob=$("joystickKnob");
+    const rect=base.getBoundingClientRect();
+    const radius=rect.width*.5;
+    const knobRadius=knob.offsetWidth*.5;
+    const maxDistance=Math.max(1,radius-knobRadius-5);
+    let dx=event.clientX-(rect.left+radius);
+    let dy=event.clientY-(rect.top+radius);
+    const length=Math.hypot(dx,dy);
+
+    if(length>maxDistance){
+        dx=dx/length*maxDistance;
+        dy=dy/length*maxDistance;
+    }
+
+    joystickX=Math.abs(dx/maxDistance)<.1 ? 0 : dx/maxDistance;
+    joystickY=Math.abs(dy/maxDistance)<.1 ? 0 : dy/maxDistance;
+    knob.style.transform="translate(calc(-50% + "+dx+"px),calc(-50% + "+dy+"px))";
+}
+
+function releaseVirtualJoystick(event){
+    if(
+        event &&
+        joystickPointerId!==null &&
+        event.pointerId!==joystickPointerId
+    ){
+        return;
+    }
+    joystickPointerId=null;
+    joystickX=0;
+    joystickY=0;
+    $("joystickKnob").style.transform="translate(-50%,-50%)";
+}
+
+$("virtualJoystick").addEventListener("pointerdown",function(event){
+    if(!gyroEnabled || gamePaused){return;}
+    event.preventDefault();
+    joystickPointerId=event.pointerId;
+    try{this.setPointerCapture(event.pointerId);}catch(error){}
+    updateVirtualJoystick(event);
+});
+$("virtualJoystick").addEventListener("pointermove",function(event){
+    if(event.pointerId!==joystickPointerId){return;}
+    event.preventDefault();
+    updateVirtualJoystick(event);
+});
+$("virtualJoystick").addEventListener("pointerup",releaseVirtualJoystick);
+$("virtualJoystick").addEventListener("pointercancel",releaseVirtualJoystick);
+$("virtualJoystick").addEventListener("lostpointercapture",releaseVirtualJoystick);
+window.addEventListener("blur",function(){releaseVirtualJoystick();});
 
 /* =====================================================
    EXTERNAL NFC UUID KEYBOARD-WEDGE READER
