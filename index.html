@@ -1937,10 +1937,12 @@ const GYRO_EXPERIMENT=true;
 const GYRO_WALK_SPEED=40;
 const GYRO_LOOK_SENSITIVITY=1.65;
 const CONTROL_TURN_SPEED=4.7;
-const MONSTER_AGGRO_DISTANCE=22;
-const MONSTER_ATTACK_DISTANCE=7;
-const MONSTER_DISENGAGE_DISTANCE=9;
+const MONSTER_AGGRO_DISTANCE=32;
+const MONSTER_ATTACK_DISTANCE=13;
+const MONSTER_BLOCK_DISTANCE=11.5;
+const MONSTER_DISENGAGE_DISTANCE=32;
 const MONSTER_CHASE_SPEED=8.5;
+const WOLF_ASSET_URL="https://static.wixstatic.com/media/172435_acaa7e55cedb42448b78a3c8f6c2e356~mv2.png";
 const WORLD_BOUNDS={minX:-86,maxX:86,minZ:-105,maxZ:82};
 const GYRO_MONSTER_POSITIONS=[
     {x:0,z:-34},
@@ -2077,12 +2079,31 @@ function moveGyroPlayer(dt){
     }
 
     const distance=GYRO_WALK_SPEED*dt;
-    const nextX=camera.position.x+
+    let nextX=camera.position.x+
         (-Math.sin(gyroViewHeading)*moveInput+
         Math.cos(gyroViewHeading)*strafeInput)*distance;
-    const nextZ=camera.position.z+
+    let nextZ=camera.position.z+
         (-Math.cos(gyroViewHeading)*moveInput-
         Math.sin(gyroViewHeading)*strafeInput)*distance;
+
+    /* 몬스터는 통과할 수 없는 원형 장애물이다. 가까워지면
+       반지름 밖으로 밀어내되 좌우 이동은 원을 따라 계속된다. */
+    if(monster && !monsterDead){
+        const colliderX=monsterHomeX;
+        const colliderZ=monsterHomeZ;
+        let obstacleDX=nextX-colliderX;
+        let obstacleDZ=nextZ-colliderZ;
+        const obstacleDistance=Math.hypot(obstacleDX,obstacleDZ);
+        if(obstacleDistance<MONSTER_BLOCK_DISTANCE){
+            if(obstacleDistance<.001){
+                obstacleDX=Math.sin(gyroViewHeading);
+                obstacleDZ=Math.cos(gyroViewHeading);
+            }
+            const safeLength=Math.max(.001,Math.hypot(obstacleDX,obstacleDZ));
+            nextX=colliderX+obstacleDX/safeLength*MONSTER_BLOCK_DISTANCE;
+            nextZ=colliderZ+obstacleDZ/safeLength*MONSTER_BLOCK_DISTANCE;
+        }
+    }
 
     if(!isInsidePlayableRoad(nextX,nextZ)){
         return false;
@@ -4302,19 +4323,22 @@ function spawnMonster(index){
         false;
 
 
+    const wolfTexture=new THREE.TextureLoader().load(WOLF_ASSET_URL);
+    wolfTexture.colorSpace=THREE.SRGBColorSpace;
+    wolfTexture.magFilter=THREE.NearestFilter;
+    wolfTexture.minFilter=THREE.LinearFilter;
+
     monsterMaterial=
 
         new THREE.MeshBasicMaterial({
 
-            map:
-                temporaryMonster(
-                    index
-                ),
+            map:wolfTexture,
 
             transparent:true,
 
             side:
-                THREE.DoubleSide
+                THREE.DoubleSide,
+            depthTest:false
 
         });
 
@@ -4383,6 +4407,8 @@ function spawnMonster(index){
     scene.add(
         monster
     );
+    monster.renderOrder=50;
+    monster.frustumCulled=false;
 
 
     /*
@@ -6319,7 +6345,7 @@ function startQRSmallAssist(){
         finally{
             qrSmallAssistBusy=false;
         }
-    },isIPhone() ? 140 : (isIOS() ? 160 : 240));
+    },isIPhone() ? 140 : (isIOS() ? 160 : 120));
 }
 
 function tuneAndroidQRCamera(video){
@@ -6433,16 +6459,21 @@ async function startQR(){
 
         await html5QrCode.start(
 
-            {
-                facingMode:"user"
-            },
+            isIOS()
+                ? {facingMode:"user"}
+                : {
+                    facingMode:{ideal:"user"},
+                    width:{ideal:1280},
+                    height:{ideal:720},
+                    frameRate:{ideal:30,max:60}
+                },
 
             {
                 /* 전면 카메라의 세로 크기 보고값 때문에 qrbox가
                    작아지는 문제를 피하고 영상 전체를 판독한다. */
                 /* iPhone/iPad 안정값은 10 그대로 유지하고
                    Android만 더 자주 판독한다. */
-                fps:isIOS() ? 10 : 18
+                fps:isIOS() ? 10 : 30
             },
 
             function(decodedText){
@@ -7504,20 +7535,23 @@ function loop(now){
             monsterHitTimer<=0
         ){
 
-            const breathe=
-
-                1 +
-
-                Math.sin(
-                    now*.003
-                ) *
-
-                .025;
+            const wolfDistance=Math.hypot(
+                camera.position.x-monsterHomeX,
+                camera.position.z-monsterHomeZ
+            );
+            const wolfWalking=
+                gyroEnabled &&
+                !battle &&
+                !battleExitSuppressed &&
+                wolfDistance<=MONSTER_AGGRO_DISTANCE &&
+                wolfDistance>MONSTER_ATTACK_DISTANCE;
+            const walkWave=wolfWalking ? Math.sin(now*.016) : 0;
+            const breathe=1+Math.sin(now*.003)*.025;
 
 
             monster.scale.set(
 
-                1,
+                1+Math.abs(walkWave)*.025,
 
                 breathe,
 
@@ -7541,7 +7575,10 @@ function loop(now){
                     breathe-1
                 ) *
 
-                2.7;
+                2.7+
+                (wolfWalking ? Math.abs(walkWave)*.12 : 0);
+
+            monster.rotation.z=wolfWalking ? walkWave*.025 : 0;
 
         }
 
