@@ -1937,9 +1937,10 @@ const GYRO_EXPERIMENT=true;
 const GYRO_WALK_SPEED=40;
 const GYRO_LOOK_SENSITIVITY=1.65;
 const CONTROL_TURN_SPEED=4.7;
-const MONSTER_AGGRO_DISTANCE=32;
-const MONSTER_ATTACK_DISTANCE=13;
-const MONSTER_BLOCK_DISTANCE=11.5;
+const MONSTER_AGGRO_DISTANCE=64;
+const MONSTER_LOCK_DISTANCE=32;
+const MONSTER_ATTACK_DISTANCE=3.2;
+const MONSTER_BLOCK_DISTANCE=3.2;
 const MONSTER_DISENGAGE_DISTANCE=32;
 const MONSTER_CHASE_SPEED=8.5;
 const WOLF_ASSET_URL="https://static.wixstatic.com/media/172435_acaa7e55cedb42448b78a3c8f6c2e356~mv2.png";
@@ -4337,7 +4338,7 @@ function spawnMonster(index){
             transparent:true,
 
             side:
-                THREE.DoubleSide,
+                THREE.FrontSide,
             depthTest:false
 
         });
@@ -4659,7 +4660,11 @@ function attack(){
 
                 if(
                     battle &&
-                    !monsterDead
+                    !monsterDead &&
+                    Math.hypot(
+                        camera.position.x-monsterHomeX,
+                        camera.position.z-monsterHomeZ
+                    )<=MONSTER_ATTACK_DISTANCE+.35
                 ){
 
                     damageMonster();
@@ -5238,7 +5243,12 @@ function triggerMonsterAttack(){
         !battle ||
         monsterDead ||
         gamePaused ||
-        gameOver
+        gameOver ||
+        !monster ||
+        Math.hypot(
+            camera.position.x-monsterHomeX,
+            camera.position.z-monsterHomeZ
+        )>MONSTER_ATTACK_DISTANCE+.35
     ){
 
         return;
@@ -6459,14 +6469,7 @@ async function startQR(){
 
         await html5QrCode.start(
 
-            isIOS()
-                ? {facingMode:"user"}
-                : {
-                    facingMode:{ideal:"user"},
-                    width:{ideal:1280},
-                    height:{ideal:720},
-                    frameRate:{ideal:30,max:60}
-                },
+            {facingMode:"user"},
 
             {
                 /* 전면 카메라의 세로 크기 보고값 때문에 qrbox가
@@ -7299,54 +7302,51 @@ function loop(now){
                 );
                 if(
                     battleExitSuppressed &&
-                    gyroMonsterDistance>MONSTER_DISENGAGE_DISTANCE
+                    gyroMonsterDistance>MONSTER_LOCK_DISTANCE
                 ){
                     battleExitSuppressed=false;
                 }
-                if(gyroMonsterDistance<=MONSTER_ATTACK_DISTANCE){
+
+                if(
+                    !battle &&
+                    !battleExitSuppressed &&
+                    gyroMonsterDistance<=MONSTER_LOCK_DISTANCE
+                ){
                     startBattle();
-                }
-                else{
-                    if(
-                        battle &&
-                        gyroMonsterDistance>MONSTER_DISENGAGE_DISTANCE
-                    ){
-                        stopBattleForDistance();
-                    }
-
-                    if(
-                        !battle &&
-                        !battleExitSuppressed &&
-                        gyroMonsterDistance<=MONSTER_AGGRO_DISTANCE &&
-                        monsterAttackProgress<0
-                    ){
-                        const chaseDX=camera.position.x-monsterHomeX;
-                        const chaseDZ=camera.position.z-monsterHomeZ;
-                        const chaseLength=Math.max(
-                            .001,
-                            Math.hypot(chaseDX,chaseDZ)
-                        );
-                        const chaseStep=Math.min(
-                            MONSTER_CHASE_SPEED*dt,
-                            Math.max(0,gyroMonsterDistance-MONSTER_ATTACK_DISTANCE)
-                        );
-
-                        monsterHomeX+=chaseDX/chaseLength*chaseStep;
-                        monsterHomeZ+=chaseDZ/chaseLength*chaseStep;
-                        monster.position.x=monsterHomeX;
-                        monster.position.z=monsterHomeZ;
-                        if(monsterShadow){
-                            monsterShadow.position.x=monsterHomeX;
-                            monsterShadow.position.z=monsterHomeZ;
-                        }
-                    }
                 }
 
                 if(
                     battle &&
-                    gyroMonsterDistance>MONSTER_AGGRO_DISTANCE
+                    gyroMonsterDistance>MONSTER_LOCK_DISTANCE
                 ){
                     stopBattleForDistance();
+                }
+
+                if(
+                    !battleExitSuppressed &&
+                    gyroMonsterDistance<=MONSTER_AGGRO_DISTANCE &&
+                    gyroMonsterDistance>MONSTER_ATTACK_DISTANCE &&
+                    monsterAttackProgress<0
+                ){
+                    const chaseDX=camera.position.x-monsterHomeX;
+                    const chaseDZ=camera.position.z-monsterHomeZ;
+                    const chaseLength=Math.max(
+                        .001,
+                        Math.hypot(chaseDX,chaseDZ)
+                    );
+                    const chaseStep=Math.min(
+                        MONSTER_CHASE_SPEED*dt,
+                        Math.max(0,gyroMonsterDistance-MONSTER_ATTACK_DISTANCE)
+                    );
+
+                    monsterHomeX+=chaseDX/chaseLength*chaseStep;
+                    monsterHomeZ+=chaseDZ/chaseLength*chaseStep;
+                    monster.position.x=monsterHomeX;
+                    monster.position.z=monsterHomeZ;
+                    if(monsterShadow){
+                        monsterShadow.position.x=monsterHomeX;
+                        monsterShadow.position.z=monsterHomeZ;
+                    }
                 }
             }
 
@@ -7506,14 +7506,13 @@ function loop(now){
             !monsterDead
         ){
 
-            monster.lookAt(
-
-                camera.position.x,
-
-                monster.position.y,
-
-                camera.position.z
-
+            /* 수평 Y축만 계산해 Plane의 뒷면으로 넘어가거나
+               걸을 때 이미지가 뒤집히는 현상을 막는다. */
+            monster.rotation.order="YXZ";
+            monster.rotation.x=0;
+            monster.rotation.y=Math.atan2(
+                camera.position.x-monster.position.x,
+                camera.position.z-monster.position.z
             );
 
         }
@@ -7704,12 +7703,12 @@ function loop(now){
 
                 monster.position.x=THREE.MathUtils.lerp(
                     monsterHomeX-attackUX*.7,
-                    monsterHomeX+attackUX*3.8,
+                    monsterHomeX+attackUX*1.4,
                     p
                 );
                 monster.position.z=THREE.MathUtils.lerp(
                     monsterHomeZ-attackUZ*.7,
-                    monsterHomeZ+attackUZ*3.8,
+                    monsterHomeZ+attackUZ*1.4,
                     p
                 );
 
@@ -7749,12 +7748,12 @@ function loop(now){
 
 
                 monster.position.x=THREE.MathUtils.lerp(
-                    monsterHomeX+attackUX*3.8,
+                    monsterHomeX+attackUX*1.4,
                     monsterHomeX,
                     p
                 );
                 monster.position.z=THREE.MathUtils.lerp(
-                    monsterHomeZ+attackUZ*3.8,
+                    monsterHomeZ+attackUZ*1.4,
                     monsterHomeZ,
                     p
                 );
