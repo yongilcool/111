@@ -1076,20 +1076,21 @@ canvas{
 #game.control-experiment #gyroTopControls,
 #game.control-experiment #gyroStatus{display:none}
 #game.control-experiment #gyroMoveButtons{
-    display:grid;
-    grid-template-columns:68px 68px 68px;
-    grid-template-rows:68px 68px 68px;
-    gap:4px;
+    display:block;
+    position:relative;
+    width:220px;
+    height:220px;
     pointer-events:auto;
 }
 #game.control-experiment #forwardButton,
 #game.control-experiment #backwardButton,
 #game.control-experiment #leftButton,
 #game.control-experiment #rightButton{
-    width:68px;
-    height:68px;
-    min-width:68px;
-    min-height:68px;
+    position:absolute;
+    width:84px;
+    height:84px;
+    min-width:84px;
+    min-height:84px;
     margin:0;
     padding:0;
     border:4px solid #57311f;
@@ -1101,10 +1102,10 @@ canvas{
     touch-action:none;
     pointer-events:auto;
 }
-#game.control-experiment #forwardButton{grid-column:2;grid-row:1}
-#game.control-experiment #leftButton{grid-column:1;grid-row:2}
-#game.control-experiment #rightButton{grid-column:3;grid-row:2}
-#game.control-experiment #backwardButton{grid-column:2;grid-row:3}
+#game.control-experiment #forwardButton{left:68px;top:0}
+#game.control-experiment #leftButton{left:0;top:68px}
+#game.control-experiment #rightButton{left:136px;top:68px}
+#game.control-experiment #backwardButton{left:68px;top:136px}
 #game.control-experiment #forwardButton::before{content:"▲";font-size:35px;line-height:1}
 #game.control-experiment #backwardButton::before{content:"▼";font-size:35px;line-height:1}
 #game.control-experiment #leftButton::before{content:"◀";font-size:35px;line-height:1}
@@ -1118,8 +1119,12 @@ canvas{
 #game.control-experiment #modeSwitch{left:auto;right:10px;bottom:10px;transform:none}
 #game.control-experiment.qr-mode #modeSwitch{left:auto;right:10px;bottom:calc(36% + 14px);transform:none}
 @media (max-width:430px){
-    #game.control-experiment #gyroMoveButtons{grid-template-columns:60px 60px 60px;grid-template-rows:60px 60px 60px}
-    #game.control-experiment #forwardButton,#game.control-experiment #backwardButton,#game.control-experiment #leftButton,#game.control-experiment #rightButton{width:60px;height:60px;min-width:60px;min-height:60px}
+    #game.control-experiment #gyroMoveButtons{width:190px;height:190px}
+    #game.control-experiment #forwardButton,#game.control-experiment #backwardButton,#game.control-experiment #leftButton,#game.control-experiment #rightButton{width:76px;height:76px;min-width:76px;min-height:76px}
+    #game.control-experiment #forwardButton{left:57px;top:0}
+    #game.control-experiment #leftButton{left:0;top:57px}
+    #game.control-experiment #rightButton{left:114px;top:57px}
+    #game.control-experiment #backwardButton{left:57px;top:114px}
     #game.control-experiment #inventoryButton{bottom:205px}
 }
 
@@ -1892,9 +1897,13 @@ let turnFootTimer=0;
 ===================================================== */
 
 const GYRO_EXPERIMENT=true;
-const GYRO_WALK_SPEED=20;
+const GYRO_WALK_SPEED=40;
 const GYRO_LOOK_SENSITIVITY=1.65;
-const CONTROL_TURN_SPEED=2.35;
+const CONTROL_TURN_SPEED=4.7;
+const MONSTER_AGGRO_DISTANCE=22;
+const MONSTER_ATTACK_DISTANCE=7;
+const MONSTER_DISENGAGE_DISTANCE=9;
+const MONSTER_CHASE_SPEED=8.5;
 const WORLD_BOUNDS={minX:-86,maxX:86,minZ:-105,maxZ:82};
 const GYRO_MONSTER_POSITIONS=[
     {x:0,z:-34},
@@ -2013,9 +2022,7 @@ function moveGyroPlayer(dt){
 
     if(
         !gyroEnabled ||
-        (!gyroForwardPressed && !gyroBackwardPressed) ||
-        battle ||
-        monsterDead
+        (!gyroForwardPressed && !gyroBackwardPressed)
     ){
         return false;
     }
@@ -5073,6 +5080,22 @@ function nextMonster(){
    START BATTLE
 ===================================================== */
 
+function stopBattleForDistance(){
+    if(!battle){return;}
+
+    battle=false;
+    $("game").classList.remove("in-battle");
+    monsterAttackProgress=-1;
+    monsterAttackHit=false;
+
+    if(monsterAttackTimer){
+        clearInterval(monsterAttackTimer);
+        monsterAttackTimer=null;
+    }
+
+    updateSwordIdle();
+}
+
 function startBattle(){
 
     if(
@@ -6933,31 +6956,85 @@ function setControlTurn(direction,pressed,event){
     });
 });
 
+/* =====================================================
+   EXTERNAL NFC UUID KEYBOARD-WEDGE READER
+
+   순수 UID 리더가 아주 빠르게 타이핑하는 16진수와 Enter를
+   한글 입력 상태와 무관하게 event.code로 복원한다.
+===================================================== */
+
+let externalReaderBuffer="";
+let externalReaderLastKeyAt=0;
+
+function externalReaderCharacter(code){
+    if(/^Digit[0-9]$/.test(code)){return code.slice(-1);}
+    if(/^Numpad[0-9]$/.test(code)){return code.slice(-1);}
+    if(/^Key[A-F]$/.test(code)){return code.slice(-1);}
+    return "";
+}
+
 window.addEventListener("keydown",function(event){
-    if(event.key==="ArrowUp" || event.key.toLowerCase()==="w"){
+    const now=performance.now();
+    const character=externalReaderCharacter(event.code || "");
+
+    if(character){
+        if(now-externalReaderLastKeyAt>140){
+            externalReaderBuffer="";
+        }
+        externalReaderLastKeyAt=now;
+        externalReaderBuffer+=character;
+
+        /* UID 중간의 A/D가 이동키로 전달되지 않게 막는다. */
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+    }
+
+    if(event.code==="Enter" || event.code==="NumpadEnter"){
+        const uid=externalReaderBuffer.toUpperCase();
+        externalReaderBuffer="";
+
+        if(/^[0-9A-F]{8,32}$/.test(uid)){
+            event.preventDefault();
+            event.stopImmediatePropagation();
+
+            if(started && !gameOver && !gamePaused){
+                attack();
+            }
+        }
+        return;
+    }
+
+    if(now-externalReaderLastKeyAt>140){
+        externalReaderBuffer="";
+    }
+},true);
+
+window.addEventListener("keydown",function(event){
+    if(event.key==="ArrowUp"){
         setGyroForward(true,event);
     }
-    if(event.key==="ArrowDown" || event.key.toLowerCase()==="s"){
+    if(event.key==="ArrowDown"){
         setGyroBackward(true,event);
     }
-    if(event.key==="ArrowLeft" || event.key.toLowerCase()==="a"){
+    if(event.key==="ArrowLeft"){
         setControlTurn("left",true,event);
     }
-    if(event.key==="ArrowRight" || event.key.toLowerCase()==="d"){
+    if(event.key==="ArrowRight"){
         setControlTurn("right",true,event);
     }
 });
 window.addEventListener("keyup",function(event){
-    if(event.key==="ArrowUp" || event.key.toLowerCase()==="w"){
+    if(event.key==="ArrowUp"){
         setGyroForward(false,event);
     }
-    if(event.key==="ArrowDown" || event.key.toLowerCase()==="s"){
+    if(event.key==="ArrowDown"){
         setGyroBackward(false,event);
     }
-    if(event.key==="ArrowLeft" || event.key.toLowerCase()==="a"){
+    if(event.key==="ArrowLeft"){
         setControlTurn("left",false,event);
     }
-    if(event.key==="ArrowRight" || event.key.toLowerCase()==="d"){
+    if(event.key==="ArrowRight"){
         setControlTurn("right",false,event);
     }
 });
@@ -7060,7 +7137,7 @@ function loop(now){
            WALK
         ============================================= */
 
-        if(gyroEnabled && !battle){
+        if(gyroEnabled){
 
             walking=moveGyroPlayer(dt);
 
@@ -7069,16 +7146,49 @@ function loop(now){
                     camera.position.x-monster.position.x,
                     camera.position.z-monster.position.z
                 );
-                if(gyroMonsterDistance<=CONFIG.BATTLE_DISTANCE){
-                    gyroForwardPressed=false;
-                    gyroBackwardPressed=false;
-                    controlLeftPressed=false;
-                    controlRightPressed=false;
-                    $("forwardButton").classList.remove("pressed");
-                    $("backwardButton").classList.remove("pressed");
-                    $("leftButton").classList.remove("pressed");
-                    $("rightButton").classList.remove("pressed");
+                if(gyroMonsterDistance<=MONSTER_ATTACK_DISTANCE){
                     startBattle();
+                }
+                else{
+                    if(
+                        battle &&
+                        gyroMonsterDistance>MONSTER_DISENGAGE_DISTANCE
+                    ){
+                        stopBattleForDistance();
+                    }
+
+                    if(
+                        !battle &&
+                        gyroMonsterDistance<=MONSTER_AGGRO_DISTANCE &&
+                        monsterAttackProgress<0
+                    ){
+                        const chaseDX=camera.position.x-monsterHomeX;
+                        const chaseDZ=camera.position.z-monsterHomeZ;
+                        const chaseLength=Math.max(
+                            .001,
+                            Math.hypot(chaseDX,chaseDZ)
+                        );
+                        const chaseStep=Math.min(
+                            MONSTER_CHASE_SPEED*dt,
+                            Math.max(0,gyroMonsterDistance-MONSTER_ATTACK_DISTANCE)
+                        );
+
+                        monsterHomeX+=chaseDX/chaseLength*chaseStep;
+                        monsterHomeZ+=chaseDZ/chaseLength*chaseStep;
+                        monster.position.x=monsterHomeX;
+                        monster.position.z=monsterHomeZ;
+                        if(monsterShadow){
+                            monsterShadow.position.x=monsterHomeX;
+                            monsterShadow.position.z=monsterHomeZ;
+                        }
+                    }
+                }
+
+                if(
+                    battle &&
+                    gyroMonsterDistance>MONSTER_AGGRO_DISTANCE
+                ){
+                    stopBattleForDistance();
                 }
             }
 
