@@ -1940,6 +1940,8 @@ const MONSTER_ATTACK_DISTANCE=6.5;
 const MONSTER_BLOCK_DISTANCE=6.5;
 const MONSTER_DISENGAGE_DISTANCE=32;
 const MONSTER_CHASE_SPEED=4.5;
+const MONSTER_BASE_Y=2.7;
+const MONSTER_BASE_SCALE_Y=1;
 const WOLF_ASSET_URL="https://static.wixstatic.com/media/172435_acaa7e55cedb42448b78a3c8f6c2e356~mv2.png";
 const WORLD_BOUNDS={minX:-86,maxX:86,minZ:-105,maxZ:82};
 const GYRO_MONSTER_POSITIONS=[
@@ -5142,8 +5144,8 @@ function damageMonster(){
     if(monster){
         monster.position.x=monsterHomeX;
         monster.position.z=monsterHomeZ;
-        monster.position.y=monsterBaseY;
-        monster.scale.y=monsterBaseScaleY;
+        monster.position.y=MONSTER_BASE_Y;
+        monster.scale.y=MONSTER_BASE_SCALE_Y;
     }
 
 
@@ -5417,14 +5419,14 @@ function triggerMonsterAttack(){
         false;
 
     /* 1초간 몸을 숙여 물기 공격을 예고한다. */
-    monster.position.y=monsterBaseY-.32;
-    monster.scale.y=monsterBaseScaleY*.9;
+    monster.position.y=MONSTER_BASE_Y-.32;
+    monster.scale.y=MONSTER_BASE_SCALE_Y*.9;
 
     const thisWindup=wolfAttackWindupUntil;
     setTimeout(function(){
         if(monster){
-            monster.position.y=monsterBaseY;
-            monster.scale.y=monsterBaseScaleY;
+            monster.position.y=MONSTER_BASE_Y;
+            monster.scale.y=MONSTER_BASE_SCALE_Y;
         }
         if(
             wolfAttackWindupUntil!==thisWindup ||
