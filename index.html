@@ -1747,7 +1747,7 @@ const CONFIG = {
     SWORD_SPEED:400,
 
 
-    MONSTER_ATTACK_INTERVAL:1900,
+    MONSTER_ATTACK_INTERVAL:2100,
 
 
     BATTLE_DISTANCE:7,
@@ -5457,7 +5457,7 @@ function triggerMonsterAttack(){
 
 function damagePlayer(){
 
-    /* 맞아도 뒤로 밀리지 않으며 공격과 이동 입력도 유지한다. */
+    /* 플레이어는 맞아도 밀려나거나 공격이 중단되지 않는다. */
     playerKnockbackRemaining=0;
 
     playerHP=
