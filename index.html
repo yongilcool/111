@@ -1747,7 +1747,7 @@ const CONFIG = {
     SWORD_SPEED:400,
 
 
-    MONSTER_ATTACK_INTERVAL:2100,
+    MONSTER_ATTACK_INTERVAL:1600,
 
 
     BATTLE_DISTANCE:7,
@@ -1936,12 +1936,11 @@ const GYRO_LOOK_SENSITIVITY=1.65;
 const CONTROL_TURN_SPEED=4.7;
 const MONSTER_AGGRO_DISTANCE=64;
 const MONSTER_LOCK_DISTANCE=32;
-const MONSTER_ATTACK_DISTANCE=6.5;
-const MONSTER_BLOCK_DISTANCE=6.5;
+/* 추격 정지·몸 충돌·서로의 공격 사거리를 같은 거리로 통일한다. */
+const MONSTER_ATTACK_DISTANCE=8;
+const MONSTER_BLOCK_DISTANCE=8;
 const MONSTER_DISENGAGE_DISTANCE=32;
 const MONSTER_CHASE_SPEED=4.5;
-const MONSTER_BASE_Y=2.7;
-const MONSTER_BASE_SCALE_Y=1;
 const WOLF_ASSET_URL="https://static.wixstatic.com/media/172435_acaa7e55cedb42448b78a3c8f6c2e356~mv2.png";
 const WORLD_BOUNDS={minX:-86,maxX:86,minZ:-105,maxZ:82};
 const GYRO_MONSTER_POSITIONS=[
@@ -1963,8 +1962,6 @@ let wolfAggroActive=false;
 let playerKnockbackRemaining=0;
 let wolfWasInAttackRange=false;
 let wolfSentinels=[];
-let wolfAttackWindupUntil=0;
-let wolfStunnedUntil=0;
 let gyroHasOrientation=false;
 let gyroRawQuaternion=null;
 let gyroReferenceQuaternion=null;
@@ -5133,19 +5130,14 @@ function damageMonster(){
     }
 
 
+    /* 맞은 늑대는 잠시 경직되고 진행 중인 공격을 취소한다. */
     monsterHitTimer=
-        .22;
-
-    /* 칼에 맞은 늑대는 진행 중인 공격이 취소되고 잠시 경직된다. */
-    wolfStunnedUntil=performance.now()+700;
-    wolfAttackWindupUntil=0;
+        .65;
     monsterAttackProgress=-1;
     monsterAttackHit=false;
     if(monster){
         monster.position.x=monsterHomeX;
         monster.position.z=monsterHomeZ;
-        monster.position.y=MONSTER_BASE_Y;
-        monster.scale.y=MONSTER_BASE_SCALE_Y;
     }
 
 
@@ -5391,63 +5383,20 @@ function triggerMonsterAttack(){
         gamePaused ||
         gameOver ||
         !monster ||
-        attackDistance>MONSTER_ATTACK_DISTANCE+.35
-    ){
-
-        return;
-    }
-
-
-    if(
-        performance.now()<wolfStunnedUntil ||
-        performance.now()<wolfAttackWindupUntil
+        attackDistance>MONSTER_ATTACK_DISTANCE+.35 ||
+        monsterHitTimer>0
     ){
         return;
     }
 
-    if(
-        monsterAttackProgress>=0
-    ){
-
+    if(monsterAttackProgress>=0){
         return;
     }
 
-
+    monsterAttackProgress=0;
     battleLockOn=true;
-    wolfAttackWindupUntil=performance.now()+1000;
-    monsterAttackHit=
-        false;
-
-    /* 1초간 몸을 숙여 물기 공격을 예고한다. */
-    monster.position.y=MONSTER_BASE_Y-.32;
-    monster.scale.y=MONSTER_BASE_SCALE_Y*.9;
-
-    const thisWindup=wolfAttackWindupUntil;
-    setTimeout(function(){
-        if(monster){
-            monster.position.y=MONSTER_BASE_Y;
-            monster.scale.y=MONSTER_BASE_SCALE_Y;
-        }
-        if(
-            wolfAttackWindupUntil!==thisWindup ||
-            performance.now()<wolfStunnedUntil ||
-            !battle || monsterDead || gamePaused || gameOver || !monster
-        ){
-            return;
-        }
-        const biteDistance=Math.hypot(
-            camera.position.x-monsterHomeX,
-            camera.position.z-monsterHomeZ
-        );
-        if(biteDistance>MONSTER_ATTACK_DISTANCE+.35){
-            wolfAttackWindupUntil=0;
-            return;
-        }
-        wolfAttackWindupUntil=0;
-        monsterAttackProgress=0;
-        wolfAttackSound();
-    },1000);
-
+    wolfAttackSound();
+    monsterAttackHit=false;
 }
 
 
@@ -7531,8 +7480,8 @@ function loop(now){
 
             if(monster && !monsterDead){
                 const gyroMonsterDistance=Math.hypot(
-                    camera.position.x-monster.position.x,
-                    camera.position.z-monster.position.z
+                    camera.position.x-monsterHomeX,
+                    camera.position.z-monsterHomeZ
                 );
                 if(
                     battleExitSuppressed &&
@@ -7579,7 +7528,7 @@ function loop(now){
                     gyroMonsterDistance<=MONSTER_AGGRO_DISTANCE &&
                     gyroMonsterDistance>MONSTER_ATTACK_DISTANCE &&
                     monsterAttackProgress<0 &&
-                    performance.now()>=wolfAttackWindupUntil
+                    monsterHitTimer<=0
                 ){
                     const chaseDX=camera.position.x-monsterHomeX;
                     const chaseDZ=camera.position.z-monsterHomeZ;
