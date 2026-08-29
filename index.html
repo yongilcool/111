@@ -1041,13 +1041,19 @@ canvas{
 #gyroControls.show{display:block}
 #gyroTopControls{display:flex;justify-content:center;gap:7px;margin-bottom:10px;pointer-events:auto}
 .gyroSmallButton{min-height:38px;padding:7px 11px;border:3px solid #62351f;border-radius:12px;background:linear-gradient(#f2d4a3,#bd7d4d);color:#4b2819;font-size:12px;font-weight:1000;box-shadow:inset 0 0 0 2px #fff0c9,0 4px 0 rgba(48,22,12,.55);touch-action:manipulation}
-#forwardButton{width:min(35vw,170px);height:min(35vw,170px);border:5px solid #61351f;border-radius:50%;background:radial-gradient(circle at 50% 35%,#fff7c4,#f5bd32 58%,#d97520 59%);color:#4b2517;font-size:clamp(20px,6vw,31px);font-weight:1000;box-shadow:inset 0 0 0 5px rgba(255,255,255,.55),0 7px 0 #67351f,0 10px 20px rgba(0,0,0,.45);pointer-events:auto;touch-action:none;-webkit-user-select:none;user-select:none}
+#gyroMoveButtons{display:flex;flex-direction:column;align-items:center;gap:8px}
+#forwardButton,#backwardButton{width:min(30vw,145px);height:min(30vw,145px);border:5px solid #61351f;border-radius:50%;background:radial-gradient(circle at 50% 35%,#fff7c4,#f5bd32 58%,#d97520 59%);color:#4b2517;font-size:clamp(18px,5vw,27px);font-weight:1000;box-shadow:inset 0 0 0 5px rgba(255,255,255,.55),0 7px 0 #67351f,0 10px 20px rgba(0,0,0,.45);pointer-events:auto;touch-action:none;-webkit-user-select:none;user-select:none}
 #forwardButton::before{content:"▲";display:block;font-size:1.35em;line-height:.9}
-#forwardButton.pressed{transform:translateY(6px) scale(.96);box-shadow:inset 0 0 0 5px rgba(255,255,255,.55),0 2px 0 #67351f,0 5px 10px rgba(0,0,0,.4)}
+#backwardButton::before{content:"▼";display:block;font-size:1.2em;line-height:.9}
+#forwardButton.pressed,#backwardButton.pressed{transform:translateY(6px) scale(.96);box-shadow:inset 0 0 0 5px rgba(255,255,255,.55),0 2px 0 #67351f,0 5px 10px rgba(0,0,0,.4)}
 #gyroStatus{margin-top:9px;padding:5px 9px;border-radius:10px;background:rgba(4,13,22,.76);color:white;font-size:11px;font-weight:900;text-shadow:0 1px 2px #000}
 #game.qr-mode #gyroControls{bottom:38%}
 #game.gyro-active #directionPanel,#game.gyro-active #dialogueBox{display:none!important}
-@media (max-height:650px){#forwardButton{width:112px;height:112px}#gyroControls{bottom:7%}#game.qr-mode #gyroControls{bottom:38%}}
+@media (max-height:650px){#forwardButton,#backwardButton{width:94px;height:94px}#gyroControls{bottom:7%}#game.qr-mode #gyroControls{bottom:38%}}
+
+/* 실험판 QR 토글은 화면 맨 아래에 둔다. */
+#game.gyro-experiment #modeSwitch{position:absolute;z-index:190;top:auto;bottom:8px;left:50%;transform:translateX(-50%)}
+#game.gyro-experiment.qr-mode #modeSwitch{bottom:8px}
 
 /* 간결한 HUD */
 #statusBox,#monsterCount,#enemyText{display:none !important}
@@ -1423,7 +1429,10 @@ html.ios-device #qrPanel{
                 <button id="gyroPermissionButton" class="gyroSmallButton">📱 자이로 시작</button>
                 <button id="gyroRecenterButton" class="gyroSmallButton">◎ 정면 재설정</button>
             </div>
-            <button id="forwardButton" aria-label="바라보는 방향으로 전진">전진</button>
+            <div id="gyroMoveButtons">
+                <button id="forwardButton" aria-label="바라보는 방향으로 전진">전진</button>
+                <button id="backwardButton" aria-label="바라보는 반대 방향으로 후진">후진</button>
+            </div>
             <div id="gyroStatus">자이로 시작을 눌러주세요</div>
         </div>
 
@@ -1812,6 +1821,7 @@ let turnFootTimer=0;
 
 const GYRO_EXPERIMENT=true;
 const GYRO_WALK_SPEED=20;
+const GYRO_LOOK_SENSITIVITY=1.65;
 const GYRO_MONSTER_POSITIONS=[
     {x:0,z:-34},
     {x:-40,z:-5},
@@ -1820,6 +1830,7 @@ const GYRO_MONSTER_POSITIONS=[
 
 let gyroEnabled=false;
 let gyroForwardPressed=false;
+let gyroBackwardPressed=false;
 let gyroHasOrientation=false;
 let gyroRawQuaternion=null;
 let gyroReferenceQuaternion=null;
@@ -1883,16 +1894,21 @@ function recenterGyroView(){
 function applyGyroView(){
     if(!gyroEnabled || !gyroHasOrientation || !camera){return;}
 
-    const relative=gyroReferenceQuaternion.clone()
-        .invert()
-        .multiply(gyroRawQuaternion);
+    /* 현재 회전 × 기준 회전의 역순으로 계산해야 휴대폰의
+       실제 좌우/상하 축이 카메라 축에 그대로 대응한다. */
+    const relative=gyroRawQuaternion.clone()
+        .multiply(
+            gyroReferenceQuaternion.clone().invert()
+        );
     gyroEuler.setFromQuaternion(relative,"YXZ");
+    /* 실제 휴대폰을 돌리는 방향과 화면 방향을 일치시킨다.
+       보간 없이 최신 센서값을 즉시 사용해 360도 영상처럼 반응한다. */
     gyroViewHeading=normalizeAngle(
-        gyroBaseHeading-gyroEuler.y
+        gyroBaseHeading+gyroEuler.y*GYRO_LOOK_SENSITIVITY
     );
     gyroViewPitch=Math.max(
         -.72,
-        Math.min(.72,gyroEuler.x)
+        Math.min(.72,-gyroEuler.x*GYRO_LOOK_SENSITIVITY)
     );
 
     camera.rotation.order="YXZ";
@@ -1917,11 +1933,17 @@ function isInsidePlayableRoad(x,z){
 }
 
 function moveGyroPlayer(dt){
-    if(!gyroEnabled || !gyroForwardPressed || battle || monsterDead){
+    if(
+        !gyroEnabled ||
+        (!gyroForwardPressed && !gyroBackwardPressed) ||
+        battle ||
+        monsterDead
+    ){
         return false;
     }
 
-    const distance=GYRO_WALK_SPEED*dt;
+    const moveDirection=gyroBackwardPressed ? -1 : 1;
+    const distance=GYRO_WALK_SPEED*dt*moveDirection;
     const nextX=camera.position.x-Math.sin(gyroViewHeading)*distance;
     const nextZ=camera.position.z-Math.cos(gyroViewHeading)*distance;
 
@@ -6471,6 +6493,27 @@ $("qrButton")
 
     async function(){
 
+        /* 자이로 실험판에서는 같은 QR 버튼으로 카메라를 끈다. */
+        if(
+            GYRO_EXPERIMENT &&
+            (qrRunning || qrStarting || inputMode==="qr")
+        ){
+            inputMode=isIOS() ? "off" : "nfc";
+            await stopQR();
+            $("game").classList.remove("qr-mode");
+            $("qrButton").classList.remove("active");
+            $("qrButton").textContent="QR 켜기";
+
+            if(!isIOS()){
+                $("nfcButton").classList.add("active");
+                stopNFC();
+                await startNFC();
+            }
+
+            setTimeout(resize,220);
+            return;
+        }
+
         inputMode=
             "qr";
 
@@ -6491,6 +6534,10 @@ $("qrButton")
         .add(
             "active"
         );
+
+        if(GYRO_EXPERIMENT){
+            $("qrButton").textContent="QR 끄기";
+        }
 
 
         $("nfcButton")
@@ -6611,8 +6658,10 @@ function startGame(){
 
     if(GYRO_EXPERIMENT){
         mapPaused=true;
+        $("game").classList.add("gyro-experiment");
         $("gyroControls").classList.add("show");
         $("gyroStatus").textContent="자이로 시작을 눌러주세요";
+        $("qrButton").textContent="QR 켜기";
     }
 
 
@@ -6622,13 +6671,22 @@ function startGame(){
     /* 아이폰 Safari에서는 Web NFC 대신 QR 전용으로 시작한다.
        시작 버튼의 사용자 동작 안에서 카메라 권한을 바로 요청한다. */
     if(isIOS()){
-        inputMode="qr";
         stopNFC();
-        $("game").classList.add("qr-mode","ios-qr");
-        $("qrButton").classList.add("active");
+        $("game").classList.add("ios-qr");
         $("nfcButton").classList.remove("active");
-        setTimeout(resize,220);
-        startQR();
+
+        if(GYRO_EXPERIMENT){
+            inputMode="off";
+            $("game").classList.remove("qr-mode");
+            $("qrButton").classList.remove("active");
+        }
+        else{
+            inputMode="qr";
+            $("game").classList.add("qr-mode");
+            $("qrButton").classList.add("active");
+            setTimeout(resize,220);
+            startQR();
+        }
     }
     else{
         /* Android에서는 기존 NFC/QR 선택 구조를 유지 */
@@ -6708,7 +6766,17 @@ $("gyroRecenterButton").addEventListener(
 function setGyroForward(pressed,event){
     if(event){event.preventDefault();}
     gyroForwardPressed=pressed && gyroEnabled && !gamePaused;
+    if(gyroForwardPressed){gyroBackwardPressed=false;}
     $("forwardButton").classList.toggle("pressed",gyroForwardPressed);
+    $("backwardButton").classList.remove("pressed");
+}
+
+function setGyroBackward(pressed,event){
+    if(event){event.preventDefault();}
+    gyroBackwardPressed=pressed && gyroEnabled && !gamePaused;
+    if(gyroBackwardPressed){gyroForwardPressed=false;}
+    $("backwardButton").classList.toggle("pressed",gyroBackwardPressed);
+    $("forwardButton").classList.remove("pressed");
 }
 
 $("forwardButton").addEventListener("pointerdown",function(event){
@@ -6723,6 +6791,20 @@ $("forwardButton").addEventListener("pointercancel",function(event){
 });
 $("forwardButton").addEventListener("lostpointercapture",function(){
     setGyroForward(false);
+});
+
+$("backwardButton").addEventListener("pointerdown",function(event){
+    setGyroBackward(true,event);
+    try{$("backwardButton").setPointerCapture(event.pointerId);}catch(e){}
+});
+$("backwardButton").addEventListener("pointerup",function(event){
+    setGyroBackward(false,event);
+});
+$("backwardButton").addEventListener("pointercancel",function(event){
+    setGyroBackward(false,event);
+});
+$("backwardButton").addEventListener("lostpointercapture",function(){
+    setGyroBackward(false);
 });
 
 $("inventoryButton")
@@ -6834,7 +6916,9 @@ function loop(now){
                 );
                 if(gyroMonsterDistance<=CONFIG.BATTLE_DISTANCE){
                     gyroForwardPressed=false;
+                    gyroBackwardPressed=false;
                     $("forwardButton").classList.remove("pressed");
+                    $("backwardButton").classList.remove("pressed");
                     startBattle();
                 }
             }
