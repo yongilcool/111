@@ -15,7 +15,7 @@
 
 <meta name="theme-color" content="#07111d">
 
-<title>PIXEL 3D ADVENTURE · GYRO TEST</title>
+<title>PIXEL 3D ADVENTURE · CONTROL TEST</title>
 
 <!-- 기존 게임과 독립적으로 동작하는 QR 엔진 -->
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
@@ -1065,6 +1065,64 @@ canvas{
     --qr-focus-size:min(40vw,25.2vh);
 }
 
+/* 자이로 대신 사용하는 왼쪽 아래 4방향 패드 */
+#game.control-experiment #gyroControls,
+#game.control-experiment.qr-mode #gyroControls{
+    left:10px;
+    bottom:12px;
+    transform:none;
+    text-align:left;
+}
+#game.control-experiment #gyroTopControls,
+#game.control-experiment #gyroStatus{display:none}
+#game.control-experiment #gyroMoveButtons{
+    display:grid;
+    grid-template-columns:68px 68px 68px;
+    grid-template-rows:68px 68px 68px;
+    gap:4px;
+    pointer-events:auto;
+}
+#game.control-experiment #forwardButton,
+#game.control-experiment #backwardButton,
+#game.control-experiment #leftButton,
+#game.control-experiment #rightButton{
+    width:68px;
+    height:68px;
+    min-width:68px;
+    min-height:68px;
+    margin:0;
+    padding:0;
+    border:4px solid #57311f;
+    border-radius:18px;
+    background:linear-gradient(#f7dca9,#bd7d4c);
+    color:#4b2819;
+    font-size:0;
+    box-shadow:inset 0 0 0 3px #fff0c8,0 5px 0 #633721,0 7px 12px rgba(0,0,0,.4);
+    touch-action:none;
+    pointer-events:auto;
+}
+#game.control-experiment #forwardButton{grid-column:2;grid-row:1}
+#game.control-experiment #leftButton{grid-column:1;grid-row:2}
+#game.control-experiment #rightButton{grid-column:3;grid-row:2}
+#game.control-experiment #backwardButton{grid-column:2;grid-row:3}
+#game.control-experiment #forwardButton::before{content:"▲";font-size:35px;line-height:1}
+#game.control-experiment #backwardButton::before{content:"▼";font-size:35px;line-height:1}
+#game.control-experiment #leftButton::before{content:"◀";font-size:35px;line-height:1}
+#game.control-experiment #rightButton::before{content:"▶";font-size:35px;line-height:1}
+#game.control-experiment #forwardButton.pressed,
+#game.control-experiment #backwardButton.pressed,
+#game.control-experiment #leftButton.pressed,
+#game.control-experiment #rightButton.pressed{transform:translateY(4px) scale(.96);filter:brightness(1.15);box-shadow:inset 0 0 0 3px #fff0c8,0 1px 0 #633721}
+#game.control-experiment #inventoryButton{left:10px;bottom:230px}
+#game.control-experiment #inventoryPanel{left:10px;bottom:305px}
+#game.control-experiment #modeSwitch{left:auto;right:10px;bottom:10px;transform:none}
+#game.control-experiment.qr-mode #modeSwitch{left:auto;right:10px;bottom:calc(36% + 14px);transform:none}
+@media (max-width:430px){
+    #game.control-experiment #gyroMoveButtons{grid-template-columns:60px 60px 60px;grid-template-rows:60px 60px 60px}
+    #game.control-experiment #forwardButton,#game.control-experiment #backwardButton,#game.control-experiment #leftButton,#game.control-experiment #rightButton{width:60px;height:60px;min-width:60px;min-height:60px}
+    #game.control-experiment #inventoryButton{bottom:205px}
+}
+
 /* 간결한 HUD */
 #statusBox,#monsterCount,#enemyText{display:none !important}
 #modeSwitch{top:56px}
@@ -1441,6 +1499,8 @@ html.ios-device #qrPanel{
             </div>
             <div id="gyroMoveButtons">
                 <button id="forwardButton" aria-label="바라보는 방향으로 전진">전진</button>
+                <button id="leftButton" aria-label="왼쪽으로 회전">왼쪽</button>
+                <button id="rightButton" aria-label="오른쪽으로 회전">오른쪽</button>
                 <button id="backwardButton" aria-label="바라보는 반대 방향으로 후진">후진</button>
             </div>
             <div id="gyroStatus">자이로 시작을 눌러주세요</div>
@@ -1454,7 +1514,7 @@ html.ios-device #qrPanel{
             <div class="startBox">
 
                 <h1>
-                    PIXEL ADVENTURE · GYRO TEST
+                    PIXEL ADVENTURE · CONTROL TEST
                 </h1>
 
                 <p>
@@ -1759,6 +1819,8 @@ let swordAnimation=null;
 
 
 let footTimer=0;
+let footstepIndex=0;
+let wasWalking=false;
 
 let walkPhase=0;
 
@@ -1832,6 +1894,8 @@ let turnFootTimer=0;
 const GYRO_EXPERIMENT=true;
 const GYRO_WALK_SPEED=20;
 const GYRO_LOOK_SENSITIVITY=1.65;
+const CONTROL_TURN_SPEED=2.35;
+const WORLD_BOUNDS={minX:-86,maxX:86,minZ:-105,maxZ:82};
 const GYRO_MONSTER_POSITIONS=[
     {x:0,z:-34},
     {x:-40,z:-5},
@@ -1841,6 +1905,8 @@ const GYRO_MONSTER_POSITIONS=[
 let gyroEnabled=false;
 let gyroForwardPressed=false;
 let gyroBackwardPressed=false;
+let controlLeftPressed=false;
+let controlRightPressed=false;
 let gyroHasOrientation=false;
 let gyroRawQuaternion=null;
 let gyroReferenceQuaternion=null;
@@ -1928,21 +1994,23 @@ function applyGyroView(){
 }
 
 function isInsidePlayableRoad(x,z){
-    const halfWidth=3.7;
-    const horizontal=
-        x>=-43.7 && x<=43.7 &&
-        (Math.abs(z+45)<=halfWidth || Math.abs(z-35)<=halfWidth);
-    const vertical=
-        z>=-48.7 && z<=38.7 &&
-        (
-            Math.abs(x+40)<=halfWidth ||
-            Math.abs(x)<=halfWidth ||
-            Math.abs(x-40)<=halfWidth
-        );
-    return horizontal || vertical;
+    /* 길과 숲은 모두 이동 가능하고, 전체 맵 바깥만 막는다. */
+    return x>=WORLD_BOUNDS.minX && x<=WORLD_BOUNDS.maxX &&
+        z>=WORLD_BOUNDS.minZ && z<=WORLD_BOUNDS.maxZ;
 }
 
 function moveGyroPlayer(dt){
+    if(controlLeftPressed){
+        gyroViewHeading=normalizeAngle(
+            gyroViewHeading+CONTROL_TURN_SPEED*dt
+        );
+    }
+    if(controlRightPressed){
+        gyroViewHeading=normalizeAngle(
+            gyroViewHeading-CONTROL_TURN_SPEED*dt
+        );
+    }
+
     if(
         !gyroEnabled ||
         (!gyroForwardPressed && !gyroBackwardPressed) ||
@@ -1958,7 +2026,6 @@ function moveGyroPlayer(dt){
     const nextZ=camera.position.z-Math.cos(gyroViewHeading)*distance;
 
     if(!isInsidePlayableRoad(nextX,nextZ)){
-        $("gyroStatus").textContent="길 밖으로는 갈 수 없어요";
         return false;
     }
 
@@ -2388,14 +2455,16 @@ const enemyHitAudio=
 const bgmAudio=
     new Audio("https://static.wixstatic.com/mp3/172435_ae6a8c2d703548498735214801665e69.mp3");
 
-const footstepAudio=
-    new Audio("https://static.wixstatic.com/mp3/172435_5c0a7a0f10a34deeb7aecdfabcc9185e.mp3");
+const footstepAudios=[
+    new Audio("https://static.wixstatic.com/mp3/172435_cda7f376212e426b9b3b8a769ef16467.mp3"),
+    new Audio("https://static.wixstatic.com/mp3/172435_3fb5aa14e1304da0b263fae377613d25.mp3")
+];
 
 swordAudio.preload="auto";
 playerHitAudio.preload="auto";
 enemyHitAudio.preload="auto";
 bgmAudio.preload="auto";
-footstepAudio.preload="auto";
+footstepAudios.forEach(function(audio){audio.preload="auto";});
 bgmAudio.loop=true;
 bgmAudio.volume=.08;
 
@@ -2681,6 +2750,9 @@ function swordSound(){
 ===================================================== */
 
 function footSound(){
+
+    const footstepAudio=footstepAudios[footstepIndex];
+    footstepIndex=(footstepIndex+1)%footstepAudios.length;
 
     if(footstepAudio.readyState>=2){
         playEffect(footstepAudio,1.0);
@@ -6667,11 +6739,22 @@ function startGame(){
     );
 
     if(GYRO_EXPERIMENT){
-        mapPaused=true;
-        $("game").classList.add("gyro-experiment");
+        /* 자이로 없이 방향 패드로 즉시 자유 이동한다. */
+        gyroEnabled=true;
+        gyroHasOrientation=false;
+        gyroViewHeading=mapHeading;
+        gyroViewPitch=0;
+        mapPaused=false;
+        mapTurning=false;
+        $("game").classList.add(
+            "gyro-experiment",
+            "control-experiment",
+            "gyro-active"
+        );
         $("gyroControls").classList.add("show");
-        $("gyroStatus").textContent="자이로 시작을 눌러주세요";
         $("qrButton").textContent="QR 켜기";
+        $("directionPanel").classList.remove("show");
+        $("dialogueBox").classList.remove("show");
     }
 
 
@@ -6817,6 +6900,68 @@ $("backwardButton").addEventListener("lostpointercapture",function(){
     setGyroBackward(false);
 });
 
+function setControlTurn(direction,pressed,event){
+    if(event){event.preventDefault();}
+    const active=pressed && gyroEnabled && !gamePaused;
+    if(direction==="left"){
+        controlLeftPressed=active;
+        if(active){controlRightPressed=false;}
+    }
+    else{
+        controlRightPressed=active;
+        if(active){controlLeftPressed=false;}
+    }
+    $("leftButton").classList.toggle("pressed",controlLeftPressed);
+    $("rightButton").classList.toggle("pressed",controlRightPressed);
+}
+
+[["leftButton","left"],["rightButton","right"]].forEach(function(data){
+    const button=$(data[0]);
+    const direction=data[1];
+    button.addEventListener("pointerdown",function(event){
+        setControlTurn(direction,true,event);
+        try{button.setPointerCapture(event.pointerId);}catch(e){}
+    });
+    button.addEventListener("pointerup",function(event){
+        setControlTurn(direction,false,event);
+    });
+    button.addEventListener("pointercancel",function(event){
+        setControlTurn(direction,false,event);
+    });
+    button.addEventListener("lostpointercapture",function(){
+        setControlTurn(direction,false);
+    });
+});
+
+window.addEventListener("keydown",function(event){
+    if(event.key==="ArrowUp" || event.key.toLowerCase()==="w"){
+        setGyroForward(true,event);
+    }
+    if(event.key==="ArrowDown" || event.key.toLowerCase()==="s"){
+        setGyroBackward(true,event);
+    }
+    if(event.key==="ArrowLeft" || event.key.toLowerCase()==="a"){
+        setControlTurn("left",true,event);
+    }
+    if(event.key==="ArrowRight" || event.key.toLowerCase()==="d"){
+        setControlTurn("right",true,event);
+    }
+});
+window.addEventListener("keyup",function(event){
+    if(event.key==="ArrowUp" || event.key.toLowerCase()==="w"){
+        setGyroForward(false,event);
+    }
+    if(event.key==="ArrowDown" || event.key.toLowerCase()==="s"){
+        setGyroBackward(false,event);
+    }
+    if(event.key==="ArrowLeft" || event.key.toLowerCase()==="a"){
+        setControlTurn("left",false,event);
+    }
+    if(event.key==="ArrowRight" || event.key.toLowerCase()==="d"){
+        setControlTurn("right",false,event);
+    }
+});
+
 $("inventoryButton")
 .addEventListener(
     "click",
@@ -6927,8 +7072,12 @@ function loop(now){
                 if(gyroMonsterDistance<=CONFIG.BATTLE_DISTANCE){
                     gyroForwardPressed=false;
                     gyroBackwardPressed=false;
+                    controlLeftPressed=false;
+                    controlRightPressed=false;
                     $("forwardButton").classList.remove("pressed");
                     $("backwardButton").classList.remove("pressed");
+                    $("leftButton").classList.remove("pressed");
+                    $("rightButton").classList.remove("pressed");
                     startBattle();
                 }
             }
@@ -7011,6 +7160,13 @@ function loop(now){
 
         if(walking){
 
+            if(!wasWalking){
+                footstepIndex=0;
+                footTimer=0;
+                footSound();
+                wasWalking=true;
+            }
+
             footTimer +=
                 dt;
 
@@ -7034,6 +7190,8 @@ function loop(now){
 
             footTimer=
                 0;
+            footstepIndex=0;
+            wasWalking=false;
         }
 
 
@@ -7468,8 +7626,11 @@ function loop(now){
 
         }
 
-        if(gyroEnabled){
-            applyGyroView();
+        if(GYRO_EXPERIMENT && gyroEnabled){
+            camera.rotation.order="YXZ";
+            camera.rotation.x=0;
+            camera.rotation.y=gyroViewHeading;
+            camera.rotation.z=0;
         }
         else{
             /* 기존 자동 이동 카메라는 항상 수평을 유지한다. */
