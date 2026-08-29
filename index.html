@@ -1942,7 +1942,7 @@ const MONSTER_LOCK_DISTANCE=32;
 const MONSTER_ATTACK_DISTANCE=3.2;
 const MONSTER_BLOCK_DISTANCE=3.2;
 const MONSTER_DISENGAGE_DISTANCE=32;
-const MONSTER_CHASE_SPEED=8.5;
+const MONSTER_CHASE_SPEED=4.5;
 const WOLF_ASSET_URL="https://static.wixstatic.com/media/172435_acaa7e55cedb42448b78a3c8f6c2e356~mv2.png";
 const WORLD_BOUNDS={minX:-86,maxX:86,minZ:-105,maxZ:82};
 const GYRO_MONSTER_POSITIONS=[
@@ -1959,6 +1959,8 @@ let controlRightPressed=false;
 let joystickX=0;
 let joystickY=0;
 let joystickPointerId=null;
+let wolfAggroActive=false;
+let playerKnockbackRemaining=0;
 let gyroHasOrientation=false;
 let gyroRawQuaternion=null;
 let gyroReferenceQuaternion=null;
@@ -2056,13 +2058,7 @@ function moveGyroPlayer(dt){
     const turnInput=joystickPointerId!==null
         ? joystickX
         : (controlLeftPressed ? -1 : (controlRightPressed ? 1 : 0));
-    if(lockTarget){
-        gyroViewHeading=Math.atan2(
-            camera.position.x-monster.position.x,
-            camera.position.z-monster.position.z
-        );
-    }
-    else if(turnInput!==0){
+    if(!lockTarget && turnInput!==0){
         gyroViewHeading=normalizeAngle(
             gyroViewHeading-CONTROL_TURN_SPEED*dt*turnInput
         );
@@ -2113,6 +2109,41 @@ function moveGyroPlayer(dt){
     camera.position.x=nextX;
     camera.position.z=nextZ;
     return true;
+}
+
+function updateCombatLockHeading(dt){
+    if(!battleLockOn || !battle || !monster || monsterDead){return;}
+    const targetHeading=Math.atan2(
+        camera.position.x-monster.position.x,
+        camera.position.z-monster.position.z
+    );
+    const difference=normalizeAngle(targetHeading-gyroViewHeading);
+    const turnSpeed=playerKnockbackRemaining>0 ? 2.15 : 1.35;
+    const step=Math.min(Math.abs(difference),turnSpeed*dt);
+    gyroViewHeading=normalizeAngle(
+        gyroViewHeading+Math.sign(difference)*step
+    );
+}
+
+function updatePlayerKnockback(dt){
+    if(
+        playerKnockbackRemaining<=0 ||
+        !monster ||
+        monsterDead
+    ){
+        return;
+    }
+    const dx=camera.position.x-monsterHomeX;
+    const dz=camera.position.z-monsterHomeZ;
+    const length=Math.max(.001,Math.hypot(dx,dz));
+    const step=Math.min(playerKnockbackRemaining,14*dt);
+    const nextX=camera.position.x+dx/length*step;
+    const nextZ=camera.position.z+dz/length*step;
+    if(isInsidePlayableRoad(nextX,nextZ)){
+        camera.position.x=nextX;
+        camera.position.z=nextZ;
+    }
+    playerKnockbackRemaining=Math.max(0,playerKnockbackRemaining-step);
 }
 
 async function enableGyroMode(){
@@ -2540,12 +2571,23 @@ const footstepAudios=[
     new Audio("https://static.wixstatic.com/mp3/172435_cda7f376212e426b9b3b8a769ef16467.mp3"),
     new Audio("https://static.wixstatic.com/mp3/172435_3fb5aa14e1304da0b263fae377613d25.mp3")
 ];
+const footstepBoostAudios=[
+    new Audio("https://static.wixstatic.com/mp3/172435_cda7f376212e426b9b3b8a769ef16467.mp3"),
+    new Audio("https://static.wixstatic.com/mp3/172435_3fb5aa14e1304da0b263fae377613d25.mp3")
+];
+const wolfGrowlAudio=
+    new Audio("https://static.wixstatic.com/mp3/172435_e122ba3874b041a3b67cdadc1f3eb0e2.mp3");
+const wolfAttackAudio=
+    new Audio("https://static.wixstatic.com/mp3/172435_ded74c8549b94e74841f5c9a64bbf060.mp3");
 
 swordAudio.preload="auto";
 playerHitAudio.preload="auto";
 enemyHitAudio.preload="auto";
 bgmAudio.preload="auto";
 footstepAudios.forEach(function(audio){audio.preload="auto";});
+footstepBoostAudios.forEach(function(audio){audio.preload="auto";});
+wolfGrowlAudio.preload="auto";
+wolfAttackAudio.preload="auto";
 bgmAudio.loop=true;
 bgmAudio.volume=.08;
 
@@ -2560,6 +2602,16 @@ function playEffect(audio,volume){
         }
     }
     catch(error){}
+}
+
+function wolfGrowlSound(){
+    initAudio();
+    playEffect(wolfGrowlAudio,.72);
+}
+
+function wolfAttackSound(){
+    initAudio();
+    playEffect(wolfAttackAudio,.78);
 }
 
 function isIOS(){
@@ -2837,6 +2889,10 @@ function footSound(){
 
     if(footstepAudio.readyState>=2){
         playEffect(footstepAudio,1.0);
+        const boostAudio=footstepBoostAudios[
+            (footstepIndex+footstepBoostAudios.length-1)%footstepBoostAudios.length
+        ];
+        setTimeout(function(){playEffect(boostAudio,.72);},18);
         return;
     }
 
@@ -4277,6 +4333,8 @@ function temporaryMonster(index){
 ===================================================== */
 
 function spawnMonster(index){
+    wolfAggroActive=false;
+    playerKnockbackRemaining=0;
 
     if(monster){
 
@@ -4339,7 +4397,9 @@ function spawnMonster(index){
 
             side:
                 THREE.FrontSide,
-            depthTest:false
+            depthTest:true,
+            depthWrite:true,
+            alphaTest:.06
 
         });
 
@@ -4408,7 +4468,7 @@ function spawnMonster(index){
     scene.add(
         monster
     );
-    monster.renderOrder=50;
+    monster.renderOrder=0;
     monster.frustumCulled=false;
 
 
@@ -5198,7 +5258,9 @@ function startBattle(){
     battle=
         true;
 
-    battleLockOn=true;
+    /* 발견 직후 카메라를 순간이동시키지 않는다.
+       첫 공격이 시작될 때 피격 연출과 함께 서서히 락온한다. */
+    battleLockOn=false;
     $("game").classList.add("in-battle");
 
 
@@ -5265,6 +5327,8 @@ function triggerMonsterAttack(){
 
     monsterAttackProgress=
         0;
+    battleLockOn=true;
+    wolfAttackSound();
 
 
     monsterAttackHit=
@@ -5278,6 +5342,8 @@ function triggerMonsterAttack(){
 ===================================================== */
 
 function damagePlayer(){
+
+    playerKnockbackRemaining=Math.max(playerKnockbackRemaining,6.4);
 
     playerHP=
 
@@ -6498,6 +6564,14 @@ async function startQR(){
 
         if(qrVideoElement){
             tuneAndroidQRCamera(qrVideoElement);
+            if(!isIOS()){
+                setTimeout(function(){
+                    if(qrRunning){tuneAndroidQRCamera(qrVideoElement);}
+                },320);
+                setTimeout(function(){
+                    if(qrRunning){tuneAndroidQRCamera(qrVideoElement);}
+                },900);
+            }
 
             qrVideoElement.style.setProperty(
                 "transform",
@@ -7294,6 +7368,8 @@ function loop(now){
         if(gyroEnabled){
 
             walking=moveGyroPlayer(dt);
+            updatePlayerKnockback(dt);
+            updateCombatLockHeading(dt);
 
             if(monster && !monsterDead){
                 const gyroMonsterDistance=Math.hypot(
@@ -7308,7 +7384,25 @@ function loop(now){
                 }
 
                 if(
+                    !wolfAggroActive &&
+                    !battleExitSuppressed &&
+                    gyroMonsterDistance<=MONSTER_LOCK_DISTANCE
+                ){
+                    wolfAggroActive=true;
+                    wolfGrowlSound();
+                }
+
+                if(
+                    wolfAggroActive &&
+                    gyroMonsterDistance>MONSTER_AGGRO_DISTANCE
+                ){
+                    wolfAggroActive=false;
+                    if(battle){stopBattleForDistance();}
+                }
+
+                if(
                     !battle &&
+                    wolfAggroActive &&
                     !battleExitSuppressed &&
                     gyroMonsterDistance<=MONSTER_LOCK_DISTANCE
                 ){
@@ -7323,6 +7417,7 @@ function loop(now){
                 }
 
                 if(
+                    wolfAggroActive &&
                     !battleExitSuppressed &&
                     gyroMonsterDistance<=MONSTER_AGGRO_DISTANCE &&
                     gyroMonsterDistance>MONSTER_ATTACK_DISTANCE &&
@@ -7540,7 +7635,7 @@ function loop(now){
             );
             const wolfWalking=
                 gyroEnabled &&
-                !battle &&
+                wolfAggroActive &&
                 !battleExitSuppressed &&
                 wolfDistance<=MONSTER_AGGRO_DISTANCE &&
                 wolfDistance>MONSTER_ATTACK_DISTANCE;
@@ -7550,7 +7645,9 @@ function loop(now){
 
             monster.scale.set(
 
-                1+Math.abs(walkWave)*.025,
+                wolfWalking
+                    ? (walkWave<0 ? -1.035 : 1.035)
+                    : 1,
 
                 breathe,
 
@@ -7900,12 +7997,6 @@ function loop(now){
         }
 
         if(GYRO_EXPERIMENT && gyroEnabled){
-            if(battleLockOn && battle && monster && !monsterDead){
-                gyroViewHeading=Math.atan2(
-                    camera.position.x-monster.position.x,
-                    camera.position.z-monster.position.z
-                );
-            }
             camera.rotation.order="YXZ";
             camera.rotation.x=0;
             camera.rotation.y=gyroViewHeading;
