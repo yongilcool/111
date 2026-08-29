@@ -1747,7 +1747,7 @@ const CONFIG = {
     SWORD_SPEED:400,
 
 
-    MONSTER_ATTACK_INTERVAL:900,
+    MONSTER_ATTACK_INTERVAL:1900,
 
 
     BATTLE_DISTANCE:7,
@@ -1961,6 +1961,8 @@ let wolfAggroActive=false;
 let playerKnockbackRemaining=0;
 let wolfWasInAttackRange=false;
 let wolfSentinels=[];
+let wolfAttackWindupUntil=0;
+let wolfStunnedUntil=0;
 let gyroHasOrientation=false;
 let gyroRawQuaternion=null;
 let gyroReferenceQuaternion=null;
@@ -5132,6 +5134,18 @@ function damageMonster(){
     monsterHitTimer=
         .22;
 
+    /* 칼에 맞은 늑대는 진행 중인 공격이 취소되고 잠시 경직된다. */
+    wolfStunnedUntil=performance.now()+700;
+    wolfAttackWindupUntil=0;
+    monsterAttackProgress=-1;
+    monsterAttackHit=false;
+    if(monster){
+        monster.position.x=monsterHomeX;
+        monster.position.z=monsterHomeZ;
+        monster.position.y=monsterBaseY;
+        monster.scale.y=monsterBaseScaleY;
+    }
+
 
     cameraShake=
         .14;
@@ -5383,6 +5397,13 @@ function triggerMonsterAttack(){
 
 
     if(
+        performance.now()<wolfStunnedUntil ||
+        performance.now()<wolfAttackWindupUntil
+    ){
+        return;
+    }
+
+    if(
         monsterAttackProgress>=0
     ){
 
@@ -5390,14 +5411,40 @@ function triggerMonsterAttack(){
     }
 
 
-    monsterAttackProgress=
-        0;
     battleLockOn=true;
-    wolfAttackSound();
-
-
+    wolfAttackWindupUntil=performance.now()+1000;
     monsterAttackHit=
         false;
+
+    /* 1초간 몸을 숙여 물기 공격을 예고한다. */
+    monster.position.y=monsterBaseY-.32;
+    monster.scale.y=monsterBaseScaleY*.9;
+
+    const thisWindup=wolfAttackWindupUntil;
+    setTimeout(function(){
+        if(monster){
+            monster.position.y=monsterBaseY;
+            monster.scale.y=monsterBaseScaleY;
+        }
+        if(
+            wolfAttackWindupUntil!==thisWindup ||
+            performance.now()<wolfStunnedUntil ||
+            !battle || monsterDead || gamePaused || gameOver || !monster
+        ){
+            return;
+        }
+        const biteDistance=Math.hypot(
+            camera.position.x-monsterHomeX,
+            camera.position.z-monsterHomeZ
+        );
+        if(biteDistance>MONSTER_ATTACK_DISTANCE+.35){
+            wolfAttackWindupUntil=0;
+            return;
+        }
+        wolfAttackWindupUntil=0;
+        monsterAttackProgress=0;
+        wolfAttackSound();
+    },1000);
 
 }
 
@@ -5408,7 +5455,8 @@ function triggerMonsterAttack(){
 
 function damagePlayer(){
 
-    playerKnockbackRemaining=Math.max(playerKnockbackRemaining,6.4);
+    /* 맞아도 뒤로 밀리지 않으며 공격과 이동 입력도 유지한다. */
+    playerKnockbackRemaining=0;
 
     playerHP=
 
@@ -7528,7 +7576,8 @@ function loop(now){
                     wolfAggroActive &&
                     gyroMonsterDistance<=MONSTER_AGGRO_DISTANCE &&
                     gyroMonsterDistance>MONSTER_ATTACK_DISTANCE &&
-                    monsterAttackProgress<0
+                    monsterAttackProgress<0 &&
+                    performance.now()>=wolfAttackWindupUntil
                 ){
                     const chaseDX=camera.position.x-monsterHomeX;
                     const chaseDZ=camera.position.z-monsterHomeZ;
@@ -7940,7 +7989,13 @@ function loop(now){
                         true;
 
 
-                    damagePlayer();
+                    const hitDistance=Math.hypot(
+                        camera.position.x-monsterHomeX,
+                        camera.position.z-monsterHomeZ
+                    );
+                    if(hitDistance<=MONSTER_ATTACK_DISTANCE+.35){
+                        damagePlayer();
+                    }
 
                 }
 
