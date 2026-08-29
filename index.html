@@ -5166,6 +5166,8 @@ function damageMonster(){
     if(monster){
         monster.position.x=monsterHomeX;
         monster.position.z=monsterHomeZ;
+        monster.position.y=2.7;
+        monster.scale.set(1,1,1);
     }
 
 
@@ -6298,6 +6300,7 @@ let qrContinuousAttackTimer=null;
 let qrAutofocusWatchTimer=null;
 
 let lastValidQRSeenAt=0;
+let qrReadyForNextScan=true;
 
 const QR_ATTACK_COOLDOWN=650;
 
@@ -6336,23 +6339,25 @@ function stopQRContinuousAttack(){
         qrContinuousAttackTimer=null;
     }
     lastValidQRSeenAt=0;
+    qrReadyForNextScan=true;
 }
 
 function startQRContinuousAttack(){
     stopQRContinuousAttack();
 
     qrContinuousAttackTimer=setInterval(function(){
-        if(
-            inputMode!=="qr" ||
-            !qrRunning ||
-            performance.now()-lastValidQRSeenAt>760
-        ){
+        if(inputMode!=="qr" || !qrRunning){
             return;
         }
 
-        /* 모든 기기에서 QR 판독 시점과 칼 잠금 해제 시점이 겹쳐도
-           잠금이 풀린 직후 다음 공격을 다시 시도한다. */
-        tryQRAttack();
+        /* 같은 QR이 화면에 계속 있는 동안은 다시 공격하지 않는다.
+           QR이 사라진 것이 확인된 뒤에만 다음 한 번을 허용한다. */
+        if(
+            !qrReadyForNextScan &&
+            performance.now()-lastValidQRSeenAt>520
+        ){
+            qrReadyForNextScan=true;
+        }
     },80);
 }
 
@@ -6409,7 +6414,9 @@ function processDecodedQR(decodedText){
     }
 
     lastValidQRSeenAt=performance.now();
-    tryQRAttack();
+    if(qrReadyForNextScan && tryQRAttack()){
+        qrReadyForNextScan=false;
+    }
 }
 
 function stopQRSmallAssist(){
@@ -7966,7 +7973,7 @@ function loop(now){
             monsterAttackProgress>=0
         ){
 
-            /* 실제 초 단위 진행: 처음 2초는 공격 예고 자세다. */
+            /* 실제 초 단위 진행: 처음 1초는 공격 예고 자세다. */
             monsterAttackProgress += dt;
 
 
@@ -7988,19 +7995,38 @@ function loop(now){
             const attackUZ=attackDZ/attackLength;
 
 
-            /* 2초 동안 몸을 숙이며 대기한다. 이때 플레이어가 피할 수 있다. */
-            if(t<2){
-                setWolfTexture(getWolfTextures().idle);
-                const crouch=Math.sin(Math.min(1,t/2)*Math.PI*.5);
-                monster.position.x=monsterHomeX;
-                monster.position.z=monsterHomeZ;
-                monster.position.y=2.7-crouch*.36;
-                monster.scale.y=1-crouch*.1;
+            /* 1초 동안 확실히 몸을 낮춘다. 준비 중 사거리 밖으로
+               피하면 즉시 준비를 취소하고 다시 추격한다. */
+            if(t<1){
+                const windupDistance=Math.hypot(
+                    camera.position.x-monsterHomeX,
+                    camera.position.z-monsterHomeZ
+                );
+                if(windupDistance>MONSTER_ATTACK_DISTANCE+.35){
+                    monsterAttackProgress=-1;
+                    monsterAttackHit=false;
+                    monsterAttackSoundPlayed=false;
+                    monsterNextAttackAt=0;
+                    monster.position.x=monsterHomeX;
+                    monster.position.z=monsterHomeZ;
+                    monster.position.y=2.7;
+                    monster.scale.set(1,1,1);
+                    setWolfTexture(getWolfTextures().idle);
+                    wolfWasInAttackRange=false;
+                }
+                else{
+                    setWolfTexture(getWolfTextures().idle);
+                    const crouch=Math.sin(t*Math.PI*.5);
+                    monster.position.x=monsterHomeX;
+                    monster.position.z=monsterHomeZ;
+                    monster.position.y=2.7-crouch*.82;
+                    monster.scale.set(1,1-crouch*.28,1);
+                }
             }
 
             /* 입을 벌리는 실제 공격 이미지는 약 0.3초만 표시한다.
                공격 범위에 도착한 늑대는 더 걷거나 전진하지 않는다. */
-            else if(t<2.3){
+            else if(t<1.3){
                 if(!monsterAttackSoundPlayed){
                     monsterAttackSoundPlayed=true;
                     wolfAttackSound();
@@ -8008,10 +8034,11 @@ function loop(now){
                 setWolfTexture(getWolfTextures().attack);
                 monster.position.x=monsterHomeX;
                 monster.position.z=monsterHomeZ;
-                monster.position.y=2.7;
-                monster.scale.y=1;
+                const attackZoom=1+Math.min(1,(t-1)/.3)*.3;
+                monster.position.y=2.7*attackZoom;
+                monster.scale.set(attackZoom,attackZoom,1);
 
-                if(t>=2.12 && !monsterAttackHit){
+                if(t>=1.12 && !monsterAttackHit){
 
                     monsterAttackHit=
                         true;
