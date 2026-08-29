@@ -15,7 +15,7 @@
 
 <meta name="theme-color" content="#07111d">
 
-<title>PIXEL 3D ADVENTURE</title>
+<title>PIXEL 3D ADVENTURE · GYRO TEST</title>
 
 <!-- 기존 게임과 독립적으로 동작하는 QR 엔진 -->
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
@@ -1036,6 +1036,19 @@ canvas{
 #pauseOverlay{position:absolute;inset:0;z-index:150;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.42);color:white;font-size:34px;font-weight:1000;text-shadow:0 3px 8px #000;pointer-events:none}
 #pauseOverlay.show{display:flex}
 
+/* 자이로 자유이동 실험판 UI */
+#gyroControls{position:absolute;z-index:175;left:50%;bottom:12%;display:none;transform:translateX(-50%);pointer-events:none;text-align:center}
+#gyroControls.show{display:block}
+#gyroTopControls{display:flex;justify-content:center;gap:7px;margin-bottom:10px;pointer-events:auto}
+.gyroSmallButton{min-height:38px;padding:7px 11px;border:3px solid #62351f;border-radius:12px;background:linear-gradient(#f2d4a3,#bd7d4d);color:#4b2819;font-size:12px;font-weight:1000;box-shadow:inset 0 0 0 2px #fff0c9,0 4px 0 rgba(48,22,12,.55);touch-action:manipulation}
+#forwardButton{width:min(35vw,170px);height:min(35vw,170px);border:5px solid #61351f;border-radius:50%;background:radial-gradient(circle at 50% 35%,#fff7c4,#f5bd32 58%,#d97520 59%);color:#4b2517;font-size:clamp(20px,6vw,31px);font-weight:1000;box-shadow:inset 0 0 0 5px rgba(255,255,255,.55),0 7px 0 #67351f,0 10px 20px rgba(0,0,0,.45);pointer-events:auto;touch-action:none;-webkit-user-select:none;user-select:none}
+#forwardButton::before{content:"▲";display:block;font-size:1.35em;line-height:.9}
+#forwardButton.pressed{transform:translateY(6px) scale(.96);box-shadow:inset 0 0 0 5px rgba(255,255,255,.55),0 2px 0 #67351f,0 5px 10px rgba(0,0,0,.4)}
+#gyroStatus{margin-top:9px;padding:5px 9px;border-radius:10px;background:rgba(4,13,22,.76);color:white;font-size:11px;font-weight:900;text-shadow:0 1px 2px #000}
+#game.qr-mode #gyroControls{bottom:38%}
+#game.gyro-active #directionPanel,#game.gyro-active #dialogueBox{display:none!important}
+@media (max-height:650px){#forwardButton{width:112px;height:112px}#gyroControls{bottom:7%}#game.qr-mode #gyroControls{bottom:38%}}
+
 /* 간결한 HUD */
 #statusBox,#monsterCount,#enemyText{display:none !important}
 #modeSwitch{top:56px}
@@ -1405,6 +1418,15 @@ html.ios-device #qrPanel{
         <div id="pauseOverlay">PAUSED</div>
         <div id="chestBurstText">TREASURE!</div>
 
+        <div id="gyroControls" aria-label="자이로 이동 조작">
+            <div id="gyroTopControls">
+                <button id="gyroPermissionButton" class="gyroSmallButton">📱 자이로 시작</button>
+                <button id="gyroRecenterButton" class="gyroSmallButton">◎ 정면 재설정</button>
+            </div>
+            <button id="forwardButton" aria-label="바라보는 방향으로 전진">전진</button>
+            <div id="gyroStatus">자이로 시작을 눌러주세요</div>
+        </div>
+
 
         <!-- START -->
 
@@ -1413,7 +1435,7 @@ html.ios-device #qrPanel{
             <div class="startBox">
 
                 <h1>
-                    PIXEL ADVENTURE
+                    PIXEL ADVENTURE · GYRO TEST
                 </h1>
 
                 <p>
@@ -1783,6 +1805,165 @@ let mapHeading=0;
 let mapTargetHeading=0;
 let mapTurning=false;
 let turnFootTimer=0;
+
+/* =====================================================
+   GYROSCOPE FREE-WALK EXPERIMENT
+===================================================== */
+
+const GYRO_EXPERIMENT=true;
+const GYRO_WALK_SPEED=20;
+const GYRO_MONSTER_POSITIONS=[
+    {x:0,z:-34},
+    {x:-40,z:-5},
+    {x:40,z:-5}
+];
+
+let gyroEnabled=false;
+let gyroForwardPressed=false;
+let gyroHasOrientation=false;
+let gyroRawQuaternion=null;
+let gyroReferenceQuaternion=null;
+let gyroBaseHeading=0;
+let gyroViewHeading=0;
+let gyroViewPitch=0;
+let gyroEuler=null;
+let gyroScreenQuaternion=null;
+let gyroQuarterTurn=null;
+let gyroZAxis=null;
+
+function ensureGyroMath(){
+    if(gyroRawQuaternion){return;}
+    gyroRawQuaternion=new THREE.Quaternion();
+    gyroReferenceQuaternion=new THREE.Quaternion();
+    gyroEuler=new THREE.Euler();
+    gyroScreenQuaternion=new THREE.Quaternion();
+    gyroQuarterTurn=new THREE.Quaternion(
+        -Math.sqrt(.5),0,0,Math.sqrt(.5)
+    );
+    gyroZAxis=new THREE.Vector3(0,0,1);
+}
+
+function readDeviceQuaternion(event){
+    if(event.alpha===null || event.beta===null || event.gamma===null){
+        return;
+    }
+
+    ensureGyroMath();
+    const alpha=THREE.MathUtils.degToRad(event.alpha || 0);
+    const beta=THREE.MathUtils.degToRad(event.beta || 0);
+    const gamma=THREE.MathUtils.degToRad(event.gamma || 0);
+    const screenAngle=THREE.MathUtils.degToRad(
+        screen.orientation && typeof screen.orientation.angle==="number"
+            ? screen.orientation.angle
+            : (window.orientation || 0)
+    );
+
+    gyroEuler.set(beta,alpha,-gamma,"YXZ");
+    gyroRawQuaternion.setFromEuler(gyroEuler);
+    gyroRawQuaternion.multiply(gyroQuarterTurn);
+    gyroScreenQuaternion.setFromAxisAngle(gyroZAxis,-screenAngle);
+    gyroRawQuaternion.multiply(gyroScreenQuaternion);
+
+    if(!gyroHasOrientation){
+        gyroHasOrientation=true;
+        recenterGyroView();
+        $("gyroStatus").textContent="자이로 준비 완료 · 폰을 돌려보세요";
+    }
+}
+
+function recenterGyroView(){
+    if(!gyroRawQuaternion){return;}
+    ensureGyroMath();
+    gyroReferenceQuaternion.copy(gyroRawQuaternion);
+    gyroBaseHeading=mapHeading;
+    gyroViewHeading=mapHeading;
+    gyroViewPitch=0;
+}
+
+function applyGyroView(){
+    if(!gyroEnabled || !gyroHasOrientation || !camera){return;}
+
+    const relative=gyroReferenceQuaternion.clone()
+        .invert()
+        .multiply(gyroRawQuaternion);
+    gyroEuler.setFromQuaternion(relative,"YXZ");
+    gyroViewHeading=normalizeAngle(
+        gyroBaseHeading-gyroEuler.y
+    );
+    gyroViewPitch=Math.max(
+        -.72,
+        Math.min(.72,gyroEuler.x)
+    );
+
+    camera.rotation.order="YXZ";
+    camera.rotation.x=gyroViewPitch;
+    camera.rotation.y=gyroViewHeading;
+    camera.rotation.z=0;
+}
+
+function isInsidePlayableRoad(x,z){
+    const halfWidth=3.7;
+    const horizontal=
+        x>=-43.7 && x<=43.7 &&
+        (Math.abs(z+45)<=halfWidth || Math.abs(z-35)<=halfWidth);
+    const vertical=
+        z>=-48.7 && z<=38.7 &&
+        (
+            Math.abs(x+40)<=halfWidth ||
+            Math.abs(x)<=halfWidth ||
+            Math.abs(x-40)<=halfWidth
+        );
+    return horizontal || vertical;
+}
+
+function moveGyroPlayer(dt){
+    if(!gyroEnabled || !gyroForwardPressed || battle || monsterDead){
+        return false;
+    }
+
+    const distance=GYRO_WALK_SPEED*dt;
+    const nextX=camera.position.x-Math.sin(gyroViewHeading)*distance;
+    const nextZ=camera.position.z-Math.cos(gyroViewHeading)*distance;
+
+    if(!isInsidePlayableRoad(nextX,nextZ)){
+        $("gyroStatus").textContent="길 밖으로는 갈 수 없어요";
+        return false;
+    }
+
+    camera.position.x=nextX;
+    camera.position.z=nextZ;
+    return true;
+}
+
+async function enableGyroMode(){
+    try{
+        if(
+            typeof DeviceOrientationEvent!=="undefined" &&
+            typeof DeviceOrientationEvent.requestPermission==="function"
+        ){
+            const permission=await DeviceOrientationEvent.requestPermission();
+            if(permission!=="granted"){
+                $("gyroStatus").textContent="자이로 권한이 필요합니다";
+                return;
+            }
+        }
+
+        window.removeEventListener("deviceorientation",readDeviceQuaternion);
+        window.addEventListener("deviceorientation",readDeviceQuaternion,true);
+        gyroEnabled=true;
+        mapPaused=false;
+        mapTurning=false;
+        $("game").classList.add("gyro-active");
+        $("directionPanel").classList.remove("show");
+        $("dialogueBox").classList.remove("show");
+        $("gyroPermissionButton").textContent="✓ 자이로 켜짐";
+        $("gyroStatus").textContent="폰을 정면으로 들고 재설정을 눌러주세요";
+        lastTime=performance.now();
+    }
+    catch(error){
+        $("gyroStatus").textContent="자이로를 시작할 수 없습니다";
+    }
+}
 
 function normalizeAngle(angle){
     while(angle>Math.PI){angle-=Math.PI*2;}
@@ -4009,6 +4190,11 @@ function spawnMonster(index){
             index
         ];
 
+    if(GYRO_EXPERIMENT && GYRO_MONSTER_POSITIONS[index]){
+        monsterHomeX=GYRO_MONSTER_POSITIONS[index].x;
+        monsterHomeZ=GYRO_MONSTER_POSITIONS[index].z;
+    }
+
 
     /*
         높이 2.7
@@ -4740,6 +4926,29 @@ function killMonster(){
 ===================================================== */
 
 function nextMonster(){
+
+    if(GYRO_EXPERIMENT && gyroEnabled){
+        if(monster){scene.remove(monster);monster=null;}
+        if(monsterShadow){scene.remove(monsterShadow);monsterShadow=null;}
+        monsterDead=false;
+        $("game").classList.remove("in-battle");
+        deathProgress=-1;
+        $("enemyHP").style.width="0%";
+        $("enemyText").textContent="";
+
+        if(monsterIndex<GYRO_MONSTER_POSITIONS.length-1){
+            spawnMonster(monsterIndex+1);
+            $("gyroStatus").textContent="다음 몬스터를 찾아 이동하세요";
+        }
+        else{
+            mapPaused=true;
+            $("dialogueText").textContent="모든 몬스터를 물리쳤어!";
+            $("dialogueBox").classList.add("show");
+            $("gyroStatus").textContent="실험 완료!";
+        }
+        updateSwordIdle();
+        return;
+    }
 
     /* 적이 사라진 뒤에도 실제 3D 길의 빨간 교차점까지
        계속 걸어간 다음 방향 선택 화면을 띄운다. */
@@ -6400,6 +6609,12 @@ function startGame(){
         "hidden"
     );
 
+    if(GYRO_EXPERIMENT){
+        mapPaused=true;
+        $("gyroControls").classList.add("show");
+        $("gyroStatus").textContent="자이로 시작을 눌러주세요";
+    }
+
 
     updateSwordIdle();
 
@@ -6472,6 +6687,43 @@ $("pauseButton")
     "click",
     toggleGamePause
 );
+
+$("gyroPermissionButton").addEventListener(
+    "click",
+    enableGyroMode
+);
+
+$("gyroRecenterButton").addEventListener(
+    "click",
+    function(){
+        if(!gyroEnabled){
+            $("gyroStatus").textContent="먼저 자이로 시작을 눌러주세요";
+            return;
+        }
+        recenterGyroView();
+        $("gyroStatus").textContent="현재 방향을 정면으로 설정했습니다";
+    }
+);
+
+function setGyroForward(pressed,event){
+    if(event){event.preventDefault();}
+    gyroForwardPressed=pressed && gyroEnabled && !gamePaused;
+    $("forwardButton").classList.toggle("pressed",gyroForwardPressed);
+}
+
+$("forwardButton").addEventListener("pointerdown",function(event){
+    setGyroForward(true,event);
+    try{$("forwardButton").setPointerCapture(event.pointerId);}catch(e){}
+});
+$("forwardButton").addEventListener("pointerup",function(event){
+    setGyroForward(false,event);
+});
+$("forwardButton").addEventListener("pointercancel",function(event){
+    setGyroForward(false,event);
+});
+$("forwardButton").addEventListener("lostpointercapture",function(){
+    setGyroForward(false);
+});
 
 $("inventoryButton")
 .addEventListener(
@@ -6571,7 +6823,25 @@ function loop(now){
            WALK
         ============================================= */
 
-        if(!battle && !mapPaused){
+        if(gyroEnabled && !battle){
+
+            walking=moveGyroPlayer(dt);
+
+            if(monster && !monsterDead){
+                const gyroMonsterDistance=Math.hypot(
+                    camera.position.x-monster.position.x,
+                    camera.position.z-monster.position.z
+                );
+                if(gyroMonsterDistance<=CONFIG.BATTLE_DISTANCE){
+                    gyroForwardPressed=false;
+                    $("forwardButton").classList.remove("pressed");
+                    startBattle();
+                }
+            }
+
+        }
+
+        else if(!battle && !mapPaused){
 
             if(mapTurning){
 
@@ -7061,7 +7331,9 @@ function loop(now){
                 앞으로 계속 이동
             */
 
-            moveTowardMapTarget(dt);
+            if(!gyroEnabled){
+                moveTowardMapTarget(dt);
+            }
 
 
             /*
@@ -7102,11 +7374,16 @@ function loop(now){
 
         }
 
-        /* 카메라는 항상 수평을 유지한다. */
-        camera.rotation.order="YXZ";
-        camera.rotation.x=0;
-        camera.rotation.y=mapHeading;
-        camera.rotation.z=0;
+        if(gyroEnabled){
+            applyGyroView();
+        }
+        else{
+            /* 기존 자동 이동 카메라는 항상 수평을 유지한다. */
+            camera.rotation.order="YXZ";
+            camera.rotation.x=0;
+            camera.rotation.y=mapHeading;
+            camera.rotation.z=0;
+        }
 
     }
 
