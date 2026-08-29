@@ -149,11 +149,8 @@ canvas{
     /* 손잡이를 고정하고 칼날은 오른쪽을 향한 기본 자세 */
     transform:rotate(34deg);
 
-    filter:
-        drop-shadow(
-            0 10px 10px
-            rgba(0,0,0,.32)
-        );
+    filter:brightness(.62) saturate(.72) sepia(.12) hue-rotate(215deg)
+        drop-shadow(0 10px 10px rgba(0,0,0,.55));
 }
 
 
@@ -956,7 +953,7 @@ canvas{
 .mapNode{position:absolute;width:11px;height:11px;border:2px solid #fff;border-radius:2px;background:#e53935;transform:translate(-50%,-50%)}
 .mapEnemy{position:absolute;width:9px;height:9px;border-radius:50%;background:#ff8a26;transform:translate(-50%,-50%)}
 .mapChest{position:absolute;width:11px;height:9px;background:#111;border:1px solid #fff;transform:translate(-50%,-50%)}
-#mapPlayer{position:absolute;width:13px;height:13px;border:2px solid #fff;border-radius:50%;background:#24b8ff;box-shadow:0 0 9px #24b8ff;transform:translate(-50%,-50%);transition:left .3s,top .3s}
+#mapPlayer{--map-heading:0rad;position:absolute;width:17px;height:21px;border:0;border-radius:0;background:#29c4ff;clip-path:polygon(50% 0,100% 100%,50% 77%,0 100%);filter:drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff) drop-shadow(0 0 6px #29c4ff);transform:translate(-50%,-50%) rotate(var(--map-heading));transform-origin:50% 50%;transition:left .2s,top .2s,transform .12s linear}
 #directionPanel{position:absolute;z-index:110;inset:0;display:none;color:#fff;text-align:center;pointer-events:none}
 #directionPanel.show{display:block}
 #directionTitle{display:none}
@@ -1790,7 +1787,7 @@ const CONFIG = {
 
 const SKY_IMAGE =
 
-"https://static.wixstatic.com/media/172435_d6012f4ec1594a17858298879561b509~mv2.png";
+"https://static.wixstatic.com/media/172435_b14315929f164d139461b465a6d488b8~mv2.jpg";
 
 const TREE_IMAGE =
 
@@ -1939,8 +1936,8 @@ const GYRO_LOOK_SENSITIVITY=1.65;
 const CONTROL_TURN_SPEED=4.7;
 const MONSTER_AGGRO_DISTANCE=64;
 const MONSTER_LOCK_DISTANCE=32;
-const MONSTER_ATTACK_DISTANCE=3.2;
-const MONSTER_BLOCK_DISTANCE=3.2;
+const MONSTER_ATTACK_DISTANCE=6.5;
+const MONSTER_BLOCK_DISTANCE=6.5;
 const MONSTER_DISENGAGE_DISTANCE=32;
 const MONSTER_CHASE_SPEED=4.5;
 const WOLF_ASSET_URL="https://static.wixstatic.com/media/172435_acaa7e55cedb42448b78a3c8f6c2e356~mv2.png";
@@ -2283,6 +2280,7 @@ function updateMapPlayer(point){
     const data=MAP_POINTS[point] || MAP_POINTS.START;
     $("mapPlayer").style.left=data.x+"px";
     $("mapPlayer").style.top=data.y+"px";
+    $("mapPlayer").style.setProperty("--map-heading",(-mapHeading)+"rad");
 }
 
 function updateMapPlayerFromCamera(){
@@ -2290,6 +2288,10 @@ function updateMapPlayerFromCamera(){
     const top=17+(camera.position.z+45)*.725;
     $("mapPlayer").style.left=Math.max(18,Math.min(98,left))+"px";
     $("mapPlayer").style.top=Math.max(17,Math.min(75,top))+"px";
+    $("mapPlayer").style.setProperty(
+        "--map-heading",
+        (-(gyroEnabled ? gyroViewHeading : mapHeading))+"rad"
+    );
 }
 
 function relativeDirection(to){
@@ -3404,7 +3406,7 @@ function init3D(){
         scene.background=
 
             new THREE.Color(
-                0x87b9d7
+                0x100d28
             );
 
 
@@ -3480,7 +3482,7 @@ function init3D(){
 
             new THREE.Fog(
 
-                0xa5bdc8,
+                0x211932,
 
                 55,
 
@@ -3595,11 +3597,11 @@ function init3D(){
 
             new THREE.HemisphereLight(
 
-                0xe6f6ff,
+                0x7770a8,
 
-                0x27391f,
+                0x140f25,
 
-                2.1
+                .82
 
             );
 
@@ -3613,9 +3615,9 @@ function init3D(){
 
             new THREE.DirectionalLight(
 
-                0xffffff,
+                0x9b8bd0,
 
-                .8
+                .34
 
             );
 
@@ -4132,6 +4134,7 @@ function createForest(){
 
             const treeMaterial=new THREE.SpriteMaterial({
                 map:treeTexture,
+                color:0x77708f,
                 transparent:true,
                 alphaTest:.08,
                 fog:true
@@ -4392,6 +4395,7 @@ function spawnMonster(index){
         new THREE.MeshBasicMaterial({
 
             map:wolfTexture,
+            color:0x81758f,
 
             transparent:true,
 
