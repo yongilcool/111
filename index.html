@@ -1935,12 +1935,12 @@ const GYRO_EXPERIMENT=true;
 const GYRO_WALK_SPEED=40;
 const GYRO_LOOK_SENSITIVITY=1.65;
 const CONTROL_TURN_SPEED=4.7;
-const MONSTER_AGGRO_DISTANCE=10;
-const MONSTER_LOCK_DISTANCE=10;
+const MONSTER_AGGRO_DISTANCE=15;
+const MONSTER_LOCK_DISTANCE=15;
 /* 추격 정지·몸 충돌·서로의 공격 사거리를 같은 거리로 통일한다. */
 const MONSTER_ATTACK_DISTANCE=8;
 const MONSTER_BLOCK_DISTANCE=8;
-const MONSTER_DISENGAGE_DISTANCE=12;
+const MONSTER_DISENGAGE_DISTANCE=18;
 const MONSTER_CHASE_SPEED=4.5;
 const WOLF_IDLE_URL="https://static.wixstatic.com/media/172435_91e8afed612c4a6ababa985a8414d211~mv2.png";
 const WOLF_WALK_1_URL="https://static.wixstatic.com/media/172435_30f709b4dba24b53aca0dd743c0f9b0b~mv2.png";
@@ -6698,14 +6698,9 @@ async function startQR(){
         $("statusText").textContent=
             "QR 카메라 시작 중";
 
-        const qrCameraConfig=isIOS()
-            ? {facingMode:"user"}
-            : {
-                facingMode:"user",
-                width:{ideal:1920},
-                height:{ideal:1080},
-                frameRate:{ideal:60,max:60}
-            };
+        /* 해상도·프레임을 강제하면 일부 Android에서 카메라가
+           시작되지 않으므로 검증된 전면 카메라 조건만 사용한다. */
+        const qrCameraConfig={facingMode:"user"};
 
         await html5QrCode.start(
 
@@ -6716,7 +6711,7 @@ async function startQR(){
                    작아지는 문제를 피하고 영상 전체를 판독한다. */
                 /* iPhone/iPad 안정값은 10 그대로 유지하고
                    Android만 더 자주 판독한다. */
-                fps:isIOS() ? 10 : 45
+                fps:isIOS() ? 10 : 30
             },
 
             function(decodedText){
@@ -8003,54 +7998,20 @@ function loop(now){
                 monster.scale.y=1-crouch*.1;
             }
 
-            /* 물기 직전 뒤로 살짝 힘을 모은다. */
-            else if(t<2.18){
-                const p=(t-2)/.18;
+            /* 입을 벌리는 실제 공격 이미지는 약 0.3초만 표시한다.
+               공격 범위에 도착한 늑대는 더 걷거나 전진하지 않는다. */
+            else if(t<2.3){
                 if(!monsterAttackSoundPlayed){
                     monsterAttackSoundPlayed=true;
                     wolfAttackSound();
                 }
-                setWolfTexture(getWolfTextures().idle);
                 setWolfTexture(getWolfTextures().attack);
-                monster.position.x=THREE.MathUtils.lerp(
-                    monsterHomeX,
-                    monsterHomeX-attackUX*.7,
-                    p
-                );
-                monster.position.z=THREE.MathUtils.lerp(
-                    monsterHomeZ,
-                    monsterHomeZ-attackUZ*.7,
-                    p
-                );
+                monster.position.x=monsterHomeX;
+                monster.position.z=monsterHomeZ;
+                monster.position.y=2.7;
+                monster.scale.y=1;
 
-            }
-
-
-            /* 플레이어 쪽으로 한 번만 돌진한다. */
-            else if(t<2.5){
-                const p=(t-2.18)/.32;
-
-
-                monster.position.x=THREE.MathUtils.lerp(
-                    monsterHomeX-attackUX*.7,
-                    monsterHomeX+attackUX*1.4,
-                    p
-                );
-                monster.position.z=THREE.MathUtils.lerp(
-                    monsterHomeZ-attackUZ*.7,
-                    monsterHomeZ+attackUZ*1.4,
-                    p
-                );
-
-            }
-
-
-            /* 실제 충돌 순간에 다시 거리를 검사한다. */
-            else if(t<2.62){
-
-                if(
-                    !monsterAttackHit
-                ){
+                if(t>=2.12 && !monsterAttackHit){
 
                     monsterAttackHit=
                         true;
@@ -8065,26 +8026,6 @@ function loop(now){
                     }
 
                 }
-
-            }
-
-
-            /* 공격 후 원위치로 돌아온다. */
-            else if(t<3){
-                const p=(t-2.62)/.38;
-
-
-                monster.position.x=THREE.MathUtils.lerp(
-                    monsterHomeX+attackUX*1.4,
-                    monsterHomeX,
-                    p
-                );
-                monster.position.z=THREE.MathUtils.lerp(
-                    monsterHomeZ+attackUZ*1.4,
-                    monsterHomeZ,
-                    p
-                );
-
             }
 
 
