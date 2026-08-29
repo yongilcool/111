@@ -1184,6 +1184,9 @@ canvas{
 #hud .unit:nth-child(2){display:none}
 #game.in-battle #hud .unit:nth-child(2){display:block;position:fixed;z-index:61;top:105px;left:50%;width:min(48%,300px);transform:translateX(-50%)}
 #game:not(.in-battle) #hud .unit:first-child{width:min(58%,360px)}
+#exitBattleButton{display:none;position:absolute;z-index:176;left:50%;top:160px;transform:translateX(-50%);min-width:128px;padding:10px 16px;border:3px solid #633621;border-radius:14px;background:linear-gradient(#f4d5a8,#b9794c);color:#4b2819;font-size:15px;font-weight:1000;box-shadow:inset 0 0 0 2px #fff0c8,0 4px 0 rgba(55,25,12,.62);touch-action:manipulation}
+#game.in-battle #exitBattleButton{display:block}
+#exitBattleButton:active{transform:translate(-50%,4px);box-shadow:inset 0 0 0 2px #fff0c8,0 1px 0 rgba(55,25,12,.62)}
 
 /* 이후 모든 캐릭터 대화에 공통으로 사용할 상단 말칸 */
 #dialogueBox{position:absolute;z-index:108;left:4%;right:4%;top:118px;display:none;min-height:62px;padding:16px 48px 15px 18px;box-sizing:border-box;border:4px solid #70462c;border-radius:14px;background:linear-gradient(#ffe5b1,#efc983);color:#3c2417;font-size:clamp(17px,4.8vw,28px);font-weight:900;line-height:1.35;box-shadow:inset 0 0 0 3px #fff0c8,0 5px 0 rgba(70,37,20,.45)}
@@ -1520,6 +1523,7 @@ html.ios-device #qrPanel{
         <div id="turnIndicator" aria-hidden="true"></div>
 
         <button id="pauseButton">⏸ 일시정지</button>
+        <button id="exitBattleButton">전투 나가기</button>
         <button id="inventoryButton" aria-label="인벤토리 열기">🎒<small>아이템</small></button>
         <div id="inventoryPanel">인벤토리<br><span style="font-size:12px">획득한 아이템이 여기에 표시됩니다.</span></div>
         <div id="pauseOverlay">PAUSED</div>
@@ -1810,6 +1814,8 @@ let gameOver=false;
 let gamePaused=false;
 
 let battle=false;
+let battleLockOn=false;
+let battleExitSuppressed=false;
 
 let monsterDead=false;
 
@@ -2043,10 +2049,17 @@ function isInsidePlayableRoad(x,z){
 }
 
 function moveGyroPlayer(dt){
+    const lockTarget=battleLockOn && battle && monster && !monsterDead;
     const turnInput=joystickPointerId!==null
         ? joystickX
         : (controlLeftPressed ? -1 : (controlRightPressed ? 1 : 0));
-    if(turnInput!==0){
+    if(lockTarget){
+        gyroViewHeading=Math.atan2(
+            camera.position.x-monster.position.x,
+            camera.position.z-monster.position.z
+        );
+    }
+    else if(turnInput!==0){
         gyroViewHeading=normalizeAngle(
             gyroViewHeading-CONTROL_TURN_SPEED*dt*turnInput
         );
@@ -2055,17 +2068,21 @@ function moveGyroPlayer(dt){
     const moveInput=joystickPointerId!==null
         ? -joystickY
         : (gyroForwardPressed ? 1 : (gyroBackwardPressed ? -1 : 0));
+    const strafeInput=lockTarget && joystickPointerId!==null
+        ? joystickX
+        : 0;
 
-    if(
-        !gyroEnabled ||
-        Math.abs(moveInput)<.08
-    ){
+    if(!gyroEnabled || (Math.abs(moveInput)<.08 && Math.abs(strafeInput)<.08)){
         return false;
     }
 
-    const distance=GYRO_WALK_SPEED*dt*moveInput;
-    const nextX=camera.position.x-Math.sin(gyroViewHeading)*distance;
-    const nextZ=camera.position.z-Math.cos(gyroViewHeading)*distance;
+    const distance=GYRO_WALK_SPEED*dt;
+    const nextX=camera.position.x+
+        (-Math.sin(gyroViewHeading)*moveInput+
+        Math.cos(gyroViewHeading)*strafeInput)*distance;
+    const nextZ=camera.position.z+
+        (-Math.cos(gyroViewHeading)*moveInput-
+        Math.sin(gyroViewHeading)*strafeInput)*distance;
 
     if(!isInsidePlayableRoad(nextX,nextZ)){
         return false;
@@ -5034,6 +5051,8 @@ function killMonster(){
 
     battle=
         false;
+    battleLockOn=false;
+    battleExitSuppressed=false;
 
     $("game").classList.remove("in-battle");
 
@@ -5119,6 +5138,7 @@ function stopBattleForDistance(){
     if(!battle){return;}
 
     battle=false;
+    battleLockOn=false;
     $("game").classList.remove("in-battle");
     monsterAttackProgress=-1;
     monsterAttackHit=false;
@@ -5136,7 +5156,8 @@ function startBattle(){
     if(
         battle ||
         monsterDead ||
-        gameOver
+        gameOver ||
+        battleExitSuppressed
     ){
 
         return;
@@ -5146,6 +5167,7 @@ function startBattle(){
     battle=
         true;
 
+    battleLockOn=true;
     $("game").classList.add("in-battle");
 
 
@@ -5177,6 +5199,12 @@ function startBattle(){
 /* =====================================================
    MONSTER ATTACK
 ===================================================== */
+
+function exitBattleByPlayer(){
+    if(!battle){return;}
+    battleExitSuppressed=true;
+    stopBattleForDistance();
+}
 
 function triggerMonsterAttack(){
 
@@ -6897,6 +6925,11 @@ $("pauseButton")
     toggleGamePause
 );
 
+$("exitBattleButton").addEventListener("click",function(event){
+    event.preventDefault();
+    exitBattleByPlayer();
+});
+
 $("gyroPermissionButton").addEventListener(
     "click",
     enableGyroMode
@@ -7233,6 +7266,12 @@ function loop(now){
                     camera.position.x-monster.position.x,
                     camera.position.z-monster.position.z
                 );
+                if(
+                    battleExitSuppressed &&
+                    gyroMonsterDistance>MONSTER_DISENGAGE_DISTANCE
+                ){
+                    battleExitSuppressed=false;
+                }
                 if(gyroMonsterDistance<=MONSTER_ATTACK_DISTANCE){
                     startBattle();
                 }
@@ -7246,6 +7285,7 @@ function loop(now){
 
                     if(
                         !battle &&
+                        !battleExitSuppressed &&
                         gyroMonsterDistance<=MONSTER_AGGRO_DISTANCE &&
                         monsterAttackProgress<0
                     ){
@@ -7824,6 +7864,12 @@ function loop(now){
         }
 
         if(GYRO_EXPERIMENT && gyroEnabled){
+            if(battleLockOn && battle && monster && !monsterDead){
+                gyroViewHeading=Math.atan2(
+                    camera.position.x-monster.position.x,
+                    camera.position.z-monster.position.z
+                );
+            }
             camera.rotation.order="YXZ";
             camera.rotation.x=0;
             camera.rotation.y=gyroViewHeading;
