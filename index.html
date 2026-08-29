@@ -6288,7 +6288,6 @@ let qrContinuousAttackTimer=null;
 let qrAutofocusWatchTimer=null;
 
 let lastValidQRSeenAt=0;
-let qrReadyForNextScan=true;
 
 const QR_ATTACK_COOLDOWN=650;
 
@@ -6327,25 +6326,23 @@ function stopQRContinuousAttack(){
         qrContinuousAttackTimer=null;
     }
     lastValidQRSeenAt=0;
-    qrReadyForNextScan=true;
 }
 
 function startQRContinuousAttack(){
     stopQRContinuousAttack();
 
     qrContinuousAttackTimer=setInterval(function(){
-        if(inputMode!=="qr" || !qrRunning){
+        if(
+            inputMode!=="qr" ||
+            !qrRunning ||
+            performance.now()-lastValidQRSeenAt>760
+        ){
             return;
         }
 
-        /* 같은 QR이 화면에 계속 있는 동안은 다시 공격하지 않는다.
-           QR이 사라진 것이 확인된 뒤에만 다음 한 번을 허용한다. */
-        if(
-            !qrReadyForNextScan &&
-            performance.now()-lastValidQRSeenAt>520
-        ){
-            qrReadyForNextScan=true;
-        }
+        /* 첨부한 정상 파일처럼 QR이 계속 보이는 동안에는
+           칼 잠금이 풀리는 즉시 다음 공격을 다시 시도한다. */
+        tryQRAttack();
     },80);
 }
 
@@ -6402,9 +6399,7 @@ function processDecodedQR(decodedText){
     }
 
     lastValidQRSeenAt=performance.now();
-    if(qrReadyForNextScan && tryQRAttack()){
-        qrReadyForNextScan=false;
-    }
+    tryQRAttack();
 }
 
 function stopQRSmallAssist(){
