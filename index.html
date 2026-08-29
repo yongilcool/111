@@ -1054,6 +1054,16 @@ canvas{
 /* 실험판 QR 토글은 화면 맨 아래에 둔다. */
 #game.gyro-experiment #modeSwitch{position:absolute;z-index:190;top:auto;bottom:8px;left:50%;transform:translateX(-50%)}
 #game.gyro-experiment.qr-mode #modeSwitch{bottom:8px}
+#game.gyro-experiment.qr-mode #qrPanel{
+    left:auto;
+    right:8px;
+    bottom:8px;
+    width:48%;
+    height:36%;
+    border:3px solid white;
+    border-radius:18px;
+    --qr-focus-size:min(40vw,25.2vh);
+}
 
 /* 간결한 HUD */
 #statusBox,#monsterCount,#enemyText{display:none !important}
@@ -1908,7 +1918,7 @@ function applyGyroView(){
     );
     gyroViewPitch=Math.max(
         -.72,
-        Math.min(.72,-gyroEuler.x*GYRO_LOOK_SENSITIVITY)
+        Math.min(.72,gyroEuler.x*GYRO_LOOK_SENSITIVITY)
     );
 
     camera.rotation.order="YXZ";
