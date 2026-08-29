@@ -1747,7 +1747,8 @@ const CONFIG = {
     SWORD_SPEED:400,
 
 
-    MONSTER_ATTACK_INTERVAL:1600,
+    /* 짧게 반복 공격하지 않고 준비 상태만 자주 확인한다. */
+    MONSTER_ATTACK_INTERVAL:300,
 
 
     BATTLE_DISTANCE:7,
@@ -1889,7 +1890,7 @@ let mapChestMesh=null;
 ===================================================== */
 
 const MAP_POINTS={
-    START:{x:58,y:48,wx:0,wz:8},
+    START:{x:58,y:46,wx:0,wz:-5},
     TL:{x:18,y:17,wx:-40,wz:-45},
     TM:{x:58,y:17,wx:0,wz:-45},
     TR:{x:98,y:17,wx:40,wz:-45},
@@ -1934,20 +1935,27 @@ const GYRO_EXPERIMENT=true;
 const GYRO_WALK_SPEED=40;
 const GYRO_LOOK_SENSITIVITY=1.65;
 const CONTROL_TURN_SPEED=4.7;
-const MONSTER_AGGRO_DISTANCE=64;
-const MONSTER_LOCK_DISTANCE=32;
+const MONSTER_AGGRO_DISTANCE=10;
+const MONSTER_LOCK_DISTANCE=10;
 /* 추격 정지·몸 충돌·서로의 공격 사거리를 같은 거리로 통일한다. */
 const MONSTER_ATTACK_DISTANCE=8;
 const MONSTER_BLOCK_DISTANCE=8;
-const MONSTER_DISENGAGE_DISTANCE=32;
+const MONSTER_DISENGAGE_DISTANCE=12;
 const MONSTER_CHASE_SPEED=4.5;
-const WOLF_ASSET_URL="https://static.wixstatic.com/media/172435_acaa7e55cedb42448b78a3c8f6c2e356~mv2.png";
-const WORLD_BOUNDS={minX:-86,maxX:86,minZ:-105,maxZ:82};
+const WOLF_IDLE_URL="https://static.wixstatic.com/media/172435_91e8afed612c4a6ababa985a8414d211~mv2.png";
+const WOLF_WALK_1_URL="https://static.wixstatic.com/media/172435_30f709b4dba24b53aca0dd743c0f9b0b~mv2.png";
+const WOLF_WALK_2_URL="https://static.wixstatic.com/media/172435_272a87bc3b864f79a0e9b088e4dd9cfd~mv2.png";
+const WOLF_ATTACK_URL="https://static.wixstatic.com/media/172435_4d0ae03f956f469bad1b23638ee66bcb~mv2.png";
+const WOLF_HIT_URL="https://static.wixstatic.com/media/172435_781e915fcfa64329bb7547d94c10b8bb~mv2.png";
+const WORLD_BOUNDS={minX:-64,maxX:64,minZ:-67,maxZ:57};
 const GYRO_MONSTER_POSITIONS=[
     {x:-40,z:-5},
     {x:-20,z:35},
     {x:20,z:35},
-    {x:40,z:-5}
+    {x:40,z:-5},
+    {x:-20,z:-45},
+    {x:20,z:-45},
+    {x:0,z:20}
 ];
 
 let gyroEnabled=false;
@@ -1962,6 +1970,10 @@ let wolfAggroActive=false;
 let playerKnockbackRemaining=0;
 let wolfWasInAttackRange=false;
 let wolfSentinels=[];
+let defeatedWolfIndices=new Set();
+let wolfTextures=null;
+let monsterNextAttackAt=0;
+let monsterAttackSoundPlayed=false;
 let gyroHasOrientation=false;
 let gyroRawQuaternion=null;
 let gyroReferenceQuaternion=null;
@@ -2119,7 +2131,7 @@ function updateCombatLockHeading(dt){
         camera.position.z-monster.position.z
     );
     const difference=normalizeAngle(targetHeading-gyroViewHeading);
-    const turnSpeed=playerKnockbackRemaining>0 ? 2.15 : 1.35;
+    const turnSpeed=playerKnockbackRemaining>0 ? 6.45 : 4.05;
     const step=Math.min(Math.abs(difference),turnSpeed*dt);
     gyroViewHeading=normalizeAngle(
         gyroViewHeading+Math.sign(difference)*step
@@ -3525,7 +3537,7 @@ function init3D(){
 
             2.15,
 
-            8
+            -5
 
         );
 
@@ -3804,9 +3816,7 @@ function init3D(){
         );
 
 
-        scene.add(
-            road
-        );
+        /* 예전의 화면 밖까지 이어지는 직선 길은 사용하지 않는다. */
 
 
         /* =============================================
@@ -3836,15 +3846,7 @@ function init3D(){
         addMapRoad(7,87,40,-5);
         addMapRoad(7,87,0,-5);
 
-        /* 갈 수는 없지만 맵이 계속 이어져 보이는 장식용 연장 길 */
-        [-40,0,40].forEach(function(x){
-            addMapRoad(7,105,x,-100);
-            addMapRoad(7,105,x,90);
-        });
-        [-45,35].forEach(function(z){
-            addMapRoad(105,7,-95,z);
-            addMapRoad(105,7,95,z);
-        });
+        /* 실제로 이동 가능한 순환 길만 표시한다. */
 
         const junctionMaterial=
             new THREE.MeshLambertMaterial({
@@ -4340,6 +4342,33 @@ function temporaryMonster(index){
    SPAWN MONSTER
 ===================================================== */
 
+function getWolfTextures(){
+    if(wolfTextures){return wolfTextures;}
+    const loader=new THREE.TextureLoader();
+    function load(url){
+        const texture=loader.load(url);
+        texture.colorSpace=THREE.SRGBColorSpace;
+        texture.magFilter=THREE.NearestFilter;
+        texture.minFilter=THREE.LinearFilter;
+        return texture;
+    }
+    wolfTextures={
+        idle:load(WOLF_IDLE_URL),
+        walk1:load(WOLF_WALK_1_URL),
+        walk2:load(WOLF_WALK_2_URL),
+        attack:load(WOLF_ATTACK_URL),
+        hit:load(WOLF_HIT_URL)
+    };
+    return wolfTextures;
+}
+
+function setWolfTexture(texture){
+    if(monsterMaterial && texture && monsterMaterial.map!==texture){
+        monsterMaterial.map=texture;
+        monsterMaterial.needsUpdate=true;
+    }
+}
+
 function removeWolfSentinel(index){
     const sentinel=wolfSentinels[index];
     if(!sentinel){return;}
@@ -4354,13 +4383,10 @@ function createWolfSentinels(){
     });
     wolfSentinels=[];
 
-    const texture=new THREE.TextureLoader().load(WOLF_ASSET_URL);
-    texture.colorSpace=THREE.SRGBColorSpace;
-    texture.magFilter=THREE.NearestFilter;
-    texture.minFilter=THREE.LinearFilter;
+    const texture=getWolfTextures().idle;
 
     GYRO_MONSTER_POSITIONS.forEach(function(position,index){
-        if(index===monsterIndex){return;}
+        if(index===monsterIndex || defeatedWolfIndices.has(index)){return;}
         const material=new THREE.SpriteMaterial({
             map:texture,
             color:0x81758f,
@@ -4432,10 +4458,9 @@ function spawnMonster(index){
         false;
 
 
-    const wolfTexture=new THREE.TextureLoader().load(WOLF_ASSET_URL);
-    wolfTexture.colorSpace=THREE.SRGBColorSpace;
-    wolfTexture.magFilter=THREE.NearestFilter;
-    wolfTexture.minFilter=THREE.LinearFilter;
+    const wolfTexture=getWolfTextures().idle;
+    monsterNextAttackAt=performance.now()+1200;
+    monsterAttackSoundPlayed=false;
 
     monsterMaterial=
 
@@ -5132,9 +5157,12 @@ function damageMonster(){
 
     /* 맞은 늑대는 잠시 경직되고 진행 중인 공격을 취소한다. */
     monsterHitTimer=
-        .65;
+        .9;
     monsterAttackProgress=-1;
     monsterAttackHit=false;
+    monsterAttackSoundPlayed=false;
+    monsterNextAttackAt=performance.now()+2200;
+    setWolfTexture(getWolfTextures().hit);
     if(monster){
         monster.position.x=monsterHomeX;
         monster.position.z=monsterHomeZ;
@@ -5196,6 +5224,8 @@ function killMonster(){
 
     monsterDead=
         true;
+    defeatedWolfIndices.add(monsterIndex);
+    setWolfTexture(getWolfTextures().hit);
 
 
     battle=
@@ -5250,8 +5280,22 @@ function nextMonster(){
         $("enemyHP").style.width="0%";
         $("enemyText").textContent="";
 
-        if(monsterIndex<GYRO_MONSTER_POSITIONS.length-1){
-            spawnMonster(monsterIndex+1);
+        const remaining=GYRO_MONSTER_POSITIONS
+            .map(function(position,index){return {position:position,index:index};})
+            .filter(function(item){return !defeatedWolfIndices.has(item.index);})
+            .sort(function(a,b){
+                return Math.hypot(
+                    camera.position.x-a.position.x,
+                    camera.position.z-a.position.z
+                )-Math.hypot(
+                    camera.position.x-b.position.x,
+                    camera.position.z-b.position.z
+                );
+            });
+
+        if(remaining.length){
+            spawnMonster(remaining[0].index);
+            createWolfSentinels();
             $("gyroStatus").textContent="다음 몬스터를 찾아 이동하세요";
         }
         else{
@@ -5383,20 +5427,36 @@ function triggerMonsterAttack(){
         gamePaused ||
         gameOver ||
         !monster ||
-        attackDistance>MONSTER_ATTACK_DISTANCE+.35 ||
-        monsterHitTimer>0
+        attackDistance>MONSTER_ATTACK_DISTANCE+.35
+    ){
+
+        return;
+    }
+
+
+    if(
+        monsterHitTimer>0 ||
+        performance.now()<monsterNextAttackAt
     ){
         return;
     }
 
-    if(monsterAttackProgress>=0){
+    if(
+        monsterAttackProgress>=0
+    ){
+
         return;
     }
 
-    monsterAttackProgress=0;
+
+    monsterAttackProgress=
+        0;
     battleLockOn=true;
-    wolfAttackSound();
-    monsterAttackHit=false;
+    monsterAttackHit=
+        false;
+    monsterAttackSoundPlayed=false;
+    setWolfTexture(getWolfTextures().idle);
+
 }
 
 
@@ -5406,7 +5466,7 @@ function triggerMonsterAttack(){
 
 function damagePlayer(){
 
-    /* 플레이어는 맞아도 밀려나거나 공격이 중단되지 않는다. */
+    /* 맞아도 뒤로 밀리지 않아 플레이어 공격이 끊기지 않는다. */
     playerKnockbackRemaining=0;
 
     playerHP=
@@ -6540,7 +6600,7 @@ function resetAndroidQRAutofocus(video){
             Promise.resolve(track.applyConstraints({
                 advanced:[{focusMode:"single-shot"}]
             })).catch(function(){}).finally(function(){
-                setTimeout(function(){tuneAndroidQRCamera(video);},260);
+                setTimeout(function(){tuneAndroidQRCamera(video);},70);
             });
         }
         else{
@@ -6555,12 +6615,12 @@ function startAndroidAutofocusWatch(video){
     if(isIOS()){return;}
     setTimeout(function(){
         if(qrRunning){resetAndroidQRAutofocus(video);}
-    },2300);
+    },350);
     qrAutofocusWatchTimer=setInterval(function(){
         if(qrRunning && inputMode==="qr"){
             resetAndroidQRAutofocus(video);
         }
-    },2800);
+    },750);
 }
 
 function waitForQRVideoReady(video){
@@ -6638,16 +6698,25 @@ async function startQR(){
         $("statusText").textContent=
             "QR 카메라 시작 중";
 
+        const qrCameraConfig=isIOS()
+            ? {facingMode:"user"}
+            : {
+                facingMode:"user",
+                width:{ideal:1920},
+                height:{ideal:1080},
+                frameRate:{ideal:60,max:60}
+            };
+
         await html5QrCode.start(
 
-            {facingMode:"user"},
+            qrCameraConfig,
 
             {
                 /* 전면 카메라의 세로 크기 보고값 때문에 qrbox가
                    작아지는 문제를 피하고 영상 전체를 판독한다. */
                 /* iPhone/iPad 안정값은 10 그대로 유지하고
                    Android만 더 자주 판독한다. */
-                fps:isIOS() ? 10 : 30
+                fps:isIOS() ? 10 : 45
             },
 
             function(decodedText){
@@ -6673,10 +6742,10 @@ async function startQR(){
             if(!isIOS()){
                 setTimeout(function(){
                     if(qrRunning){tuneAndroidQRCamera(qrVideoElement);}
-                },320);
+                },120);
                 setTimeout(function(){
                     if(qrRunning){tuneAndroidQRCamera(qrVideoElement);}
-                },900);
+                },420);
             }
 
             qrVideoElement.style.setProperty(
@@ -7478,7 +7547,40 @@ function loop(now){
             updatePlayerKnockback(dt);
             updateCombatLockHeading(dt);
 
+            /* 어느 길의 늑대든 플레이어가 10 거리 안으로 접근하면
+               그 늑대를 활성화한다. 멀리 있는 늑대는 제자리에 대기한다. */
+            if(
+                !battle &&
+                !wolfAggroActive &&
+                monsterAttackProgress<0 &&
+                monsterHitTimer<=0
+            ){
+                let nearestWolfIndex=-1;
+                let nearestWolfDistance=Infinity;
+                GYRO_MONSTER_POSITIONS.forEach(function(position,index){
+                    if(defeatedWolfIndices.has(index)){return;}
+                    const distance=Math.hypot(
+                        camera.position.x-position.x,
+                        camera.position.z-position.z
+                    );
+                    if(distance<nearestWolfDistance){
+                        nearestWolfDistance=distance;
+                        nearestWolfIndex=index;
+                    }
+                });
+                if(
+                    nearestWolfIndex>=0 &&
+                    nearestWolfIndex!==monsterIndex &&
+                    nearestWolfDistance<=MONSTER_AGGRO_DISTANCE
+                ){
+                    spawnMonster(nearestWolfIndex);
+                    createWolfSentinels();
+                }
+            }
+
             if(monster && !monsterDead){
+                /* 애니메이션으로 흔들리는 화면 위치가 아니라
+                   늑대의 실제 기준 좌표로 모든 거리 판정을 계산한다. */
                 const gyroMonsterDistance=Math.hypot(
                     camera.position.x-monsterHomeX,
                     camera.position.z-monsterHomeZ
@@ -7756,12 +7858,22 @@ function loop(now){
             const walkWave=wolfWalking ? Math.sin(now*.016) : 0;
             const breathe=1+Math.sin(now*.003)*.025;
 
+            if(wolfWalking){
+                const walkFrame=Math.floor(now/170)%2;
+                setWolfTexture(
+                    walkFrame===0
+                        ? getWolfTextures().walk1
+                        : getWolfTextures().walk2
+                );
+            }
+            else{
+                setWolfTexture(getWolfTextures().idle);
+            }
+
 
             monster.scale.set(
 
-                wolfWalking
-                    ? (walkWave<0 ? -1.035 : 1.035)
-                    : 1,
+                1,
 
                 breathe,
 
@@ -7801,6 +7913,8 @@ function loop(now){
             monster &&
             monsterHitTimer>0
         ){
+
+            setWolfTexture(getWolfTextures().hit);
 
             monsterHitTimer -=
                 dt;
@@ -7857,9 +7971,8 @@ function loop(now){
             monsterAttackProgress>=0
         ){
 
-            monsterAttackProgress +=
-
-                dt*4.6;
+            /* 실제 초 단위 진행: 처음 2초는 공격 예고 자세다. */
+            monsterAttackProgress += dt;
 
 
             const t=
@@ -7880,13 +7993,25 @@ function loop(now){
             const attackUZ=attackDZ/attackLength;
 
 
-            /*
-                뒤로 살짝
-            */
+            /* 2초 동안 몸을 숙이며 대기한다. 이때 플레이어가 피할 수 있다. */
+            if(t<2){
+                setWolfTexture(getWolfTextures().idle);
+                const crouch=Math.sin(Math.min(1,t/2)*Math.PI*.5);
+                monster.position.x=monsterHomeX;
+                monster.position.z=monsterHomeZ;
+                monster.position.y=2.7-crouch*.36;
+                monster.scale.y=1-crouch*.1;
+            }
 
-            if(t<.2){
-
-                const p=t/.2;
+            /* 물기 직전 뒤로 살짝 힘을 모은다. */
+            else if(t<2.18){
+                const p=(t-2)/.18;
+                if(!monsterAttackSoundPlayed){
+                    monsterAttackSoundPlayed=true;
+                    wolfAttackSound();
+                }
+                setWolfTexture(getWolfTextures().idle);
+                setWolfTexture(getWolfTextures().attack);
                 monster.position.x=THREE.MathUtils.lerp(
                     monsterHomeX,
                     monsterHomeX-attackUX*.7,
@@ -7901,15 +8026,9 @@ function loop(now){
             }
 
 
-            /*
-                플레이어 쪽 돌진
-            */
-
-            else if(t<.52){
-
-                const p=
-
-                    (t-.2)/.32;
+            /* 플레이어 쪽으로 한 번만 돌진한다. */
+            else if(t<2.5){
+                const p=(t-2.18)/.32;
 
 
                 monster.position.x=THREE.MathUtils.lerp(
@@ -7926,11 +8045,8 @@ function loop(now){
             }
 
 
-            /*
-                플레이어 맞음
-            */
-
-            else if(t<.62){
+            /* 실제 충돌 순간에 다시 거리를 검사한다. */
+            else if(t<2.62){
 
                 if(
                     !monsterAttackHit
@@ -7953,15 +8069,9 @@ function loop(now){
             }
 
 
-            /*
-                원위치
-            */
-
-            else if(t<1){
-
-                const p=
-
-                    (t-.62)/.38;
+            /* 공격 후 원위치로 돌아온다. */
+            else if(t<3){
+                const p=(t-2.62)/.38;
 
 
                 monster.position.x=THREE.MathUtils.lerp(
@@ -7995,6 +8105,11 @@ function loop(now){
 
                 monsterAttackHit=
                     false;
+                monsterAttackSoundPlayed=false;
+                monsterNextAttackAt=performance.now()+1700;
+                monster.position.y=2.7;
+                monster.scale.y=1;
+                setWolfTexture(getWolfTextures().idle);
 
             }
 
@@ -8309,3 +8424,4 @@ pageReady();
 
 </body>
 </html>
+
