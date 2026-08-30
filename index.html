@@ -1942,9 +1942,10 @@ const WOLF_IDLE_URL="https://static.wixstatic.com/media/172435_91e8afed612c4a6ab
 const WOLF_WALK_1_URL="https://static.wixstatic.com/media/172435_30f709b4dba24b53aca0dd743c0f9b0b~mv2.png";
 const WOLF_WALK_2_URL="https://static.wixstatic.com/media/172435_272a87bc3b864f79a0e9b088e4dd9cfd~mv2.png";
 const WOLF_ATTACK_URL="https://static.wixstatic.com/media/172435_4d0ae03f956f469bad1b23638ee66bcb~mv2.png";
-const WOLF_HIT_URL="https://static.wixstatic.com/media/172435_732226b899ac4c7498c5ed2e40251364~mv2.png";
-const WOLF_BASE_SIZE=3.6;
-const WOLF_BASE_Y=1.68;
+const WOLF_HIT_URL="https://static.wixstatic.com/media/172435_42b4d9ee255645c283beeb970157741a~mv2.png";
+const WOLF_BASE_SIZE=5.4;
+/* 원래 크기를 복원하되 이미지의 투명 여백을 고려해 지면 쪽으로 내린다. */
+const WOLF_BASE_Y=2.58;
 const WORLD_BOUNDS={minX:-64,maxX:64,minZ:-67,maxZ:57};
 const GYRO_MONSTER_POSITIONS=[
     {x:-40,z:-5},
@@ -1953,7 +1954,8 @@ const GYRO_MONSTER_POSITIONS=[
     {x:40,z:-5},
     {x:-31,z:-45},
     {x:31,z:-45},
-    {x:0,z:20}
+    /* 시작점(0,-5)에서 정확히 20 거리라 시작 직후 추격을 확인할 수 있다. */
+    {x:0,z:15}
 ];
 
 let gyroEnabled=false;
@@ -2144,7 +2146,7 @@ function updateCombatLockHeading(dt){
         camera.position.z-monster.position.z
     );
     const difference=normalizeAngle(targetHeading-gyroViewHeading);
-    const turnSpeed=playerKnockbackRemaining>0 ? 6.45 : 4.05;
+    const turnSpeed=playerKnockbackRemaining>0 ? 12.9 : 8.1;
     const step=Math.min(Math.abs(difference),turnSpeed*dt);
     gyroViewHeading=normalizeAngle(
         gyroViewHeading+Math.sign(difference)*step
@@ -5207,7 +5209,7 @@ function damageMonster(){
         monsterMaterial
         .color
         .set(
-            0xff3030
+            0x655475
         );
 
     }
@@ -5419,9 +5421,8 @@ function startBattle(){
     battle=
         true;
 
-    /* 발견 직후 카메라를 순간이동시키지 않는다.
-       첫 공격이 시작될 때 피격 연출과 함께 서서히 락온한다. */
-    battleLockOn=false;
+    /* 늑대가 가까워져 전투가 시작되면 즉시 부드럽게 늑대를 바라본다. */
+    battleLockOn=true;
     $("game").classList.add("in-battle");
 
 
@@ -6402,8 +6403,8 @@ function startQRContinuousAttack(){
             return;
         }
 
-        /* 첨부한 정상 파일처럼 QR이 계속 보이는 동안에는
-           칼 잠금이 풀리는 즉시 다음 공격을 다시 시도한다. */
+        /* 모든 기기에서 QR 판독 시점과 칼 잠금 해제 시점이 겹쳐도
+           잠금이 풀린 직후 다음 공격을 다시 시도한다. */
         tryQRAttack();
     },80);
 }
@@ -7609,7 +7610,7 @@ function loop(now){
                 if(
                     nearestWolfIndex>=0 &&
                     nearestWolfIndex!==monsterIndex &&
-                    nearestWolfDistance<=MONSTER_AGGRO_DISTANCE
+                    nearestWolfDistance<=MONSTER_AGGRO_DISTANCE+.5
                 ){
                     spawnMonster(nearestWolfIndex);
                     createWolfSentinels();
@@ -7625,7 +7626,7 @@ function loop(now){
                 );
                 if(
                     !wolfAggroActive &&
-                    gyroMonsterDistance<=MONSTER_LOCK_DISTANCE
+                    gyroMonsterDistance<=MONSTER_LOCK_DISTANCE+.5
                 ){
                     wolfAggroActive=true;
                 }
