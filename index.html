@@ -1030,6 +1030,9 @@ canvas{
 .directionButton.dir-straight::after{background-image:var(--direction-gem-right) !important;transform:rotate(-90deg)}
 
 #pauseButton{position:absolute;z-index:170;right:12px;top:92px;padding:9px 12px;border:1px solid rgba(255,255,255,.65);border-radius:11px;background:rgba(4,13,22,.82);color:white;font-size:12px;font-weight:900;box-shadow:0 3px 10px rgba(0,0,0,.35)}
+#battleExitButton{position:absolute;z-index:176;left:50%;top:155px;display:none;transform:translateX(-50%);padding:11px 20px;border:3px solid #6b3924;border-radius:14px;background:linear-gradient(#f2d4a3,#bd7d4d);color:#4b2819;font-size:15px;font-weight:1000;box-shadow:inset 0 0 0 2px #fff0c9,0 5px 0 rgba(48,22,12,.55);touch-action:manipulation}
+#game.in-battle #battleExitButton{display:block}
+#battleExitButton:active{transform:translate(-50%,4px)}
 #pauseOverlay{position:absolute;inset:0;z-index:150;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.42);color:white;font-size:34px;font-weight:1000;text-shadow:0 3px 8px #000;pointer-events:none}
 #pauseOverlay.show{display:flex}
 
@@ -1517,6 +1520,7 @@ html.ios-device #qrPanel{
         <div id="turnIndicator" aria-hidden="true"></div>
 
         <button id="pauseButton">⏸ 일시정지</button>
+        <button id="battleExitButton">🏃 전투 나가기</button>
         <button id="inventoryButton" aria-label="인벤토리 열기">🎒<small>아이템</small></button>
         <div id="inventoryPanel">인벤토리<br><span style="font-size:12px">획득한 아이템이 여기에 표시됩니다.</span></div>
         <div id="pauseOverlay">PAUSED</div>
@@ -1810,6 +1814,7 @@ let gamePaused=false;
 let battle=false;
 let battleLockOn=false;
 let battleExitSuppressed=false;
+let battleExitGraceUntil=0;
 
 let monsterDead=false;
 
@@ -3742,15 +3747,29 @@ function init3D(){
         );
 
 
+        /* 맵 경계 밖에는 물이 보이고, 이동 가능한 직사각형 안에만
+           풀밭을 깔아 시각적으로도 바깥으로 나갈 수 없게 한다. */
+        const water=new THREE.Mesh(
+            new THREE.PlaneGeometry(500,500),
+            new THREE.MeshLambertMaterial({
+                color:0x173f67,
+                transparent:true,
+                opacity:.96
+            })
+        );
+        water.rotation.x=-Math.PI/2;
+        water.position.set(0,-.055,-5);
+        scene.add(water);
+
         const ground=
 
             new THREE.Mesh(
 
                 new THREE.PlaneGeometry(
 
-                    500,
+                    WORLD_BOUNDS.maxX-WORLD_BOUNDS.minX,
 
-                    500
+                    WORLD_BOUNDS.maxZ-WORLD_BOUNDS.minZ
 
                 ),
 
@@ -3775,7 +3794,7 @@ function init3D(){
 
             0,
 
-            -10
+            (WORLD_BOUNDS.minZ+WORLD_BOUNDS.maxZ)/2
 
         );
 
@@ -4026,8 +4045,8 @@ function createForest(){
 
 
     for(
-        let z=5;
-        z>-180;
+        let z=WORLD_BOUNDS.maxZ-2;
+        z>WORLD_BOUNDS.minZ+2;
         z-=5
     ){
 
@@ -4211,6 +4230,14 @@ function createForest(){
                 for(let x=-125;x<=125;x+=9){
                     const px=x+(Math.random()-.5)*4.2;
                     const pz=z+(Math.random()-.5)*4.2;
+                    if(
+                        px<WORLD_BOUNDS.minX+2 ||
+                        px>WORLD_BOUNDS.maxX-2 ||
+                        pz<WORLD_BOUNDS.minZ+2 ||
+                        pz>WORLD_BOUNDS.maxZ-2
+                    ){
+                        continue;
+                    }
                     const verticalRoadDistance=Math.min(
                         Math.abs(px+40),
                         Math.abs(px),
@@ -5406,6 +5433,24 @@ function stopBattleForDistance(){
     updateSwordIdle();
 }
 
+function exitBattleAndFlee(){
+    if(!battle || monsterDead || gamePaused || gameOver){return;}
+    battle=false;
+    battleLockOn=false;
+    battleExitSuppressed=true;
+    battleExitGraceUntil=performance.now()+5000;
+    monsterAttackProgress=-1;
+    monsterAttackHit=false;
+    monsterAttackSoundPlayed=false;
+    $("game").classList.remove("in-battle");
+    if(monsterAttackTimer){
+        clearInterval(monsterAttackTimer);
+        monsterAttackTimer=null;
+    }
+    updateSwordIdle();
+    $("statusText").textContent="전투에서 벗어났습니다 · 도망가세요!";
+}
+
 function startBattle(){
 
     if(
@@ -5467,10 +5512,10 @@ function triggerMonsterAttack(){
 
     if(
         !battle &&
+        !battleExitSuppressed &&
         wolfAggroActive &&
         attackDistance<=MONSTER_ATTACK_DISTANCE+.35
     ){
-        battleExitSuppressed=false;
         startBattle();
     }
 
@@ -6349,6 +6394,7 @@ let qrSmallAssistBusy=false;
 
 let qrContinuousAttackTimer=null;
 let qrAutofocusWatchTimer=null;
+let lastQRFocusRecoveryAt=0;
 
 let lastValidQRSeenAt=0;
 
@@ -6666,14 +6712,22 @@ function resetAndroidQRAutofocus(video){
 function startAndroidAutofocusWatch(video){
     stopAndroidAutofocusWatch();
     if(isIOS()){return;}
+    lastQRFocusRecoveryAt=performance.now();
     setTimeout(function(){
         if(qrRunning){resetAndroidQRAutofocus(video);}
     },2300);
     qrAutofocusWatchTimer=setInterval(function(){
-        if(qrRunning && inputMode==="qr"){
+        const now=performance.now();
+        if(
+            qrRunning &&
+            inputMode==="qr" &&
+            now-lastQRHit>=3000 &&
+            now-lastQRFocusRecoveryAt>=2200
+        ){
+            lastQRFocusRecoveryAt=now;
             resetAndroidQRAutofocus(video);
         }
-    },2800);
+    },500);
 }
 
 function waitForQRVideoReady(video){
@@ -6773,6 +6827,9 @@ async function startQR(){
         );
 
         qrRunning=true;
+        /* 카메라가 켜진 뒤 3초간 공격 인식이 없으면
+           Android 초점을 다시 요청할 수 있도록 기준 시각을 잡는다. */
+        lastQRHit=performance.now();
         startQRContinuousAttack();
 
         /* 라이브러리가 video 스타일을 다시 지정해도
@@ -7253,6 +7310,11 @@ $("pauseButton")
     toggleGamePause
 );
 
+$("battleExitButton").addEventListener(
+    "click",
+    exitBattleAndFlee
+);
+
 $("gyroPermissionButton").addEventListener(
     "click",
     enableGyroMode
@@ -7625,6 +7687,15 @@ function loop(now){
                     camera.position.z-monsterHomeZ
                 );
                 if(
+                    battleExitSuppressed &&
+                    (
+                        gyroMonsterDistance>MONSTER_AGGRO_DISTANCE ||
+                        performance.now()>=battleExitGraceUntil
+                    )
+                ){
+                    battleExitSuppressed=false;
+                }
+                if(
                     !wolfAggroActive &&
                     gyroMonsterDistance<=MONSTER_LOCK_DISTANCE+.5
                 ){
@@ -7636,12 +7707,14 @@ function loop(now){
                     gyroMonsterDistance>MONSTER_AGGRO_DISTANCE
                 ){
                     wolfAggroActive=false;
+                    battleExitSuppressed=false;
                     wolfWasChasing=false;
                     if(battle){stopBattleForDistance();}
                 }
 
                 if(
                     !battle &&
+                    !battleExitSuppressed &&
                     wolfAggroActive &&
                     gyroMonsterDistance<=MONSTER_LOCK_DISTANCE
                 ){
