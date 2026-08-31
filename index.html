@@ -1950,7 +1950,7 @@ let turnFootTimer=0;
 ===================================================== */
 
 const GYRO_EXPERIMENT=true;
-const GYRO_WALK_SPEED=28;
+const GYRO_WALK_SPEED=40;
 const GYRO_LOOK_SENSITIVITY=1.65;
 const CONTROL_TURN_SPEED=4.7;
 const MONSTER_AGGRO_DISTANCE=30;
@@ -8088,7 +8088,7 @@ function loop(now){
             const breathe=1+Math.sin(now*.003)*.025;
 
             if(wolfWalking){
-                const walkFrame=Math.floor(now/121)%2;
+                const walkFrame=Math.floor(now/170)%2;
                 setWolfTexture(
                     walkFrame===0
                         ? getWolfTextures().walk1
@@ -8123,7 +8123,7 @@ function loop(now){
 
                 WOLF_BASE_Y -
 
-                (wolfWalking ? .50 : 0) +
+                (wolfWalking ? .45 : 0) +
 
                 (
                     breathe-1
