@@ -1950,7 +1950,7 @@ let turnFootTimer=0;
 ===================================================== */
 
 const GYRO_EXPERIMENT=true;
-const GYRO_WALK_SPEED=40;
+const GYRO_WALK_SPEED=28;
 const GYRO_LOOK_SENSITIVITY=1.65;
 const CONTROL_TURN_SPEED=4.7;
 const MONSTER_AGGRO_DISTANCE=30;
@@ -6823,7 +6823,7 @@ function startAndroidAutofocusWatch(video){
             qrRunning &&
             inputMode==="qr" &&
             now-lastQRHit>=2000 &&
-            now-lastQRFocusRecoveryAt>=500
+            now-lastQRFocusRecoveryAt>=1000
         ){
             lastQRFocusRecoveryAt=now;
             resetAndroidQRAutofocus(video);
@@ -8088,13 +8088,11 @@ function loop(now){
             const breathe=1+Math.sin(now*.003)*.025;
 
             if(wolfWalking){
-                const walkFrame=Math.floor(now/85)%4;
+                const walkFrame=Math.floor(now/85)%2;
                 setWolfTexture(
                     walkFrame===0
                         ? getWolfTextures().walk1
-                        : walkFrame===2
-                            ? getWolfTextures().walk2
-                            : getWolfTextures().idle
+                        : getWolfTextures().walk2
                 );
             }
             else{
@@ -8123,9 +8121,9 @@ function loop(now){
 
             monster.position.y=
 
-                WOLF_BASE_Y +
+                WOLF_BASE_Y -
 
-                (wolfWalking ? .28 : 0) +
+                (wolfWalking ? .34 : 0) +
 
                 (
                     breathe-1
