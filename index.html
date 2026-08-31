@@ -149,7 +149,8 @@ canvas{
     /* 손잡이를 고정하고 칼날은 오른쪽을 향한 기본 자세 */
     transform:rotate(34deg);
 
-    filter:drop-shadow(0 10px 10px rgba(0,0,0,.55));
+    filter:brightness(.82) saturate(.90) hue-rotate(8deg)
+        drop-shadow(0 10px 10px rgba(0,0,0,.55));
 }
 
 
@@ -1030,7 +1031,7 @@ canvas{
 .directionButton.dir-back::after{background-image:var(--direction-gem-right) !important;transform:rotate(90deg)}
 .directionButton.dir-straight::after{background-image:var(--direction-gem-right) !important;transform:rotate(-90deg)}
 
-#pauseButton{position:absolute;z-index:170;right:12px;top:92px;padding:9px 12px;border:1px solid rgba(255,255,255,.65);border-radius:11px;background:rgba(4,13,22,.82);color:white;font-size:12px;font-weight:900;box-shadow:0 3px 10px rgba(0,0,0,.35)}
+#pauseButton{position:absolute;z-index:170;right:8px;left:auto;top:8px;width:38px;height:38px;padding:0;border:2px solid #6b3924;border-radius:10px;background:linear-gradient(#a66a47,#653a25);color:#fff0d4;font-size:18px;font-weight:900;box-shadow:inset 0 0 0 2px #d7a176,0 3px 0 rgba(52,22,11,.55)}
 #battleExitButton{position:absolute;z-index:176;left:50%;top:155px;display:none;transform:translateX(-50%);padding:11px 20px;border:3px solid #6b3924;border-radius:14px;background:linear-gradient(#f2d4a3,#bd7d4d);color:#4b2819;font-size:15px;font-weight:1000;box-shadow:inset 0 0 0 2px #fff0c9,0 5px 0 rgba(48,22,12,.55);touch-action:manipulation}
 #game.in-battle #battleExitButton{display:block}
 #battleExitButton:active{transform:translate(-50%,4px)}
@@ -1057,12 +1058,14 @@ canvas{
 #game.gyro-experiment.qr-mode #modeSwitch{bottom:8px}
 #game.gyro-experiment.qr-mode #qrPanel{
     left:auto;
-    right:8px;
-    bottom:8px;
+    right:0;
+    bottom:0;
     width:38.4%;
-    height:36%;
-    border:3px solid white;
-    border-radius:18px;
+    height:auto;
+    aspect-ratio:1 / 1;
+    border:4px solid #6c3b25;
+    border-radius:13px 0 0 0;
+    box-shadow:inset 0 0 0 3px #d9a476,0 0 12px rgba(0,0,0,.55);
     --qr-focus-size:min(40vw,25.2vh);
 }
 
@@ -1143,7 +1146,9 @@ canvas{
 #game.control-experiment #leftButton.pressed,
 #game.control-experiment #rightButton.pressed{transform:translateY(4px) scale(.96);filter:brightness(1.15);box-shadow:inset 0 0 0 3px #fff0c8,0 1px 0 #633721}
 #game.control-experiment #inventoryButton{left:10px;bottom:230px}
-#game.control-experiment #inventoryPanel,#game.control-experiment #questPanel{left:86px;bottom:230px}
+#game.control-experiment #inventoryPanel,#game.control-experiment #questPanel{left:86px}
+#game.control-experiment #inventoryPanel{bottom:230px}
+#game.control-experiment #questPanel{bottom:306px}
 #game.control-experiment #modeSwitch{left:auto;right:10px;bottom:10px;transform:none}
 #game.control-experiment.qr-mode #modeSwitch{left:auto;right:10px;bottom:calc(36% + 14px);transform:none}
 @media (max-width:430px){
@@ -1156,7 +1161,8 @@ canvas{
     #game.control-experiment #backwardButton{left:57px;top:114px}
     #game.control-experiment #inventoryButton{bottom:205px}
     #game.control-experiment #questButton{bottom:281px}
-    #game.control-experiment #inventoryPanel,#game.control-experiment #questPanel{bottom:205px}
+    #game.control-experiment #inventoryPanel{bottom:205px}
+    #game.control-experiment #questPanel{bottom:281px}
 }
 
 /* 간결한 HUD */
@@ -1173,7 +1179,7 @@ canvas{
 #modeSwitch{top:82px;border:2px solid #60321f;background:linear-gradient(#9b6040,#613923);box-shadow:inset 0 0 0 2px #d5a074,0 3px 0 rgba(49,20,10,.55)}
 .modeButton{color:#ffe9c8}
 .modeButton.active{background:#f4d5a8;color:#532b1b;box-shadow:inset 0 0 0 2px #fff0ce}
-#pauseButton{left:8px;right:auto;top:82px;border:2px solid #6b3924;background:linear-gradient(#a66a47,#653a25);color:#fff0d4;box-shadow:inset 0 0 0 2px #d7a176,0 3px 0 rgba(52,22,11,.55)}
+#pauseButton{left:auto;right:8px;top:8px}
 #miniMap{top:8px;right:8px;border:3px solid #6c3b25;background:rgba(70,38,25,.85);box-shadow:inset 0 0 0 2px #d3a273,0 5px 12px rgba(0,0,0,.5)}
 
 /* 아이폰은 QR 전용 */
@@ -1189,7 +1195,7 @@ canvas{
 #game:not(.in-battle) #hud .unit:first-child{width:min(58%,360px)}
 
 /* 이후 모든 캐릭터 대화에 공통으로 사용할 상단 말칸 */
-#dialogueBox{position:absolute;z-index:108;left:4%;right:4%;top:118px;display:none;min-height:62px;padding:16px 48px 15px 18px;box-sizing:border-box;border:4px solid #70462c;border-radius:14px;background:linear-gradient(#ffe5b1,#efc983);color:#3c2417;font-size:clamp(17px,4.8vw,28px);font-weight:900;line-height:1.35;box-shadow:inset 0 0 0 3px #fff0c8,0 5px 0 rgba(70,37,20,.45)}
+#dialogueBox{position:absolute;z-index:188;left:auto;right:0;top:auto;bottom:calc(38.4vw + 5px);display:none;width:55%;min-height:38px;padding:7px 28px 7px 9px;box-sizing:border-box;border:2px solid #70462c;border-radius:9px;background:#fff;color:#3c2417;font-size:clamp(12px,2.8vw,17px);font-weight:900;line-height:1.25;box-shadow:0 3px 8px rgba(0,0,0,.42);cursor:pointer}
 #dialogueBox.show{display:block}
 #dialogueNext{position:absolute;right:17px;bottom:10px;width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-top:13px solid #765038;animation:dialogueBlink .7s steps(2,end) infinite}
 @keyframes dialogueBlink{50%{opacity:.15;transform:translateY(4px)}}
@@ -1199,12 +1205,13 @@ canvas{
 #inventoryButton{bottom:230px}
 #questButton{bottom:306px}
 #inventoryButton img,#questButton img{width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
-#inventoryPanel,#questPanel{position:absolute;z-index:159;left:86px;bottom:230px;display:none;width:168px;min-height:61px;padding:6px;border:3px solid #6c3b25;border-radius:13px;background:linear-gradient(#f8ddb0,#d8ae75);color:#4a291a;font-size:13px;font-weight:900;box-shadow:inset 0 0 0 2px #fff0ca,0 5px 12px rgba(0,0,0,.45)}
+#inventoryPanel,#questPanel{position:absolute;z-index:159;left:86px;display:none;width:134px;min-height:49px;padding:2px;border:2px solid #6c3b25;border-radius:10px;background:linear-gradient(#f8ddb0,#d8ae75);color:#4a291a;font-size:13px;font-weight:900;box-shadow:inset 0 0 0 1px #fff0ca,0 4px 9px rgba(0,0,0,.42)}
+#inventoryPanel{bottom:230px}#questPanel{bottom:306px}
 #inventoryPanel.show,#questPanel.show{display:block}
-.inventoryRow{display:flex;align-items:center;gap:8px;margin-top:7px}.inventoryRow img{width:38px;height:38px;object-fit:contain;image-rendering:pixelated}.inventoryRow span{white-space:nowrap}
+.inventoryRow{display:flex;align-items:center;gap:2px;margin-top:7px}.inventoryRow img{width:38px;height:38px;object-fit:contain;image-rendering:pixelated}.inventoryRow span{white-space:nowrap}
 #inventoryButton.panel-open,#questButton.panel-open{filter:brightness(1.25);transform:scale(.90);box-shadow:inset 0 0 0 3px #fff0c9,0 2px 0 rgba(52,22,11,.58)}
-#lootToast{position:absolute;z-index:188;right:3px;top:108px;display:none;width:142px;padding:2px;border:2px solid #70462c;border-radius:8px;background:linear-gradient(#ffe5b1,#efc983);color:#3c2417;font-size:10px;font-weight:1000;line-height:1.05;box-shadow:inset 0 0 0 1px #fff0c8,0 3px 8px rgba(0,0,0,.4)}
-#lootToast.show{display:block}.lootRow{display:flex;align-items:center;gap:2px;margin:1px 0}.lootRow img{width:25px;height:25px;object-fit:contain;image-rendering:pixelated}.lootRow span{white-space:nowrap}
+#lootToast{position:absolute;z-index:188;right:2px;top:108px;display:none;width:220px;padding:2px;border:2px solid #70462c;border-radius:8px;background:linear-gradient(#ffe5b1,#efc983);color:#3c2417;font-size:13px;font-weight:1000;line-height:1.05;box-shadow:inset 0 0 0 1px #fff0c8,0 3px 8px rgba(0,0,0,.4);transform:scale(.5);transform-origin:top right}
+#lootToast.show{display:block}.lootRow{display:flex;align-items:center;gap:2px;margin:1px 0}.lootRow img{width:42px;height:42px;object-fit:contain;image-rendering:pixelated}.lootRow span{white-space:nowrap}
 
 /* QR 바깥은 게임 50% + 카메라 50%, 중앙은 카메라 100% */
 #game.qr-mode #playArea{height:100%}
@@ -1532,7 +1539,7 @@ html.ios-device #qrPanel{
 
         <div id="turnIndicator" aria-hidden="true"></div>
 
-        <button id="pauseButton">⏸ 일시정지</button>
+        <button id="pauseButton" aria-label="일시정지">⏸</button>
         <button id="battleExitButton">전투 나가기</button>
         <button id="questButton" aria-label="퀘스트 열기"><img src="https://static.wixstatic.com/media/172435_db0fd22ef0cd4fd48cde2f64dee535bc~mv2.png" alt="퀘스트"></button>
         <button id="inventoryButton" aria-label="인벤토리 열기"><img src="https://static.wixstatic.com/media/172435_513831dd8ed049688a5282ba36bc3b3e~mv2.png" alt="아이템"></button>
@@ -1624,10 +1631,6 @@ html.ios-device #qrPanel{
             <h1>
                 GAME OVER
             </h1>
-
-            <p>
-                HP가 모두 소진되었습니다.
-            </p>
 
             <button id="retryButton">
                 다시 시작
@@ -1993,7 +1996,11 @@ let defeatedWolfIndices=new Set();
 let wolfMeatCount=0;
 let wolfHideCount=0;
 let lootToastTimer=null;
+let dialogueQueue=[];
+let dialogueQueueIndex=0;
+let dialogueAutoHideTimer=null;
 let wolfTextures=null;
+let wolfEyeGlow=null;
 let monsterNextAttackAt=0;
 let monsterAttackSoundPlayed=false;
 let gyroHasOrientation=false;
@@ -2402,6 +2409,36 @@ function updateMapPlayerFromCamera(){
         dot.style.left=(58+wolf.x)+"px";
         dot.style.top=(17+(wolf.z+45)*.725)+"px";
     });
+}
+
+function showDialogueMessages(messages,autoHideMs){
+    dialogueQueue=Array.isArray(messages) ? messages.slice() : [String(messages)];
+    dialogueQueueIndex=0;
+    if(dialogueAutoHideTimer){clearTimeout(dialogueAutoHideTimer);}
+    $("dialogueText").textContent=dialogueQueue[0] || "";
+    $("dialogueBox").classList.add("show");
+    if(autoHideMs){
+        dialogueAutoHideTimer=setTimeout(function(){
+            $("dialogueBox").classList.remove("show");
+            dialogueQueue=[];
+        },autoHideMs);
+    }
+}
+
+function advanceDialogue(){
+    if(!$("dialogueBox").classList.contains("show")){return;}
+    if(dialogueAutoHideTimer){
+        clearTimeout(dialogueAutoHideTimer);
+        dialogueAutoHideTimer=null;
+    }
+    dialogueQueueIndex+=1;
+    if(dialogueQueueIndex<dialogueQueue.length){
+        $("dialogueText").textContent=dialogueQueue[dialogueQueueIndex];
+    }
+    else{
+        $("dialogueBox").classList.remove("show");
+        dialogueQueue=[];
+    }
 }
 
 function relativeDirection(to){
@@ -4476,6 +4513,16 @@ function removeWolfSentinel(index){
     wolfSentinels[index]=null;
 }
 
+function updateMonsterShadowPosition(){
+    if(!monsterShadow || !camera){return;}
+    const awayX=monsterHomeX-camera.position.x;
+    const awayZ=monsterHomeZ-camera.position.z;
+    const length=Math.max(.001,Math.hypot(awayX,awayZ));
+    /* 그림자를 늑대 뒤쪽으로 밀어 뒷발 아래에 닿아 보이게 한다. */
+    monsterShadow.position.x=monsterHomeX+awayX/length*.72;
+    monsterShadow.position.z=monsterHomeZ+awayZ/length*.72;
+}
+
 function createWolfSentinels(){
     wolfSentinels.forEach(function(sentinel,index){
         if(sentinel){removeWolfSentinel(index);}
@@ -4488,7 +4535,7 @@ function createWolfSentinels(){
         if(index===monsterIndex || defeatedWolfIndices.has(index)){return;}
         const material=new THREE.SpriteMaterial({
             map:texture,
-            color:0x655475,
+            color:0x9282a5,
             transparent:true,
             alphaTest:.06,
             depthTest:true,
@@ -4567,7 +4614,7 @@ function spawnMonster(index){
         new THREE.MeshBasicMaterial({
 
             map:wolfTexture,
-            color:0x655475,
+            color:0x9282a5,
 
             transparent:true,
 
@@ -4646,6 +4693,34 @@ function spawnMonster(index){
     );
     monster.renderOrder=0;
     monster.frustumCulled=false;
+
+    /* 야간에도 눈 위치만 은은하게 빛나도록 작은 가산광 평면을 겹친다. */
+    const eyeCanvas=document.createElement("canvas");
+    eyeCanvas.width=96;
+    eyeCanvas.height=28;
+    const eyeContext=eyeCanvas.getContext("2d");
+    function drawEye(x){
+        const glow=eyeContext.createRadialGradient(x,14,1,x,14,11);
+        glow.addColorStop(0,"rgba(255,255,185,1)");
+        glow.addColorStop(.3,"rgba(216,255,115,.95)");
+        glow.addColorStop(1,"rgba(170,255,70,0)");
+        eyeContext.fillStyle=glow;
+        eyeContext.fillRect(x-12,2,24,24);
+    }
+    drawEye(34);
+    drawEye(62);
+    const eyeTexture=new THREE.CanvasTexture(eyeCanvas);
+    wolfEyeGlow=new THREE.Mesh(
+        new THREE.PlaneGeometry(.82,.24),
+        new THREE.MeshBasicMaterial({
+            map:eyeTexture,
+            transparent:true,
+            depthWrite:false,
+            blending:THREE.AdditiveBlending
+        })
+    );
+    wolfEyeGlow.position.set(0,.72,.025);
+    monster.add(wolfEyeGlow);
 
 
     /*
@@ -5249,7 +5324,7 @@ function damageMonster(){
         monsterMaterial
         .color
         .set(
-            0x655475
+            0x9282a5
         );
 
     }
@@ -5334,9 +5409,9 @@ function showWolfLoot(){
     wolfHideCount+=1;
     updateWolfQuestUI();
 
-    const completed=defeatedWolfIndices.size>=6;
+    const completed=defeatedWolfIndices.size>=GYRO_MONSTER_POSITIONS.length;
     const burstText=$("chestBurstText");
-    burstText.textContent=completed ? "퀘스트 완료!" : "아이템 획득!";
+    burstText.textContent=completed ? "MISSION CLEAR!" : "아이템 획득!";
     chestCelebration();
 
     const toast=$("lootToast");
@@ -5347,8 +5422,10 @@ function showWolfLoot(){
     },2200);
 
     if(completed){
-        $("dialogueText").textContent="퀘스트 완료! 마을의 늑대 6마리를 모두 소탕했어!";
-        $("dialogueBox").classList.add("show");
+        showDialogueMessages([
+            "MISSION CLEAR!",
+            "마을의 늑대 6마리를 모두 소탕했어!"
+        ]);
     }
 }
 
@@ -5359,6 +5436,7 @@ function killMonster(){
     defeatedWolfIndices.add(monsterIndex);
     showWolfLoot();
     setWolfTexture(getWolfTextures().hit);
+    if(wolfEyeGlow){wolfEyeGlow.visible=false;}
 
 
     battle=
@@ -5433,8 +5511,6 @@ function nextMonster(){
         }
         else{
             mapPaused=true;
-            $("dialogueText").textContent="퀘스트 완료! 마을의 늑대 6마리를 모두 소탕했어!";
-            $("dialogueBox").classList.add("show");
             $("gyroStatus").textContent="퀘스트 완료!";
         }
         updateSwordIdle();
@@ -7272,13 +7348,7 @@ function startGame(){
         $("dialogueBox").classList.remove("show");
     }
 
-    $("dialogueText").textContent="늑대를 잡아보자.";
-    $("dialogueBox").classList.add("show");
-    setTimeout(function(){
-        if($("dialogueText").textContent==="늑대를 잡아보자."){
-            $("dialogueBox").classList.remove("show");
-        }
-    },5000);
+    showDialogueMessages("늑대를 잡아보자.",5000);
 
 
     updateSwordIdle();
@@ -7322,7 +7392,7 @@ function toggleGamePause(){
 
     if(gamePaused){
         bgmAudio.pause();
-        $("pauseButton").textContent="▶ 계속하기";
+        $("pauseButton").textContent="▶";
         $("pauseOverlay").classList.add("show");
         $("sword").style.animationPlayState="paused";
         if(swordAnimation && swordAnimation.pause){
@@ -7330,7 +7400,7 @@ function toggleGamePause(){
         }
     }
     else{
-        $("pauseButton").textContent="⏸ 일시정지";
+        $("pauseButton").textContent="⏸";
         $("pauseOverlay").classList.remove("show");
         $("sword").style.animationPlayState="running";
         if(swordAnimation && swordAnimation.play){
@@ -7360,6 +7430,11 @@ $("pauseButton")
 .addEventListener(
     "click",
     toggleGamePause
+);
+
+$("dialogueBox").addEventListener(
+    "click",
+    advanceDialogue
 );
 
 $("battleExitButton").addEventListener(
@@ -7914,6 +7989,7 @@ function loop(now){
 
 
         updateMapPlayerFromCamera();
+        updateMonsterShadowPosition();
 
 
         /* =============================================
@@ -8141,7 +8217,7 @@ function loop(now){
                     monsterMaterial
                     .color
                     .set(
-                        0x655475
+                        0x9282a5
                     );
 
                 }
