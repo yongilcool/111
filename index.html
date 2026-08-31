@@ -1543,7 +1543,7 @@ html.ios-device #qrPanel{
         <button id="battleExitButton">전투 나가기</button>
         <button id="questButton" aria-label="퀘스트 열기"><img src="https://static.wixstatic.com/media/172435_db0fd22ef0cd4fd48cde2f64dee535bc~mv2.png" alt="퀘스트"></button>
         <button id="inventoryButton" aria-label="인벤토리 열기"><img src="https://static.wixstatic.com/media/172435_513831dd8ed049688a5282ba36bc3b3e~mv2.png" alt="아이템"></button>
-        <div id="questPanel">퀘스트<br><div style="margin-top:8px;text-align:left">지하 던전<br>해골 소탕<br><b id="questProgress">0 / 6</b></div></div>
+        <div id="questPanel">퀘스트<br><div style="margin-top:8px;text-align:left">지하 던전<br>해골 소탕<br><b id="questProgress">0 / 18</b></div></div>
         <div id="inventoryPanel"><b>인벤토리</b><div class="inventoryRow"><img src="https://static.wixstatic.com/media/172435_76a4ea719647489baf3cf65188c8754c~mv2.png" alt="늑대고기"><span>늑대고기 × <b id="meatCount">0</b></span></div><div class="inventoryRow"><img src="https://static.wixstatic.com/media/172435_18c122b6a5c945718007e1ce6cfc5189~mv2.png" alt="늑대가죽"><span>늑대가죽 × <b id="hideCount">0</b></span></div></div>
         <div id="lootToast"><div class="lootRow"><span>해골 처치!</span></div></div>
         <div id="pauseOverlay">PAUSED</div>
@@ -1953,8 +1953,9 @@ const GYRO_EXPERIMENT=true;
 const DUNGEON_MODE=true;
 const DUNGEON_TEXTURE_URL="https://static.wixstatic.com/media/172435_a67fcd4a28004db6bc448dbf25e32ade~mv2.png";
 const DUNGEON_SIZE=21;
-const DUNGEON_CELL=8;
+const DUNGEON_CELL=16;
 let dungeonGrid=[];
+let dungeonOpenCells=[];
 let dungeonEntrance={x:1,z:20};
 let dungeonExit={x:19,z:0};
 const GYRO_WALK_SPEED=20;
@@ -3609,6 +3610,27 @@ function findDungeonChaseWaypoint(fromX,fromZ,toX,toZ){
     return dungeonWorldPosition(step[0],step[1]);
 }
 
+function hasDungeonLineOfSight(fromX,fromZ,toX,toZ){
+    if(!DUNGEON_MODE || !dungeonGrid.length){return true;}
+    const half=(DUNGEON_SIZE-1)/2;
+    const distance=Math.hypot(toX-fromX,toZ-fromZ);
+    const steps=Math.max(1,Math.ceil(distance/(DUNGEON_CELL*.22)));
+    for(let i=0;i<=steps;i++){
+        const ratio=i/steps;
+        const x=fromX+(toX-fromX)*ratio;
+        const z=fromZ+(toZ-fromZ)*ratio;
+        const gx=Math.round(x/DUNGEON_CELL)+half;
+        const gz=Math.round(z/DUNGEON_CELL)+half;
+        if(
+            gx<0 || gx>=DUNGEON_SIZE || gz<0 || gz>=DUNGEON_SIZE ||
+            dungeonGrid[gz][gx]!==0
+        ){
+            return false;
+        }
+    }
+    return true;
+}
+
 function generateDungeonMaze(){
     dungeonGrid=Array.from({length:DUNGEON_SIZE},function(){
         return Array(DUNGEON_SIZE).fill(1);
@@ -3653,9 +3675,10 @@ function generateDungeonMaze(){
             if(dungeonGrid[z][x]===0){open.push({x:x,z:z});}
         }
     }
-    const picks=[.17,.31,.46,.61,.76,.9];
+    dungeonOpenCells=open.slice();
     GYRO_MONSTER_POSITIONS.length=0;
-    picks.forEach(function(fraction){
+    Array.from({length:18},function(_,index){return (index+1)/19;})
+    .forEach(function(fraction){
         const cell=open[Math.min(open.length-1,Math.floor(open.length*fraction))];
         GYRO_MONSTER_POSITIONS.push(dungeonWorldPosition(cell.x,cell.z));
     });
@@ -3709,31 +3732,65 @@ function addDungeonGate(x,z,color){
     scene.add(light);
 }
 
+function createDungeonTreasureChests(){
+    worldTreasureChests.forEach(function(chest){scene.remove(chest);});
+    worldTreasureChests=[];
+    [.12,.38,.67,.86].forEach(function(fraction){
+        const cell=dungeonOpenCells[
+            Math.min(dungeonOpenCells.length-1,Math.floor(dungeonOpenCells.length*fraction))
+        ];
+        if(!cell){return;}
+        const position=dungeonWorldPosition(cell.x,cell.z);
+        const chest=new THREE.Group();
+        const wood=new THREE.MeshLambertMaterial({color:0x6b3219,emissive:0x180a04});
+        const gold=new THREE.MeshLambertMaterial({color:0xe8ad35,emissive:0x4a2c05});
+        const base=new THREE.Mesh(new THREE.BoxGeometry(3.5,1.6,2.4),wood);
+        base.position.y=.82;
+        const lid=new THREE.Mesh(new THREE.BoxGeometry(3.6,.72,2.5),wood);
+        lid.position.y=1.92;
+        const band=new THREE.Mesh(new THREE.BoxGeometry(.44,2.3,2.55),gold);
+        band.position.y=1.16;
+        chest.add(base,lid,band);
+        chest.position.set(position.x,0,position.z);
+        chest.userData.collected=false;
+        scene.add(chest);
+        worldTreasureChests.push(chest);
+    });
+}
+
 function buildDungeon(loader){
     generateDungeonMaze();
     /* 던전 밖과 시야 끝은 물색이 아니라 완전한 검은색이다. */
     scene.background=new THREE.Color(0x000000);
     scene.fog=new THREE.Fog(0x000000,58,118);
     scene.children.forEach(function(child){
-        if(child.isLight){child.intensity*=1.15;}
+        if(child.isLight){child.intensity*=.58;}
     });
     /* 횃불이 없는 구간도 맵 구조가 확실히 보이는 강한 기본광. */
-    scene.add(new THREE.AmbientLight(0xd8d5ff,1.15));
-    const dungeonHemi=new THREE.HemisphereLight(0xf1efff,0x51475f,1.05);
+    scene.add(new THREE.AmbientLight(0xd8d5ff,.58));
+    const dungeonHemi=new THREE.HemisphereLight(0xf1efff,0x51475f,.53);
     scene.add(dungeonHemi);
-    const dungeonFill=new THREE.DirectionalLight(0xcfc9ff,.78);
+    const dungeonFill=new THREE.DirectionalLight(0xcfc9ff,.39);
     dungeonFill.position.set(-3,7,4);
     scene.add(dungeonFill);
 
     const stoneTexture=loader.load(DUNGEON_TEXTURE_URL,function(texture){
         texture.wrapS=THREE.RepeatWrapping;
         texture.wrapT=THREE.RepeatWrapping;
-        texture.repeat.set(2,2);
+        texture.repeat.set(1,1);
         texture.colorSpace=THREE.SRGBColorSpace;
         texture.magFilter=THREE.NearestFilter;
+        const floorTexture=texture.clone();
+        floorTexture.wrapS=floorTexture.wrapT=THREE.RepeatWrapping;
+        floorTexture.repeat.set(DUNGEON_SIZE,DUNGEON_SIZE);
+        floorTexture.needsUpdate=true;
+        const ceilingTexture=texture.clone();
+        ceilingTexture.wrapS=ceilingTexture.wrapT=THREE.RepeatWrapping;
+        ceilingTexture.repeat.set(DUNGEON_SIZE,DUNGEON_SIZE);
+        ceilingTexture.needsUpdate=true;
         stoneMaterial.map=texture;
-        floorMaterial.map=texture;
-        ceilingMaterial.map=texture;
+        floorMaterial.map=floorTexture;
+        ceilingMaterial.map=ceilingTexture;
         stoneMaterial.needsUpdate=true;
         floorMaterial.needsUpdate=true;
         ceilingMaterial.needsUpdate=true;
@@ -3742,20 +3799,20 @@ function buildDungeon(loader){
     const stoneMaterial=new THREE.MeshLambertMaterial({
         color:0xffffff,
         emissive:0x383440,
-        emissiveIntensity:.72,
+        emissiveIntensity:.36,
         map:stoneTexture
     });
     const floorMaterial=new THREE.MeshLambertMaterial({
         color:0xf0edf8,
         emissive:0x302d38,
-        emissiveIntensity:.62,
+        emissiveIntensity:.31,
         map:stoneTexture,
         side:THREE.DoubleSide
     });
     const ceilingMaterial=new THREE.MeshLambertMaterial({
         color:0xd5d0e1,
         emissive:0x292631,
-        emissiveIntensity:.55,
+        emissiveIntensity:.28,
         map:stoneTexture,
         side:THREE.DoubleSide
     });
@@ -3787,12 +3844,15 @@ function buildDungeon(loader){
     const torchCells=[];
     for(let z=2;z<DUNGEON_SIZE-2;z++){
         for(let x=2;x<DUNGEON_SIZE-2;x++){
-            if(dungeonGrid[z][x]===0 && (x*7+z*11)%13===0){
+            const besideWall=[[1,0],[-1,0],[0,1],[0,-1]].some(function(direction){
+                return dungeonGrid[z+direction[1]][x+direction[0]]===1;
+            });
+            if(dungeonGrid[z][x]===0 && besideWall && (x+z)%2===0){
                 torchCells.push({x:x,z:z});
             }
         }
     }
-    torchCells.slice(0,18).forEach(function(cell){
+    torchCells.slice(0,84).forEach(function(cell,torchIndex){
         const position=dungeonWorldPosition(cell.x,cell.z);
         const wallDirection=[[1,0],[-1,0],[0,1],[0,-1]].find(function(direction){
             return dungeonGrid[cell.z+direction[1]][cell.x+direction[0]]===1;
@@ -3813,15 +3873,20 @@ function buildDungeon(loader){
         flame.scale.set(.72,1.45,.72);
         flame.position.set(torchX,4.3,torchZ);
         scene.add(flame);
-        const light=new THREE.PointLight(0xff8b32,1.35,27,2);
-        light.position.set(torchX,4.25,torchZ);
-        scene.add(light);
+        /* 모바일 성능을 위해 불꽃은 전부 표시하되 실제 동적광은
+           두 번째 횃불마다 배치한다. */
+        if(torchIndex%2===0 && torchIndex<64){
+            const light=new THREE.PointLight(0xff8b32,1.85,36,2);
+            light.position.set(torchX,4.25,torchZ);
+            scene.add(light);
+        }
     });
 
     const entrance=dungeonWorldPosition(dungeonEntrance.x,dungeonEntrance.z);
     const exit=dungeonWorldPosition(dungeonExit.x,dungeonExit.z);
     addDungeonGate(entrance.x,entrance.z,0x4eb8ff);
     addDungeonGate(exit.x,exit.z,0x62ff9d);
+    createDungeonTreasureChests();
     camera.position.set(entrance.x,2.15,entrance.z);
     camera.rotation.set(0,0,0);
     mapHeading=0;
@@ -3967,14 +4032,14 @@ function init3D(){
 
             new THREE.PerspectiveCamera(
 
-                67,
+                DUNGEON_MODE ? 84 : 67,
 
                 area.clientWidth /
                 area.clientHeight,
 
                 .1,
 
-                145
+                DUNGEON_MODE ? 240 : 145
 
             );
 
@@ -5761,8 +5826,8 @@ function damageMonster(){
 ===================================================== */
 
 function updateWolfQuestUI(){
-    const defeated=Math.min(6,defeatedWolfIndices.size);
-    $("questProgress").textContent=defeated+" / 6";
+    const defeated=Math.min(GYRO_MONSTER_POSITIONS.length,defeatedWolfIndices.size);
+    $("questProgress").textContent=defeated+" / "+GYRO_MONSTER_POSITIONS.length;
     $("meatCount").textContent=wolfMeatCount;
     $("hideCount").textContent=wolfHideCount;
 }
@@ -7714,7 +7779,7 @@ function startGame(){
 
     showDialogueMessages(
         DUNGEON_MODE
-            ? "던전 깊은 곳의 해골 6마리를 처치하고 출구를 찾아가자."
+            ? "던전 깊은 곳의 해골 18마리를 처치하고 출구를 찾아가자."
             : "늑대를 잡아보자.",
         5000
     );
@@ -8166,7 +8231,11 @@ function loop(now){
                         camera.position.x-position.x,
                         camera.position.z-position.z
                     );
-                    if(distance<nearestWolfDistance){
+                    const canSeePlayer=!DUNGEON_MODE || hasDungeonLineOfSight(
+                        position.x,position.z,
+                        camera.position.x,camera.position.z
+                    );
+                    if(canSeePlayer && distance<nearestWolfDistance){
                         nearestWolfDistance=distance;
                         nearestWolfIndex=index;
                     }
@@ -8196,7 +8265,11 @@ function loop(now){
                 }
                 if(
                     !wolfAggroActive &&
-                    gyroMonsterDistance<=MONSTER_LOCK_DISTANCE+.5
+                    gyroMonsterDistance<=MONSTER_AGGRO_DISTANCE+.5 &&
+                    (!DUNGEON_MODE || hasDungeonLineOfSight(
+                        monsterHomeX,monsterHomeZ,
+                        camera.position.x,camera.position.z
+                    ))
                 ){
                     wolfAggroActive=true;
                 }
@@ -8214,14 +8287,22 @@ function loop(now){
                     !battle &&
                     !battleExitSuppressed &&
                     wolfAggroActive &&
-                    gyroMonsterDistance<=MONSTER_LOCK_DISTANCE
+                    gyroMonsterDistance<=(
+                        DUNGEON_MODE
+                            ? MONSTER_ATTACK_DISTANCE+.35
+                            : MONSTER_LOCK_DISTANCE
+                    )
                 ){
                     startBattle();
                 }
 
                 if(
                     battle &&
-                    gyroMonsterDistance>MONSTER_LOCK_DISTANCE
+                    gyroMonsterDistance>(
+                        DUNGEON_MODE
+                            ? MONSTER_ATTACK_DISTANCE+1.5
+                            : MONSTER_LOCK_DISTANCE
+                    )
                 ){
                     stopBattleForDistance();
                 }
