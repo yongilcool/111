@@ -149,8 +149,7 @@ canvas{
     /* 손잡이를 고정하고 칼날은 오른쪽을 향한 기본 자세 */
     transform:rotate(34deg);
 
-    filter:brightness(.88) saturate(.90) sepia(.05) hue-rotate(208deg)
-        drop-shadow(0 10px 10px rgba(0,0,0,.55));
+    filter:drop-shadow(0 10px 10px rgba(0,0,0,.55));
 }
 
 
@@ -944,7 +943,9 @@ canvas{
     background:rgba(3,12,18,.72);
     box-shadow:0 4px 14px rgba(0,0,0,.45);
     pointer-events:none;
+    overflow:hidden;
 }
+#miniMapWorld{position:absolute;inset:0;will-change:transform;transform-origin:58px 46px}
 #miniMap .roadH,#miniMap .roadV{position:absolute;background:#d7b57b;opacity:.85}
 #miniMap .roadH{left:14px;right:14px;height:5px}
 #miniMap .roadV{top:13px;bottom:13px;width:5px}
@@ -953,7 +954,7 @@ canvas{
 .mapNode{display:none}
 .mapEnemy{position:absolute;width:9px;height:9px;border-radius:50%;background:#ff8a26;transform:translate(-50%,-50%)}
 .mapChest{display:none}
-#mapPlayer{--map-heading:0rad;position:absolute;width:17px;height:21px;border:0;border-radius:0;background:#29c4ff;clip-path:polygon(50% 0,100% 100%,50% 77%,0 100%);filter:drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff) drop-shadow(0 0 6px #29c4ff);transform:translate(-50%,-50%) rotate(var(--map-heading));transform-origin:50% 50%;transition:left .2s,top .2s,transform .12s linear}
+#mapPlayer{position:absolute;left:58px!important;top:46px!important;width:17px;height:21px;border:0;background:#29c4ff;clip-path:polygon(50% 0,100% 100%,50% 77%,0 100%);filter:drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff) drop-shadow(0 0 6px #29c4ff);transform:translate(-50%,-50%);transform-origin:50% 50%}
 #directionPanel{position:absolute;z-index:110;inset:0;display:none;color:#fff;text-align:center;pointer-events:none}
 #directionPanel.show{display:block}
 #directionTitle{display:none}
@@ -1048,7 +1049,7 @@ canvas{
 #forwardButton.pressed,#backwardButton.pressed{transform:translateY(6px) scale(.96);box-shadow:inset 0 0 0 5px rgba(255,255,255,.55),0 2px 0 #67351f,0 5px 10px rgba(0,0,0,.4)}
 #gyroStatus{margin-top:9px;padding:5px 9px;border-radius:10px;background:rgba(4,13,22,.76);color:white;font-size:11px;font-weight:900;text-shadow:0 1px 2px #000}
 #game.qr-mode #gyroControls{bottom:38%}
-#game.gyro-active #directionPanel,#game.gyro-active #dialogueBox{display:none!important}
+#game.gyro-active #directionPanel{display:none!important}
 @media (max-height:650px){#forwardButton,#backwardButton{width:94px;height:94px}#gyroControls{bottom:7%}#game.qr-mode #gyroControls{bottom:38%}}
 
 /* 실험판 QR 토글은 화면 맨 아래에 둔다. */
@@ -1058,7 +1059,7 @@ canvas{
     left:auto;
     right:8px;
     bottom:8px;
-    width:48%;
+    width:38.4%;
     height:36%;
     border:3px solid white;
     border-radius:18px;
@@ -1198,11 +1199,12 @@ canvas{
 #inventoryButton{bottom:230px}
 #questButton{bottom:306px}
 #inventoryButton img,#questButton img{width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
-#inventoryPanel,#questPanel{position:absolute;z-index:159;left:86px;bottom:230px;display:none;width:210px;min-height:76px;padding:11px;border:3px solid #6c3b25;border-radius:13px;background:linear-gradient(#f8ddb0,#d8ae75);color:#4a291a;font-size:13px;font-weight:900;box-shadow:inset 0 0 0 3px #fff0ca,0 5px 12px rgba(0,0,0,.45)}
+#inventoryPanel,#questPanel{position:absolute;z-index:159;left:86px;bottom:230px;display:none;width:168px;min-height:61px;padding:6px;border:3px solid #6c3b25;border-radius:13px;background:linear-gradient(#f8ddb0,#d8ae75);color:#4a291a;font-size:13px;font-weight:900;box-shadow:inset 0 0 0 2px #fff0ca,0 5px 12px rgba(0,0,0,.45)}
 #inventoryPanel.show,#questPanel.show{display:block}
 .inventoryRow{display:flex;align-items:center;gap:8px;margin-top:7px}.inventoryRow img{width:38px;height:38px;object-fit:contain;image-rendering:pixelated}.inventoryRow span{white-space:nowrap}
-#lootToast{position:absolute;z-index:188;right:10px;top:185px;display:none;width:220px;padding:10px;border:3px solid #70462c;border-radius:13px;background:linear-gradient(#ffe5b1,#efc983);color:#3c2417;font-size:13px;font-weight:1000;box-shadow:inset 0 0 0 2px #fff0c8,0 5px 12px rgba(0,0,0,.45)}
-#lootToast.show{display:block}.lootRow{display:flex;align-items:center;gap:8px;margin:5px 0}.lootRow img{width:42px;height:42px;object-fit:contain;image-rendering:pixelated}
+#inventoryButton.panel-open,#questButton.panel-open{filter:brightness(1.25);transform:scale(.90);box-shadow:inset 0 0 0 3px #fff0c9,0 2px 0 rgba(52,22,11,.58)}
+#lootToast{position:absolute;z-index:188;right:3px;top:108px;display:none;width:142px;padding:2px;border:2px solid #70462c;border-radius:8px;background:linear-gradient(#ffe5b1,#efc983);color:#3c2417;font-size:10px;font-weight:1000;line-height:1.05;box-shadow:inset 0 0 0 1px #fff0c8,0 3px 8px rgba(0,0,0,.4)}
+#lootToast.show{display:block}.lootRow{display:flex;align-items:center;gap:2px;margin:1px 0}.lootRow img{width:25px;height:25px;object-fit:contain;image-rendering:pixelated}.lootRow span{white-space:nowrap}
 
 /* QR 바깥은 게임 50% + 카메라 50%, 중앙은 카메라 100% */
 #game.qr-mode #playArea{height:100%}
@@ -1421,7 +1423,7 @@ html.ios-device #qrPanel{
 
                 <div class="label">
 
-                    MONSTER
+                    WOLF
 
                     <span id="enemyText">
                         100 / 100
@@ -1493,6 +1495,7 @@ html.ios-device #qrPanel{
 
         <!-- 순환형 전체 맵 -->
         <div id="miniMap" aria-label="전체 맵">
+          <div id="miniMapWorld">
             <div class="roadH top"></div>
             <div class="roadH miniMapBottom"></div>
             <div class="roadV left"></div>
@@ -1504,12 +1507,15 @@ html.ios-device #qrPanel{
             <i class="mapNode" style="left:18px;top:75px"></i>
             <i class="mapNode" style="left:58px;top:75px"></i>
             <i class="mapNode" style="left:98px;top:75px"></i>
-            <i class="mapEnemy" style="left:18px;top:46px"></i>
-            <i class="mapEnemy" style="left:38px;top:75px"></i>
-            <i class="mapEnemy" style="left:78px;top:75px"></i>
-            <i class="mapEnemy" style="left:98px;top:46px"></i>
+            <i class="mapEnemy" data-wolf-index="0"></i>
+            <i class="mapEnemy" data-wolf-index="1"></i>
+            <i class="mapEnemy" data-wolf-index="2"></i>
+            <i class="mapEnemy" data-wolf-index="3"></i>
+            <i class="mapEnemy" data-wolf-index="4"></i>
+            <i class="mapEnemy" data-wolf-index="5"></i>
             <i class="mapChest" style="left:38px;top:17px"></i>
             <i class="mapChest" style="left:78px;top:17px"></i>
+          </div>
             <i id="mapPlayer" style="left:58px;top:48px"></i>
         </div>
 
@@ -1528,11 +1534,11 @@ html.ios-device #qrPanel{
 
         <button id="pauseButton">⏸ 일시정지</button>
         <button id="battleExitButton">전투 나가기</button>
-        <button id="questButton" aria-label="퀘스트 열기"><img src="https://static.wixstatic.com/media/172435_a4a54d2e729848979904d9bfca5a948e~mv2.png" alt="퀘스트"></button>
+        <button id="questButton" aria-label="퀘스트 열기"><img src="https://static.wixstatic.com/media/172435_db0fd22ef0cd4fd48cde2f64dee535bc~mv2.png" alt="퀘스트"></button>
         <button id="inventoryButton" aria-label="인벤토리 열기"><img src="https://static.wixstatic.com/media/172435_513831dd8ed049688a5282ba36bc3b3e~mv2.png" alt="아이템"></button>
         <div id="questPanel">퀘스트<br><div style="margin-top:8px">마을 늑대 소탕하기 <b id="questProgress">0 / 6</b></div></div>
-        <div id="inventoryPanel"><b>인벤토리</b><div class="inventoryRow"><img src="https://static.wixstatic.com/media/172435_76a4ea719647489baf3cf65188c8754c~mv2.png" alt="늑대고기"><span>늑대고기 × <b id="meatCount">0</b></span></div><div class="inventoryRow"><img src="https://static.wixstatic.com/media/172435_cce9aed184564de695c9284e5c893c04~mv2.jpg" alt="늑대가죽"><span>늑대가죽 × <b id="hideCount">0</b></span></div></div>
-        <div id="lootToast"><div class="lootRow"><img src="https://static.wixstatic.com/media/172435_76a4ea719647489baf3cf65188c8754c~mv2.png" alt=""><span>늑대고기 획득 (×1)</span></div><div class="lootRow"><img src="https://static.wixstatic.com/media/172435_cce9aed184564de695c9284e5c893c04~mv2.jpg" alt=""><span>늑대가죽 획득 (×1)</span></div></div>
+        <div id="inventoryPanel"><b>인벤토리</b><div class="inventoryRow"><img src="https://static.wixstatic.com/media/172435_76a4ea719647489baf3cf65188c8754c~mv2.png" alt="늑대고기"><span>늑대고기 × <b id="meatCount">0</b></span></div><div class="inventoryRow"><img src="https://static.wixstatic.com/media/172435_18c122b6a5c945718007e1ce6cfc5189~mv2.png" alt="늑대가죽"><span>늑대가죽 × <b id="hideCount">0</b></span></div></div>
+        <div id="lootToast"><div class="lootRow"><img src="https://static.wixstatic.com/media/172435_76a4ea719647489baf3cf65188c8754c~mv2.png" alt=""><span>늑대고기 획득 (×1)</span></div><div class="lootRow"><img src="https://static.wixstatic.com/media/172435_18c122b6a5c945718007e1ce6cfc5189~mv2.png" alt=""><span>늑대가죽 획득 (×1)</span></div></div>
         <div id="pauseOverlay">PAUSED</div>
         <div id="chestBurstText">TREASURE!</div>
 
@@ -1943,12 +1949,12 @@ const GYRO_EXPERIMENT=true;
 const GYRO_WALK_SPEED=40;
 const GYRO_LOOK_SENSITIVITY=1.65;
 const CONTROL_TURN_SPEED=4.7;
-const MONSTER_AGGRO_DISTANCE=20;
-const MONSTER_LOCK_DISTANCE=20;
+const MONSTER_AGGRO_DISTANCE=30;
+const MONSTER_LOCK_DISTANCE=30;
 /* 추격 정지·몸 충돌·서로의 공격 사거리를 같은 거리로 통일한다. */
 const MONSTER_ATTACK_DISTANCE=8;
 const MONSTER_BLOCK_DISTANCE=8;
-const MONSTER_DISENGAGE_DISTANCE=20;
+const MONSTER_DISENGAGE_DISTANCE=30;
 const MONSTER_CHASE_SPEED=4.5;
 const WOLF_IDLE_URL="https://static.wixstatic.com/media/172435_91e8afed612c4a6ababa985a8414d211~mv2.png";
 const WOLF_WALK_1_URL="https://static.wixstatic.com/media/172435_3abac1336d7f4875b1c6ced1466246e8~mv2.png";
@@ -2374,12 +2380,28 @@ function updateMapPlayer(point){
 function updateMapPlayerFromCamera(){
     const left=58+camera.position.x;
     const top=17+(camera.position.z+45)*.725;
-    $("mapPlayer").style.left=Math.max(18,Math.min(98,left))+"px";
-    $("mapPlayer").style.top=Math.max(17,Math.min(75,top))+"px";
-    $("mapPlayer").style.setProperty(
-        "--map-heading",
-        (-(gyroEnabled ? gyroViewHeading : mapHeading))+"rad"
-    );
+    const heading=gyroEnabled ? gyroViewHeading : mapHeading;
+    const world=$("miniMapWorld");
+    world.style.transformOrigin=left+"px "+top+"px";
+    world.style.transform=
+        "translate("+(58-left)+"px,"+(46-top)+"px) rotate("+heading+"rad)";
+
+    document.querySelectorAll(".mapEnemy[data-wolf-index]")
+    .forEach(function(dot){
+        const index=Number(dot.dataset.wolfIndex);
+        const wolf=(
+            index===monsterIndex && monster && !monsterDead
+        )
+            ? {x:monsterHomeX,z:monsterHomeZ}
+            : GYRO_MONSTER_POSITIONS[index];
+        if(!wolf || defeatedWolfIndices.has(index)){
+            dot.style.display="none";
+            return;
+        }
+        dot.style.display="block";
+        dot.style.left=(58+wolf.x)+"px";
+        dot.style.top=(17+(wolf.z+45)*.725)+"px";
+    });
 }
 
 function relativeDirection(to){
@@ -3614,9 +3636,9 @@ function init3D(){
         );
 
         camera.rotation.order="YXZ";
-        camera.rotation.set(0,0,0);
-        mapHeading=0;
-        mapTargetHeading=0;
+        camera.rotation.set(0,Math.PI,0);
+        mapHeading=Math.PI;
+        mapTargetHeading=Math.PI;
         mapTurning=false;
 
 
@@ -4250,7 +4272,7 @@ function createForest(){
                     const tree=new THREE.Sprite(treeMaterial);
                     const scale=.72+Math.random()*.52;
                     const treeHeight=18.4*scale;
-                    tree.position.set(px,treeHeight/2,pz);
+                    tree.position.set(px,treeHeight*.43,pz);
                     tree.scale.set(
                         treeHeight*(cropWidth/cropHeight),
                         treeHeight,
@@ -7250,6 +7272,14 @@ function startGame(){
         $("dialogueBox").classList.remove("show");
     }
 
+    $("dialogueText").textContent="늑대를 잡아보자.";
+    $("dialogueBox").classList.add("show");
+    setTimeout(function(){
+        if($("dialogueText").textContent==="늑대를 잡아보자."){
+            $("dialogueBox").classList.remove("show");
+        }
+    },5000);
+
 
     updateSwordIdle();
 
@@ -7572,7 +7602,12 @@ $("inventoryButton")
     function(){
         if(!started || gameOver){return;}
         $("questPanel").classList.remove("show");
+        $("questButton").classList.remove("panel-open");
         $("inventoryPanel").classList.toggle("show");
+        $("inventoryButton").classList.toggle(
+            "panel-open",
+            $("inventoryPanel").classList.contains("show")
+        );
     }
 );
 
@@ -7581,7 +7616,12 @@ $("questButton").addEventListener(
     function(){
         if(!started || gameOver){return;}
         $("inventoryPanel").classList.remove("show");
+        $("inventoryButton").classList.remove("panel-open");
         $("questPanel").classList.toggle("show");
+        $("questButton").classList.toggle(
+            "panel-open",
+            $("questPanel").classList.contains("show")
+        );
     }
 );
 
@@ -7916,6 +7956,14 @@ function loop(now){
             wasWalking=false;
         }
 
+        /* 실제 이동 중일 때만 걷는 칼 모션을 사용한다.
+           정지 중에는 작은 상하 호흡 모션만 유지한다. */
+        if(!swordAttacking){
+            const sword=$("sword");
+            sword.classList.remove("walking","battle-idle");
+            sword.classList.add(walking ? "walking" : "battle-idle");
+        }
+
 
         /* =============================================
            CAMERA WALK BOB
@@ -8033,14 +8081,16 @@ function loop(now){
 
             monster.position.y=
 
-                WOLF_BASE_Y +
+                WOLF_BASE_Y -
+
+                (wolfWalking ? .34 : 0) +
 
                 (
                     breathe-1
                 ) *
 
                 WOLF_BASE_Y+
-                (wolfWalking ? Math.abs(walkWave)*.12 : 0);
+                (wolfWalking ? Math.abs(walkWave)*.035 : 0);
 
             monster.rotation.z=wolfWalking ? walkWave*.025 : 0;
 
