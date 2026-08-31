@@ -1206,7 +1206,7 @@ canvas{
 #questButton{bottom:306px}
 #inventoryButton img,#questButton img{width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
 #inventoryPanel,#questPanel{position:absolute;z-index:159;left:86px;display:none;width:134px;min-height:49px;padding:2px;border:2px solid #6c3b25;border-radius:10px;background:linear-gradient(#f8ddb0,#d8ae75);color:#4a291a;font-size:13px;font-weight:900;box-shadow:inset 0 0 0 1px #fff0ca,0 4px 9px rgba(0,0,0,.42)}
-#inventoryPanel{bottom:230px}#questPanel{bottom:306px}
+#inventoryPanel{bottom:230px}#questPanel{bottom:306px;text-align:left}
 #inventoryPanel.show,#questPanel.show{display:block}
 .inventoryRow{display:flex;align-items:center;gap:2px;margin-top:7px}.inventoryRow img{width:38px;height:38px;object-fit:contain;image-rendering:pixelated}.inventoryRow span{white-space:nowrap}
 #inventoryButton.panel-open,#questButton.panel-open{filter:brightness(1.25);transform:scale(.90);box-shadow:inset 0 0 0 3px #fff0c9,0 2px 0 rgba(52,22,11,.58)}
@@ -1543,7 +1543,7 @@ html.ios-device #qrPanel{
         <button id="battleExitButton">전투 나가기</button>
         <button id="questButton" aria-label="퀘스트 열기"><img src="https://static.wixstatic.com/media/172435_db0fd22ef0cd4fd48cde2f64dee535bc~mv2.png" alt="퀘스트"></button>
         <button id="inventoryButton" aria-label="인벤토리 열기"><img src="https://static.wixstatic.com/media/172435_513831dd8ed049688a5282ba36bc3b3e~mv2.png" alt="아이템"></button>
-        <div id="questPanel">퀘스트<br><div style="margin-top:8px;text-align:center">마을 늑대<br>소탕하기<br><b id="questProgress">0 / 6</b></div></div>
+        <div id="questPanel">퀘스트<br><div style="margin-top:8px;text-align:left">마을 늑대<br>소탕하기<br><b id="questProgress">0 / 6</b></div></div>
         <div id="inventoryPanel"><b>인벤토리</b><div class="inventoryRow"><img src="https://static.wixstatic.com/media/172435_76a4ea719647489baf3cf65188c8754c~mv2.png" alt="늑대고기"><span>늑대고기 × <b id="meatCount">0</b></span></div><div class="inventoryRow"><img src="https://static.wixstatic.com/media/172435_18c122b6a5c945718007e1ce6cfc5189~mv2.png" alt="늑대가죽"><span>늑대가죽 × <b id="hideCount">0</b></span></div></div>
         <div id="lootToast"><div class="lootRow"><img src="https://static.wixstatic.com/media/172435_76a4ea719647489baf3cf65188c8754c~mv2.png" alt=""><span>늑대고기 획득 (×1)</span></div><div class="lootRow"><img src="https://static.wixstatic.com/media/172435_18c122b6a5c945718007e1ce6cfc5189~mv2.png" alt=""><span>늑대가죽 획득 (×1)</span></div></div>
         <div id="pauseOverlay">PAUSED</div>
@@ -5539,7 +5539,7 @@ function exitBattleAndFlee(){
     battle=false;
     battleLockOn=false;
     battleExitSuppressed=true;
-    battleExitGraceUntil=performance.now()+5000;
+    battleExitGraceUntil=performance.now()+4000;
     monsterAttackProgress=-1;
     monsterAttackHit=false;
     monsterAttackSoundPlayed=false;
@@ -6823,7 +6823,7 @@ function startAndroidAutofocusWatch(video){
             qrRunning &&
             inputMode==="qr" &&
             now-lastQRHit>=2000 &&
-            now-lastQRFocusRecoveryAt>=1000
+            now-lastQRFocusRecoveryAt>=500
         ){
             lastQRFocusRecoveryAt=now;
             resetAndroidQRAutofocus(video);
@@ -7802,10 +7802,7 @@ function loop(now){
                 );
                 if(
                     battleExitSuppressed &&
-                    (
-                        gyroMonsterDistance>MONSTER_AGGRO_DISTANCE ||
-                        performance.now()>=battleExitGraceUntil
-                    )
+                    performance.now()>=battleExitGraceUntil
                 ){
                     battleExitSuppressed=false;
                 }
@@ -7821,7 +7818,6 @@ function loop(now){
                     gyroMonsterDistance>MONSTER_AGGRO_DISTANCE
                 ){
                     wolfAggroActive=false;
-                    battleExitSuppressed=false;
                     wolfWasChasing=false;
                     if(battle){stopBattleForDistance();}
                 }
@@ -8092,7 +8088,7 @@ function loop(now){
             const breathe=1+Math.sin(now*.003)*.025;
 
             if(wolfWalking){
-                const walkFrame=Math.floor(now/170)%4;
+                const walkFrame=Math.floor(now/85)%4;
                 setWolfTexture(
                     walkFrame===0
                         ? getWolfTextures().walk1
@@ -8127,9 +8123,9 @@ function loop(now){
 
             monster.position.y=
 
-                WOLF_BASE_Y -
+                WOLF_BASE_Y +
 
-                (wolfWalking ? .34 : 0) +
+                (wolfWalking ? .28 : 0) +
 
                 (
                     breathe-1
