@@ -2101,7 +2101,7 @@ function moveGyroPlayer(dt){
     const usingJoystick=joystickPointerId!==null;
     const joystickStraight=usingJoystick &&
         Math.abs(joystickY)>.18 &&
-        Math.abs(joystickX)<Math.abs(joystickY)*.75;
+        Math.abs(joystickX)<Math.abs(joystickY)*.268;
     const joystickTurnX=joystickStraight ? 0 : joystickX;
     const turnInput=joystickPointerId!==null
         ? joystickTurnX
@@ -4526,8 +4526,8 @@ function updateMonsterShadowPosition(){
     const awayZ=monsterHomeZ-camera.position.z;
     const length=Math.max(.001,Math.hypot(awayX,awayZ));
     /* 그림자를 늑대 뒤쪽으로 밀어 뒷발 아래에 닿아 보이게 한다. */
-    monsterShadow.position.x=monsterHomeX+awayX/length*1.25;
-    monsterShadow.position.z=monsterHomeZ+awayZ/length*1.25;
+    monsterShadow.position.x=monsterHomeX+awayX/length*1.7;
+    monsterShadow.position.z=monsterHomeZ+awayZ/length*1.7;
 }
 
 function createWolfSentinels(){
@@ -5539,7 +5539,7 @@ function exitBattleAndFlee(){
     battle=false;
     battleLockOn=false;
     battleExitSuppressed=true;
-    battleExitGraceUntil=performance.now()+4000;
+    battleExitGraceUntil=performance.now()+3000;
     monsterAttackProgress=-1;
     monsterAttackHit=false;
     monsterAttackSoundPlayed=false;
@@ -8088,7 +8088,7 @@ function loop(now){
             const breathe=1+Math.sin(now*.003)*.025;
 
             if(wolfWalking){
-                const walkFrame=Math.floor(now/85)%2;
+                const walkFrame=Math.floor(now/121)%2;
                 setWolfTexture(
                     walkFrame===0
                         ? getWolfTextures().walk1
@@ -8123,7 +8123,7 @@ function loop(now){
 
                 WOLF_BASE_Y -
 
-                (wolfWalking ? .34 : 0) +
+                (wolfWalking ? .50 : 0) +
 
                 (
                     breathe-1
