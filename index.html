@@ -1246,7 +1246,7 @@ html.ios-device #qrPanel{
 }
 #reader video{
     /* html5-qrcode의 실제 카메라 영상을 즉시 직접 표시한다. */
-    opacity:1 !important;
+    opacity:.5 !important;
     clip-path:none;
 }
 #reader__scan_region,
@@ -1269,7 +1269,6 @@ html.ios-device #qrPanel{
     opacity:0;
     pointer-events:none;
     transition:opacity .12s linear;
-    display:none !important;
 }
 #qrFocusVideo.ready{opacity:1}
 #qrFrame{
@@ -1370,7 +1369,7 @@ html.ios-device #qrPanel{
     display:none;
 }
 
-#chestBurstText{position:absolute;z-index:190;left:50%;top:43%;transform:translate(-50%,-50%);opacity:0;color:#ffe45c;font-size:34px;font-weight:1000;text-shadow:0 3px 0 #9a4c00,0 0 18px #ffd83e;pointer-events:none}
+#chestBurstText{position:absolute;z-index:190;left:50%;top:46%;width:min(86%,560px);box-sizing:border-box;transform:translate(-50%,-50%);opacity:0;padding:22px 18px;color:#fff2a8;font-size:clamp(42px,11vw,78px);font-weight:1000;line-height:1.05;text-align:center;white-space:nowrap;background:linear-gradient(#7a4028,#3d211c);border:6px solid #f3c77b;border-radius:22px;box-shadow:0 0 0 5px #6b371f,0 12px 28px #000b,0 0 26px #ffd85c99;text-shadow:0 4px 0 #8b4300,0 0 18px #ffd83e;pointer-events:none}
 .chestParticle{position:absolute;z-index:189;left:50%;top:47%;width:12px;height:12px;border-radius:3px;background:#ffd83e;box-shadow:0 0 9px #fff176;pointer-events:none;animation:chestParticleBurst .85s ease-out forwards}
 @keyframes chestParticleBurst{0%{opacity:1;transform:translate(-50%,-50%) scale(.5) rotate(0)}75%{opacity:1}100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1.25) rotate(var(--spin))}}
 </style>
@@ -1862,6 +1861,7 @@ let monsterAttackHit=false;
 
 
 let monsterHitTimer=0;
+let monsterRedFlashTimer=0;
 
 let deathProgress=-1;
 
@@ -2786,18 +2786,19 @@ if(isIOS()){
     document.documentElement.classList.add("ios-device");
 }
 
-function chestCelebration(){
+function chestCelebration(displayMs){
     initAudio();
 
     const text=$("chestBurstText");
+    const duration=Math.max(1100,displayMs || 1100);
     text.animate(
         [
             {opacity:0,transform:"translate(-50%,-35%) scale(.55)"},
-            {opacity:1,transform:"translate(-50%,-50%) scale(1.18)",offset:.24},
-            {opacity:1,transform:"translate(-50%,-50%) scale(1)",offset:.65},
+            {opacity:1,transform:"translate(-50%,-50%) scale(1.1)",offset:.08},
+            {opacity:1,transform:"translate(-50%,-50%) scale(1)",offset:.9},
             {opacity:0,transform:"translate(-50%,-80%) scale(.9)"}
         ],
-        {duration:1100,easing:"ease-out"}
+        {duration:duration,easing:"ease-out"}
     );
 
     for(let i=0;i<30;i++){
@@ -5300,11 +5301,13 @@ function damageMonster(){
         monsterMaterial
         .color
         .set(
-            0x9282a5
+            0xff3030
         );
 
     }
 
+
+    monsterRedFlashTimer=.1;
 
     /* 맞은 늑대는 잠시 경직되고 진행 중인 공격을 취소한다. */
     monsterHitTimer=
@@ -5389,7 +5392,7 @@ function showWolfLoot(){
     if(completed){
         const burstText=$("chestBurstText");
         burstText.textContent="MISSION CLEAR!";
-        chestCelebration();
+        chestCelebration(5000);
     }
 
     const toast=$("lootToast");
@@ -6488,7 +6491,6 @@ let qrSmallAssistBusy=false;
 let qrContinuousAttackTimer=null;
 let qrAutofocusWatchTimer=null;
 let lastQRFocusRecoveryAt=0;
-let qrFocusResetBusy=false;
 
 let lastValidQRSeenAt=0;
 
@@ -6781,70 +6783,47 @@ function stopAndroidAutofocusWatch(){
         clearInterval(qrAutofocusWatchTimer);
         qrAutofocusWatchTimer=null;
     }
-    qrFocusResetBusy=false;
 }
 
 function resetAndroidQRAutofocus(video){
-    if(isIOS() || !video || !video.srcObject || qrFocusResetBusy){return;}
+    if(isIOS() || !video || !video.srcObject){return;}
     try{
         const track=video.srcObject.getVideoTracks()[0];
         if(!track || !track.getCapabilities || !track.applyConstraints){return;}
-        qrFocusResetBusy=true;
-        const releaseBusy=setTimeout(function(){
-            qrFocusResetBusy=false;
-        },900);
         const modes=track.getCapabilities().focusMode || [];
         if(Array.isArray(modes) && modes.indexOf("single-shot")>=0){
             Promise.resolve(track.applyConstraints({
                 advanced:[{focusMode:"single-shot"}]
             })).catch(function(){}).finally(function(){
-                clearTimeout(releaseBusy);
-                qrFocusResetBusy=false;
                 setTimeout(function(){tuneAndroidQRCamera(video);},260);
             });
         }
         else{
             tuneAndroidQRCamera(video);
-            clearTimeout(releaseBusy);
-            qrFocusResetBusy=false;
         }
     }
-    catch(error){qrFocusResetBusy=false;}
+    catch(error){}
 }
 
 function startAndroidAutofocusWatch(video){
     stopAndroidAutofocusWatch();
     if(isIOS()){return;}
-    let watchStarted=false;
-    function beginWatch(){
-        if(watchStarted || !qrRunning){return;}
-        watchStarted=true;
-        lastQRFocusRecoveryAt=performance.now();
-        setTimeout(function(){
-            if(qrRunning){resetAndroidQRAutofocus(video);}
-        },1000);
-        qrAutofocusWatchTimer=setInterval(function(){
-            const now=performance.now();
-            if(
-                qrRunning &&
-                inputMode==="qr" &&
-                now-lastQRHit>=1000 &&
+    lastQRFocusRecoveryAt=performance.now();
+    setTimeout(function(){
+        if(qrRunning){resetAndroidQRAutofocus(video);}
+    },2000);
+    qrAutofocusWatchTimer=setInterval(function(){
+        const now=performance.now();
+        if(
+            qrRunning &&
+            inputMode==="qr" &&
+            now-lastQRHit>=2000 &&
             now-lastQRFocusRecoveryAt>=1000
-            ){
-                lastQRFocusRecoveryAt=now;
-                resetAndroidQRAutofocus(video);
-            }
-        },500);
-    }
-    /* 첫 카메라 프레임을 화면에 표시한 뒤에만 초점 복구를 시작한다. */
-    (function waitForFirstFrame(){
-        if(!qrRunning){return;}
-        if(video.readyState>=2){
-            requestAnimationFrame(beginWatch);
-            return;
+        ){
+            lastQRFocusRecoveryAt=now;
+            resetAndroidQRAutofocus(video);
         }
-        setTimeout(waitForFirstFrame,80);
-    })();
+    },500);
 }
 
 function waitForQRVideoReady(video){
@@ -6944,7 +6923,7 @@ async function startQR(){
         );
 
         qrRunning=true;
-        /* 카메라가 켜진 뒤 1초간 공격 인식이 없으면
+        /* 카메라가 켜진 뒤 3초간 공격 인식이 없으면
            Android 초점을 다시 요청할 수 있도록 기준 시각을 잡는다. */
         lastQRHit=performance.now();
         startQRContinuousAttack();
@@ -6977,7 +6956,16 @@ async function startQR(){
                 "important"
             );
 
-            /* 별도의 복제 video를 재생하지 않고 실제 QR 영상을 직접 사용한다. */
+            const focusVideo=$("qrFocusVideo");
+            focusVideo.classList.remove("ready");
+            focusVideo.srcObject=qrVideoElement.srcObject;
+            focusVideo.addEventListener("playing",function showQRFocus(){
+                focusVideo.classList.add("ready");
+            },{once:true});
+            const focusPromise=focusVideo.play();
+            if(focusPromise){
+                focusPromise.catch(function(){});
+            }
 
         }
 
@@ -8178,6 +8166,11 @@ function loop(now){
 
             monsterHitTimer -=
                 dt;
+
+            monsterRedFlashTimer=Math.max(0,monsterRedFlashTimer-dt);
+            if(monsterRedFlashTimer<=0 && monsterMaterial){
+                monsterMaterial.color.set(0x9282a5);
+            }
 
 
             monster.position.x=
