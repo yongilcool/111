@@ -1150,7 +1150,7 @@ canvas{
 #game.control-experiment #inventoryPanel{bottom:230px}
 #game.control-experiment #questPanel{bottom:306px}
 #game.control-experiment #modeSwitch{left:auto;right:10px;bottom:10px;transform:none}
-#game.control-experiment.qr-mode #modeSwitch{left:auto;right:10px;bottom:calc(36% + 14px);transform:none}
+#game.control-experiment.qr-mode #modeSwitch{left:auto;right:0;bottom:calc(38.4vw + 4px);transform:none}
 @media (max-width:430px){
     #game.control-experiment #gyroMoveButtons{width:190px;height:190px}
     #joystickKnob{width:76px;height:76px}
@@ -1963,7 +1963,7 @@ const WOLF_IDLE_URL="https://static.wixstatic.com/media/172435_91e8afed612c4a6ab
 const WOLF_WALK_1_URL="https://static.wixstatic.com/media/172435_3abac1336d7f4875b1c6ced1466246e8~mv2.png";
 const WOLF_WALK_2_URL="https://static.wixstatic.com/media/172435_5f50d836c1434b99a2982e54068031f6~mv2.png";
 const WOLF_ATTACK_URL="https://static.wixstatic.com/media/172435_4d0ae03f956f469bad1b23638ee66bcb~mv2.png";
-const WOLF_HIT_URL="https://static.wixstatic.com/media/172435_42b4d9ee255645c283beeb970157741a~mv2.png";
+const WOLF_HIT_URL="https://static.wixstatic.com/media/172435_cbf98c9fbd0640e79ea80d9a4620cb90~mv2.png";
 const WOLF_BASE_SIZE=5.4;
 /* 원래 크기를 복원하되 이미지의 투명 여백을 고려해 지면 쪽으로 내린다. */
 const WOLF_BASE_Y=2.58;
@@ -4694,33 +4694,8 @@ function spawnMonster(index){
     monster.renderOrder=0;
     monster.frustumCulled=false;
 
-    /* 야간에도 눈 위치만 은은하게 빛나도록 작은 가산광 평면을 겹친다. */
-    const eyeCanvas=document.createElement("canvas");
-    eyeCanvas.width=96;
-    eyeCanvas.height=28;
-    const eyeContext=eyeCanvas.getContext("2d");
-    function drawEye(x){
-        const glow=eyeContext.createRadialGradient(x,14,1,x,14,11);
-        glow.addColorStop(0,"rgba(255,255,185,1)");
-        glow.addColorStop(.3,"rgba(216,255,115,.95)");
-        glow.addColorStop(1,"rgba(170,255,70,0)");
-        eyeContext.fillStyle=glow;
-        eyeContext.fillRect(x-12,2,24,24);
-    }
-    drawEye(27);
-    drawEye(69);
-    const eyeTexture=new THREE.CanvasTexture(eyeCanvas);
-    wolfEyeGlow=new THREE.Mesh(
-        new THREE.PlaneGeometry(1.75,.36),
-        new THREE.MeshBasicMaterial({
-            map:eyeTexture,
-            transparent:true,
-            depthWrite:false,
-            blending:THREE.AdditiveBlending
-        })
-    );
-    wolfEyeGlow.position.set(0,1.08,.025);
-    monster.add(wolfEyeGlow);
+    /* 눈 발광 오버레이는 사용하지 않는다. */
+    wolfEyeGlow=null;
 
 
     /*
@@ -6512,6 +6487,7 @@ let qrSmallAssistBusy=false;
 let qrContinuousAttackTimer=null;
 let qrAutofocusWatchTimer=null;
 let lastQRFocusRecoveryAt=0;
+let qrFocusResetBusy=false;
 
 let lastValidQRSeenAt=0;
 
@@ -6804,47 +6780,68 @@ function stopAndroidAutofocusWatch(){
         clearInterval(qrAutofocusWatchTimer);
         qrAutofocusWatchTimer=null;
     }
+    qrFocusResetBusy=false;
 }
 
 function resetAndroidQRAutofocus(video){
-    if(isIOS() || !video || !video.srcObject){return;}
+    if(isIOS() || !video || !video.srcObject || qrFocusResetBusy){return;}
     try{
         const track=video.srcObject.getVideoTracks()[0];
         if(!track || !track.getCapabilities || !track.applyConstraints){return;}
+        qrFocusResetBusy=true;
+        const releaseBusy=setTimeout(function(){
+            qrFocusResetBusy=false;
+        },900);
         const modes=track.getCapabilities().focusMode || [];
         if(Array.isArray(modes) && modes.indexOf("single-shot")>=0){
             Promise.resolve(track.applyConstraints({
                 advanced:[{focusMode:"single-shot"}]
             })).catch(function(){}).finally(function(){
+                clearTimeout(releaseBusy);
+                qrFocusResetBusy=false;
                 setTimeout(function(){tuneAndroidQRCamera(video);},260);
             });
         }
         else{
             tuneAndroidQRCamera(video);
+            clearTimeout(releaseBusy);
+            qrFocusResetBusy=false;
         }
     }
-    catch(error){}
+    catch(error){qrFocusResetBusy=false;}
 }
 
 function startAndroidAutofocusWatch(video){
     stopAndroidAutofocusWatch();
     if(isIOS()){return;}
-    lastQRFocusRecoveryAt=performance.now();
-    setTimeout(function(){
-        if(qrRunning){resetAndroidQRAutofocus(video);}
-    },1000);
-    qrAutofocusWatchTimer=setInterval(function(){
-        const now=performance.now();
-        if(
-            qrRunning &&
-            inputMode==="qr" &&
-            now-lastQRHit>=1000 &&
-            now-lastQRFocusRecoveryAt>=500
-        ){
-            lastQRFocusRecoveryAt=now;
-            resetAndroidQRAutofocus(video);
-        }
-    },250);
+    let watchStarted=false;
+    function beginWatch(){
+        if(watchStarted || !qrRunning){return;}
+        watchStarted=true;
+        lastQRFocusRecoveryAt=performance.now();
+        setTimeout(function(){
+            if(qrRunning){resetAndroidQRAutofocus(video);}
+        },1000);
+        qrAutofocusWatchTimer=setInterval(function(){
+            const now=performance.now();
+            if(
+                qrRunning &&
+                inputMode==="qr" &&
+                now-lastQRHit>=1000 &&
+                now-lastQRFocusRecoveryAt>=500
+            ){
+                lastQRFocusRecoveryAt=now;
+                resetAndroidQRAutofocus(video);
+            }
+        },250);
+    }
+    /* 첫 카메라 프레임을 화면에 표시한 뒤에만 초점 복구를 시작한다. */
+    if(video.readyState>=2){
+        requestAnimationFrame(beginWatch);
+    }
+    else{
+        video.addEventListener("playing",beginWatch,{once:true});
+    }
 }
 
 function waitForQRVideoReady(video){
