@@ -1213,6 +1213,7 @@ canvas{
 #inventoryButton.panel-open,#questButton.panel-open{filter:brightness(1.25);transform:scale(.90);box-shadow:inset 0 0 0 3px #fff0c9,0 2px 0 rgba(52,22,11,.58)}
 #settingsPanel{position:absolute;z-index:260;left:50%;top:48%;display:none;width:min(82%,360px);padding:18px 16px 14px;box-sizing:border-box;transform:translate(-50%,-50%);border:4px solid #6c3b25;border-radius:18px;background:linear-gradient(#f8ddb0,#c98f5b);color:#442719;box-shadow:inset 0 0 0 4px #f8c991,0 10px 32px rgba(0,0,0,.65);font-weight:900}
 #settingsPanel.show{display:block}#settingsPanel h2{margin:0 0 13px;text-align:center}.settingsClose{position:absolute;right:8px;top:7px;width:38px;height:38px;border:0;background:transparent;color:#542c1c;font-size:31px;font-weight:1000}.settingsAction{display:block;width:100%;margin:8px 0;padding:11px;border:3px solid #78472e;border-radius:11px;background:#ffe0a8;color:#4b2819;font-size:17px;font-weight:1000}.volumeRow{display:grid;grid-template-columns:72px 1fr;align-items:center;gap:8px;margin:14px 3px}.volumeRow input{width:100%;accent-color:#995534}.quitAction{margin-top:18px;background:#8d3d34;color:#fff0d9}
+#settingsNotice{position:absolute;left:50%;bottom:calc(100% + 10px);display:none;min-width:210px;padding:11px 16px;transform:translateX(-50%);border:3px solid #6c3b25;border-radius:12px;background:#fff5dd;color:#4c2b1c;text-align:center;white-space:pre-line;font-size:15px;font-weight:1000;box-shadow:0 6px 16px rgba(0,0,0,.48);cursor:pointer}#settingsNotice.show{display:block}
 #fullMapOverlay{position:absolute;z-index:270;inset:0;display:none;background:rgba(8,5,12,.9);padding:46px 16px 20px;box-sizing:border-box}#fullMapOverlay.show{display:block}#fullMapViewport{width:100%;height:100%;overflow:auto;touch-action:pan-x pan-y;-webkit-overflow-scrolling:touch;border:4px solid #6c3b25;border-radius:16px;background:#201620;box-sizing:border-box}#fullMapContent{position:relative;margin:36px;flex:none;background:#130f15;box-shadow:0 0 0 3px #d3a273}.fullMapClose{position:absolute;z-index:2;right:20px;top:8px;width:42px;height:42px;border:3px solid #6c3b25;border-radius:50%;background:#f1c990;color:#4c291b;font-size:27px;font-weight:1000}
 html,body,#game,#game *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}img,canvas,video{-webkit-user-drag:none!important;user-drag:none!important}
 #lootToast{position:absolute;z-index:188;right:2px;top:108px;display:none;width:220px;padding:2px;border:2px solid #70462c;border-radius:8px;background:linear-gradient(#ffe5b1,#efc983);color:#3c2417;font-size:13px;font-weight:1000;line-height:1.05;box-shadow:inset 0 0 0 1px #fff0c8,0 3px 8px rgba(0,0,0,.4);transform:scale(.5);transform-origin:top right}
@@ -1554,7 +1555,7 @@ html.ios-device #qrPanel{
         <div id="lootToast"><div class="lootRow"><span>해골 처치!</span></div></div>
         <div id="pauseOverlay">PAUSED</div>
         <div id="chestBurstText">TREASURE!</div>
-        <div id="settingsPanel" role="dialog" aria-label="게임 설정"><button id="settingsCloseButton" class="settingsClose" aria-label="설정 닫기">×</button><h2>설정</h2><button id="saveGameButton" class="settingsAction">저장하기</button><button id="loadGameButton" class="settingsAction">불러오기</button><div class="volumeRow"><label for="sfxVolumeSlider">효과음</label><input id="sfxVolumeSlider" type="range" min="0" max="1" value="1" step="0.05"></div><div class="volumeRow"><label for="bgmVolumeSlider">BGM</label><input id="bgmVolumeSlider" type="range" min="0" max="1" value="0" step="0.05"></div><button id="quitGameButton" class="settingsAction quitAction">게임 종료</button></div>
+        <div id="settingsPanel" role="dialog" aria-label="게임 설정"><div id="settingsNotice" role="status"></div><button id="settingsCloseButton" class="settingsClose" aria-label="설정 닫기">×</button><h2>설정</h2><button id="saveGameButton" class="settingsAction">저장하기</button><button id="loadGameButton" class="settingsAction">불러오기</button><div class="volumeRow"><label for="sfxVolumeSlider">효과음</label><input id="sfxVolumeSlider" type="range" min="0" max="1" value="1" step="0.05"></div><div class="volumeRow"><label for="bgmVolumeSlider">BGM</label><input id="bgmVolumeSlider" type="range" min="0" max="1" value="0" step="0.05"></div><button id="quitGameButton" class="settingsAction quitAction">게임 종료</button></div>
         <div id="fullMapOverlay" aria-label="전체 던전 지도"><button id="fullMapCloseButton" class="fullMapClose" aria-label="전체 지도 닫기">×</button><div id="fullMapViewport"><div id="fullMapContent"></div></div></div>
 
         <div id="gyroControls" aria-label="자이로 이동 조작">
@@ -1962,6 +1963,7 @@ const DUNGEON_MODE=true;
 const DUNGEON_TEXTURE_URL="https://static.wixstatic.com/media/172435_a67fcd4a28004db6bc448dbf25e32ade~mv2.png";
 const DUNGEON_CHEST_STL_URL="https://17243552-1e44-4735-9364-cd93fc6ed895.usrfiles.com/ugd/172435_5b0bba87c0c149bf949fef30c572b3be.stl";
 const DUNGEON_CHEST_TEXTURE_URL="https://static.wixstatic.com/media/172435_deef4938249647d99e8172f4addf9813~mv2.png";
+const DUNGEON_CHEST_IMAGE_URL="https://static.wixstatic.com/media/172435_64ca5a5b73c34f9db47a0f297402dad0~mv2.png";
 const DUNGEON_SIZE=21;
 const DUNGEON_CELL=16;
 let dungeonGrid=[];
@@ -1976,8 +1978,8 @@ const CONTROL_TURN_SPEED=4.7;
 const MONSTER_AGGRO_DISTANCE=30;
 const MONSTER_LOCK_DISTANCE=30;
 /* 추격 정지·몸 충돌·서로의 공격 사거리를 같은 거리로 통일한다. */
-const MONSTER_ATTACK_DISTANCE=DUNGEON_MODE ? 4.2 : 8;
-const MONSTER_BLOCK_DISTANCE=DUNGEON_MODE ? 1.65 : 8;
+const MONSTER_ATTACK_DISTANCE=DUNGEON_MODE ? 6 : 8;
+const MONSTER_BLOCK_DISTANCE=DUNGEON_MODE ? 1.5 : 8;
 const MONSTER_DISENGAGE_DISTANCE=30;
 const MONSTER_CHASE_SPEED=4.5;
 const WOLF_IDLE_URL="https://static.wixstatic.com/media/172435_91e8afed612c4a6ababa985a8414d211~mv2.png";
@@ -1985,7 +1987,7 @@ const WOLF_WALK_1_URL="https://static.wixstatic.com/media/172435_3abac1336d7f487
 const WOLF_WALK_2_URL="https://static.wixstatic.com/media/172435_5f50d836c1434b99a2982e54068031f6~mv2.png";
 const WOLF_ATTACK_URL="https://static.wixstatic.com/media/172435_4d0ae03f956f469bad1b23638ee66bcb~mv2.png";
 const WOLF_HIT_URL="https://static.wixstatic.com/media/172435_cbf98c9fbd0640e79ea80d9a4620cb90~mv2.png";
-const WOLF_BASE_SIZE=DUNGEON_MODE ? 4.25 : 5.4;
+const WOLF_BASE_SIZE=DUNGEON_MODE ? 3.8 : 5.4;
 /* 원래 크기를 복원하되 이미지의 투명 여백을 고려해 지면 쪽으로 내린다. */
 const WOLF_BASE_Y=2.58;
 const WORLD_BOUNDS={minX:-84,maxX:84,minZ:-84,maxZ:84};
@@ -3871,12 +3873,17 @@ function openDungeonTreasureChest(chest){
     }
     chest.userData.collected=true;
     const lid=chest.getObjectByName("chestLid");
-    const model=chest.userData.modelMesh;
+    const model=chest.userData.modelMesh || chest.userData.imageSprite;
     const startedAt=performance.now();
     (function animateOpen(now){
         const progress=Math.min(1,(now-startedAt)/520);
         if(lid){lid.rotation.x=-progress*1.2;lid.position.z=-progress*.7;}
-        if(model){model.rotation.x=-progress*.28;model.position.y+=progress*.012;}
+        if(model){
+            model.position.y=2.7+Math.sin(progress*Math.PI)*.8;
+            const pulse=1+Math.sin(progress*Math.PI)*.14;
+            model.scale.set(5.7*pulse,5.7*pulse,1);
+            if(model.material){model.material.opacity=Math.max(.35,1-progress*.65);}
+        }
         if(progress<1){requestAnimationFrame(animateOpen);}
     })(startedAt);
     const rewardRoll=Math.random();
@@ -3918,46 +3925,21 @@ function createDungeonTreasureChests(){
         if(!cell){return;}
         const position=dungeonWorldPosition(cell.x,cell.z);
         const chest=new THREE.Group();
-        const wood=new THREE.MeshLambertMaterial({color:0x6b3219,emissive:0x180a04});
-        const gold=new THREE.MeshLambertMaterial({color:0xe8ad35,emissive:0x4a2c05});
-        const base=new THREE.Mesh(new THREE.BoxGeometry(3.5,1.6,2.4),wood);
-        base.position.y=.82;
-        const lid=new THREE.Mesh(new THREE.BoxGeometry(3.6,.72,2.5),wood);
-        lid.position.y=1.92;
-        lid.name="chestLid";
-        const band=new THREE.Mesh(new THREE.BoxGeometry(.44,2.3,2.55),gold);
-        band.position.y=1.16;
-        chest.add(base,lid,band);
+        const texture=new THREE.TextureLoader().load(DUNGEON_CHEST_IMAGE_URL);
+        texture.colorSpace=THREE.SRGBColorSpace;
+        texture.magFilter=THREE.NearestFilter;
+        const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,alphaTest:.04,depthTest:true,depthWrite:true,fog:true}));
+        sprite.scale.set(5.7,5.7,1);
+        sprite.position.y=2.7;
+        sprite.userData.isDungeonChestImage=true;
+        chest.add(sprite);
         chest.position.set(position.x,0,position.z);
         chest.userData.collected=false;
         chest.userData.isDungeonChest=true;
         chest.userData.chestIndex=index;
+        chest.userData.imageSprite=sprite;
         scene.add(chest);
         worldTreasureChests.push(chest);
-    });
-    loadDungeonChestModel().then(function(asset){
-        worldTreasureChests.forEach(function(chest){
-            if(chest.userData.collected){return;}
-            while(chest.children.length){chest.remove(chest.children[0]);}
-            const material=new THREE.MeshLambertMaterial({
-                map:asset.texture,
-                color:0xffffff,
-                emissive:0x241106,
-                emissiveIntensity:.22
-            });
-            const mesh=new THREE.Mesh(asset.geometry,material);
-            const size=new THREE.Vector3();
-            asset.geometry.computeBoundingBox();
-            asset.geometry.boundingBox.getSize(size);
-            const scale=4.6/Math.max(.001,size.x,size.z);
-            mesh.scale.setScalar(scale);
-            mesh.position.y=-asset.geometry.boundingBox.min.y*scale;
-            mesh.userData.isDungeonChestModel=true;
-            chest.add(mesh);
-            chest.userData.modelMesh=mesh;
-        });
-    }).catch(function(error){
-        console.log("던전 보물상자 모델 로딩 실패 - 기본 상자 유지",error);
     });
 }
 
@@ -4047,10 +4029,18 @@ function buildDungeon(loader){
     const torchCells=[];
     for(let z=2;z<DUNGEON_SIZE-2;z++){
         for(let x=2;x<DUNGEON_SIZE-2;x++){
+            const openDirections=[[1,0],[-1,0],[0,1],[0,-1]].filter(function(direction){
+                return dungeonGrid[z+direction[1]][x+direction[0]]===0;
+            });
             const besideWall=[[1,0],[-1,0],[0,1],[0,-1]].some(function(direction){
                 return dungeonGrid[z+direction[1]][x+direction[0]]===1;
             });
-            if(dungeonGrid[z][x]===0 && besideWall){
+            const hasHorizontal=openDirections.some(function(direction){return direction[0]!==0;});
+            const hasVertical=openDirections.some(function(direction){return direction[1]!==0;});
+            const isCorner=hasHorizontal && hasVertical;
+            /* 코너는 반드시 밝히고, 직선 구간은 약 2칸(약 30걸음)마다 둔다. */
+            const isThirtyStepInterval=((x+z)%2===0);
+            if(dungeonGrid[z][x]===0 && besideWall && (isCorner || isThirtyStepInterval)){
                 torchCells.push({x:x,z:z});
             }
         }
@@ -4076,9 +4066,7 @@ function buildDungeon(loader){
         flame.scale.set(.72,1.45,.72);
         flame.position.set(torchX,4.3,torchZ);
         scene.add(flame);
-        /* 모바일 성능을 위해 불꽃은 전부 표시하되 실제 동적광은
-           두 번째 횃불마다 배치한다. */
-        if(torchIndex%2===0 && torchIndex<64){
+        if(torchIndex<80){
             const light=new THREE.PointLight(0xffa13b,3.1,48,2);
             light.position.set(torchX,4.25,torchZ);
             scene.add(light);
@@ -8357,6 +8345,12 @@ function applyAudioSettings(){
     if(bgmMasterVolume<=0){bgmAudio.pause();bgmStarted=false;}
 }
 
+function showSettingsNotice(message){
+    const notice=$("settingsNotice");
+    notice.textContent=message;
+    notice.classList.add("show");
+}
+
 try{
     const savedAudio=JSON.parse(localStorage.getItem(DUNGEON_AUDIO_KEY)||"null");
     if(savedAudio){
@@ -8379,14 +8373,14 @@ function saveDungeonGame(){
     };
     try{
         localStorage.setItem(DUNGEON_SAVE_KEY,JSON.stringify(data));
-        showDialogueMessages("저장완료되었습니다.",2200);
-    }catch(error){showDialogueMessages("저장할 수 없습니다.",2200);}
+        showSettingsNotice("저장완료되었습니다.\n눌러서 닫기");
+    }catch(error){showSettingsNotice("저장할 수 없습니다.\n눌러서 닫기");}
 }
 
 function loadDungeonGame(){
     let data=null;
     try{data=JSON.parse(localStorage.getItem(DUNGEON_SAVE_KEY)||"null");}catch(error){}
-    if(!data){showDialogueMessages("저장된 게임이 없습니다.",2200);return;}
+    if(!data){showSettingsNotice("저장된 게임이 없습니다.\n눌러서 닫기");return;}
     playerHP=Math.max(1,Math.min(CONFIG.PLAYER_HP,Number(data.hp)||CONFIG.PLAYER_HP));
     dungeonGold=Math.max(0,Number(data.gold)||0);
     if(camera && Number.isFinite(data.x) && Number.isFinite(data.z)){
@@ -8403,7 +8397,7 @@ function loadDungeonGame(){
     const nextIndex=GYRO_MONSTER_POSITIONS.findIndex(function(_,index){return !defeatedWolfIndices.has(index);});
     if(nextIndex>=0){spawnMonster(nextIndex);}
     updateHP();updateWolfQuestUI();updateMapPlayerFromCamera();
-    showDialogueMessages("저장된 게임을 불러왔습니다.",2200);
+    showSettingsNotice("불러오기가 완료되었습니다.\n눌러서 닫기");
 }
 
 $("settingsButton").addEventListener("click",function(){
@@ -8411,6 +8405,7 @@ $("settingsButton").addEventListener("click",function(){
     closeSidePanels();applyAudioSettings();$("settingsPanel").classList.toggle("show");
 });
 $("settingsCloseButton").addEventListener("click",function(){$("settingsPanel").classList.remove("show");});
+$("settingsNotice").addEventListener("click",function(){this.classList.remove("show");});
 $("saveGameButton").addEventListener("click",saveDungeonGame);
 $("loadGameButton").addEventListener("click",loadDungeonGame);
 $("sfxVolumeSlider").addEventListener("input",function(){sfxMasterVolume=Number(this.value);saveAudioSettings();});
