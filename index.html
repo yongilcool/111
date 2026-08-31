@@ -1430,7 +1430,7 @@ html.ios-device #qrPanel{
 
                 <div class="label">
 
-                    WOLF
+                    SKELETON
 
                     <span id="enemyText">
                         100 / 100
@@ -1543,9 +1543,9 @@ html.ios-device #qrPanel{
         <button id="battleExitButton">전투 나가기</button>
         <button id="questButton" aria-label="퀘스트 열기"><img src="https://static.wixstatic.com/media/172435_db0fd22ef0cd4fd48cde2f64dee535bc~mv2.png" alt="퀘스트"></button>
         <button id="inventoryButton" aria-label="인벤토리 열기"><img src="https://static.wixstatic.com/media/172435_513831dd8ed049688a5282ba36bc3b3e~mv2.png" alt="아이템"></button>
-        <div id="questPanel">퀘스트<br><div style="margin-top:8px;text-align:left">마을 늑대<br>소탕하기<br><b id="questProgress">0 / 6</b></div></div>
+        <div id="questPanel">퀘스트<br><div style="margin-top:8px;text-align:left">지하 던전<br>해골 소탕<br><b id="questProgress">0 / 6</b></div></div>
         <div id="inventoryPanel"><b>인벤토리</b><div class="inventoryRow"><img src="https://static.wixstatic.com/media/172435_76a4ea719647489baf3cf65188c8754c~mv2.png" alt="늑대고기"><span>늑대고기 × <b id="meatCount">0</b></span></div><div class="inventoryRow"><img src="https://static.wixstatic.com/media/172435_18c122b6a5c945718007e1ce6cfc5189~mv2.png" alt="늑대가죽"><span>늑대가죽 × <b id="hideCount">0</b></span></div></div>
-        <div id="lootToast"><div class="lootRow"><img src="https://static.wixstatic.com/media/172435_76a4ea719647489baf3cf65188c8754c~mv2.png" alt=""><span>늑대고기 획득 (×1)</span></div><div class="lootRow"><img src="https://static.wixstatic.com/media/172435_18c122b6a5c945718007e1ce6cfc5189~mv2.png" alt=""><span>늑대가죽 획득 (×1)</span></div></div>
+        <div id="lootToast"><div class="lootRow"><span>해골 처치!</span></div></div>
         <div id="pauseOverlay">PAUSED</div>
         <div id="chestBurstText">TREASURE!</div>
 
@@ -1950,6 +1950,13 @@ let turnFootTimer=0;
 ===================================================== */
 
 const GYRO_EXPERIMENT=true;
+const DUNGEON_MODE=true;
+const DUNGEON_TEXTURE_URL="https://static.wixstatic.com/media/172435_a67fcd4a28004db6bc448dbf25e32ade~mv2.png";
+const DUNGEON_SIZE=21;
+const DUNGEON_CELL=8;
+let dungeonGrid=[];
+let dungeonEntrance={x:1,z:20};
+let dungeonExit={x:19,z:0};
 const GYRO_WALK_SPEED=40;
 const GYRO_LOOK_SENSITIVITY=1.65;
 const CONTROL_TURN_SPEED=4.7;
@@ -1968,16 +1975,8 @@ const WOLF_HIT_URL="https://static.wixstatic.com/media/172435_cbf98c9fbd0640e79e
 const WOLF_BASE_SIZE=5.4;
 /* 원래 크기를 복원하되 이미지의 투명 여백을 고려해 지면 쪽으로 내린다. */
 const WOLF_BASE_Y=2.58;
-const WORLD_BOUNDS={minX:-64,maxX:64,minZ:-67,maxZ:57};
-const GYRO_MONSTER_POSITIONS=[
-    {x:-40,z:-5},
-    {x:-20,z:35},
-    {x:20,z:35},
-    {x:40,z:-5},
-    {x:-31,z:-45},
-    /* 시작점(0,-5)에서 정확히 20 거리라 시작 직후 추격을 확인할 수 있다. */
-    {x:0,z:15}
-];
+const WORLD_BOUNDS={minX:-84,maxX:84,minZ:-84,maxZ:84};
+const GYRO_MONSTER_POSITIONS=[];
 
 let gyroEnabled=false;
 let gyroForwardPressed=false;
@@ -2091,6 +2090,20 @@ function applyGyroView(){
 }
 
 function isInsidePlayableRoad(x,z){
+    if(DUNGEON_MODE && dungeonGrid.length){
+        const half=(DUNGEON_SIZE-1)/2;
+        const radius=.72;
+        const samples=[
+            [x-radius,z-radius],[x+radius,z-radius],
+            [x-radius,z+radius],[x+radius,z+radius]
+        ];
+        return samples.every(function(point){
+            const gx=Math.round(point[0]/DUNGEON_CELL)+half;
+            const gz=Math.round(point[1]/DUNGEON_CELL)+half;
+            return gx>=0 && gx<DUNGEON_SIZE && gz>=0 && gz<DUNGEON_SIZE &&
+                dungeonGrid[gz][gx]===0;
+        });
+    }
     /* 길과 숲은 모두 이동 가능하고, 전체 맵 바깥만 막는다. */
     return x>=WORLD_BOUNDS.minX && x<=WORLD_BOUNDS.maxX &&
         z>=WORLD_BOUNDS.minZ && z<=WORLD_BOUNDS.maxZ;
@@ -2391,6 +2404,33 @@ function updateMapPlayer(point){
 }
 
 function updateMapPlayerFromCamera(){
+    if(DUNGEON_MODE){
+        const mapWidth=116;
+        const mapHeight=92;
+        const span=(DUNGEON_SIZE-1)*DUNGEON_CELL;
+        const left=(camera.position.x+span/2)/span*mapWidth;
+        const top=(camera.position.z+span/2)/span*mapHeight;
+        const heading=gyroEnabled ? gyroViewHeading : mapHeading;
+        const world=$("miniMapWorld");
+        world.style.transformOrigin=left+"px "+top+"px";
+        world.style.transform=
+            "translate("+(58-left)+"px,"+(46-top)+"px) rotate("+heading+"rad)";
+        document.querySelectorAll(".mapEnemy[data-wolf-index]")
+        .forEach(function(dot){
+            const index=Number(dot.dataset.wolfIndex);
+            const enemy=(index===monsterIndex && monster && !monsterDead)
+                ? {x:monsterHomeX,z:monsterHomeZ}
+                : GYRO_MONSTER_POSITIONS[index];
+            if(!enemy || defeatedWolfIndices.has(index)){
+                dot.style.display="none";
+                return;
+            }
+            dot.style.display="block";
+            dot.style.left=((enemy.x+span/2)/span*mapWidth)+"px";
+            dot.style.top=((enemy.z+span/2)/span*mapHeight)+"px";
+        });
+        return;
+    }
     const left=58+camera.position.x;
     const top=17+(camera.position.z+45)*.725;
     const heading=gyroEnabled ? gyroViewHeading : mapHeading;
@@ -3524,6 +3564,259 @@ function pixelTexture(colors){
    INIT THREE
 ===================================================== */
 
+function dungeonWorldPosition(gx,gz){
+    const half=(DUNGEON_SIZE-1)/2;
+    return {
+        x:(gx-half)*DUNGEON_CELL,
+        z:(gz-half)*DUNGEON_CELL
+    };
+}
+
+let dungeonChaseWaypoint=null;
+let dungeonChasePathAt=0;
+function findDungeonChaseWaypoint(fromX,fromZ,toX,toZ){
+    const half=(DUNGEON_SIZE-1)/2;
+    const sx=Math.round(fromX/DUNGEON_CELL)+half;
+    const sz=Math.round(fromZ/DUNGEON_CELL)+half;
+    const tx=Math.round(toX/DUNGEON_CELL)+half;
+    const tz=Math.round(toZ/DUNGEON_CELL)+half;
+    const queue=[[sx,sz]];
+    const previous=new Map();
+    previous.set(sx+","+sz,null);
+    const directions=[[1,0],[-1,0],[0,1],[0,-1]];
+    while(queue.length){
+        const current=queue.shift();
+        if(current[0]===tx && current[1]===tz){break;}
+        for(const direction of directions){
+            const nx=current[0]+direction[0];
+            const nz=current[1]+direction[1];
+            const key=nx+","+nz;
+            if(
+                nx<0 || nx>=DUNGEON_SIZE || nz<0 || nz>=DUNGEON_SIZE ||
+                dungeonGrid[nz][nx]!==0 || previous.has(key)
+            ){continue;}
+            previous.set(key,current);
+            queue.push([nx,nz]);
+        }
+    }
+    let step=[tx,tz];
+    if(!previous.has(tx+","+tz)){return {x:toX,z:toZ};}
+    while(true){
+        const parent=previous.get(step[0]+","+step[1]);
+        if(!parent || (parent[0]===sx && parent[1]===sz)){break;}
+        step=parent;
+    }
+    return dungeonWorldPosition(step[0],step[1]);
+}
+
+function generateDungeonMaze(){
+    dungeonGrid=Array.from({length:DUNGEON_SIZE},function(){
+        return Array(DUNGEON_SIZE).fill(1);
+    });
+    let seed=172435;
+    function random(){
+        seed=(seed*1664525+1013904223)>>>0;
+        return seed/4294967296;
+    }
+    const stack=[[1,DUNGEON_SIZE-2]];
+    dungeonGrid[DUNGEON_SIZE-2][1]=0;
+    while(stack.length){
+        const current=stack[stack.length-1];
+        const directions=[[2,0],[-2,0],[0,2],[0,-2]]
+            .map(function(direction){return {direction:direction,sort:random()};})
+            .sort(function(a,b){return a.sort-b.sort;});
+        let carved=false;
+        for(const item of directions){
+            const nx=current[0]+item.direction[0];
+            const nz=current[1]+item.direction[1];
+            if(
+                nx>0 && nx<DUNGEON_SIZE-1 &&
+                nz>0 && nz<DUNGEON_SIZE-1 &&
+                dungeonGrid[nz][nx]===1
+            ){
+                dungeonGrid[current[1]+item.direction[1]/2]
+                    [current[0]+item.direction[0]/2]=0;
+                dungeonGrid[nz][nx]=0;
+                stack.push([nx,nz]);
+                carved=true;
+                break;
+            }
+        }
+        if(!carved){stack.pop();}
+    }
+    dungeonGrid[dungeonEntrance.z][dungeonEntrance.x]=0;
+    dungeonGrid[dungeonExit.z][dungeonExit.x]=0;
+
+    const open=[];
+    for(let z=1;z<DUNGEON_SIZE-1;z++){
+        for(let x=1;x<DUNGEON_SIZE-1;x++){
+            if(dungeonGrid[z][x]===0){open.push({x:x,z:z});}
+        }
+    }
+    const picks=[.17,.31,.46,.61,.76,.9];
+    GYRO_MONSTER_POSITIONS.length=0;
+    picks.forEach(function(fraction){
+        const cell=open[Math.min(open.length-1,Math.floor(open.length*fraction))];
+        GYRO_MONSTER_POSITIONS.push(dungeonWorldPosition(cell.x,cell.z));
+    });
+}
+
+function rebuildDungeonMiniMap(){
+    const world=$("miniMapWorld");
+    world.innerHTML="";
+    const mapWidth=116;
+    const mapHeight=92;
+    dungeonGrid.forEach(function(row,z){
+        row.forEach(function(cell,x){
+            if(cell!==0){return;}
+            const tile=document.createElement("i");
+            tile.style.cssText=
+                "position:absolute;background:#b8925e;width:"+
+                (mapWidth/DUNGEON_SIZE+1)+"px;height:"+
+                (mapHeight/DUNGEON_SIZE+1)+"px;left:"+
+                (x*mapWidth/DUNGEON_SIZE)+"px;top:"+
+                (z*mapHeight/DUNGEON_SIZE)+"px";
+            world.appendChild(tile);
+        });
+    });
+    GYRO_MONSTER_POSITIONS.forEach(function(position,index){
+        const enemy=document.createElement("i");
+        enemy.className="mapEnemy";
+        enemy.dataset.wolfIndex=index;
+        world.appendChild(enemy);
+    });
+    const exit=document.createElement("i");
+    exit.style.cssText="position:absolute;width:8px;height:8px;border-radius:2px;background:#72ffae;box-shadow:0 0 7px #72ffae;right:1px;top:1px";
+    world.appendChild(exit);
+}
+
+function addDungeonGate(x,z,color){
+    const material=new THREE.MeshBasicMaterial({color:color});
+    const group=new THREE.Group();
+    const sideGeometry=new THREE.BoxGeometry(.35,6,.35);
+    const topGeometry=new THREE.BoxGeometry(6,.35,.35);
+    const left=new THREE.Mesh(sideGeometry,material);
+    const right=new THREE.Mesh(sideGeometry,material);
+    const top=new THREE.Mesh(topGeometry,material);
+    left.position.set(-3,3,0);
+    right.position.set(3,3,0);
+    top.position.set(0,6,0);
+    group.add(left,right,top);
+    group.position.set(x,0,z);
+    scene.add(group);
+    const light=new THREE.PointLight(color,1.2,20,2);
+    light.position.set(x,3,z);
+    scene.add(light);
+}
+
+function buildDungeon(loader){
+    generateDungeonMaze();
+    scene.background=new THREE.Color(0x090812);
+    scene.fog=new THREE.Fog(0x090812,32,92);
+    scene.children.forEach(function(child){
+        if(child.isLight){child.intensity*=.24;}
+    });
+    scene.add(new THREE.AmbientLight(0x6c6688,.22));
+
+    const stoneTexture=loader.load(DUNGEON_TEXTURE_URL,function(texture){
+        texture.wrapS=THREE.RepeatWrapping;
+        texture.wrapT=THREE.RepeatWrapping;
+        texture.repeat.set(2,2);
+        texture.colorSpace=THREE.SRGBColorSpace;
+        texture.magFilter=THREE.NearestFilter;
+        stoneMaterial.map=texture;
+        floorMaterial.map=texture;
+        ceilingMaterial.map=texture;
+        stoneMaterial.needsUpdate=true;
+        floorMaterial.needsUpdate=true;
+        ceilingMaterial.needsUpdate=true;
+    });
+    stoneTexture.wrapS=stoneTexture.wrapT=THREE.RepeatWrapping;
+    const stoneMaterial=new THREE.MeshLambertMaterial({
+        color:0x70697c,
+        map:stoneTexture
+    });
+    const floorMaterial=new THREE.MeshLambertMaterial({
+        color:0x5e5868,
+        map:stoneTexture,
+        side:THREE.DoubleSide
+    });
+    const ceilingMaterial=new THREE.MeshLambertMaterial({
+        color:0x403b4b,
+        map:stoneTexture,
+        side:THREE.DoubleSide
+    });
+    const span=DUNGEON_SIZE*DUNGEON_CELL;
+    const floor=new THREE.Mesh(new THREE.PlaneGeometry(span,span),floorMaterial);
+    floor.rotation.x=-Math.PI/2;
+    scene.add(floor);
+    const ceiling=new THREE.Mesh(new THREE.PlaneGeometry(span,span),ceilingMaterial);
+    ceiling.rotation.x=Math.PI/2;
+    ceiling.position.y=8;
+    scene.add(ceiling);
+
+    const wallGeometry=new THREE.BoxGeometry(DUNGEON_CELL,8,DUNGEON_CELL);
+    let wallCount=0;
+    dungeonGrid.forEach(function(row){row.forEach(function(cell){if(cell===1){wallCount++;}});});
+    const walls=new THREE.InstancedMesh(wallGeometry,stoneMaterial,wallCount);
+    const matrix=new THREE.Matrix4();
+    let wallIndex=0;
+    dungeonGrid.forEach(function(row,z){
+        row.forEach(function(cell,x){
+            if(cell!==1){return;}
+            const position=dungeonWorldPosition(x,z);
+            matrix.makeTranslation(position.x,4,position.z);
+            walls.setMatrixAt(wallIndex++,matrix);
+        });
+    });
+    scene.add(walls);
+
+    const torchCells=[];
+    for(let z=2;z<DUNGEON_SIZE-2;z++){
+        for(let x=2;x<DUNGEON_SIZE-2;x++){
+            if(dungeonGrid[z][x]===0 && (x*7+z*11)%13===0){
+                torchCells.push({x:x,z:z});
+            }
+        }
+    }
+    torchCells.slice(0,18).forEach(function(cell){
+        const position=dungeonWorldPosition(cell.x,cell.z);
+        const wallDirection=[[1,0],[-1,0],[0,1],[0,-1]].find(function(direction){
+            return dungeonGrid[cell.z+direction[1]][cell.x+direction[0]]===1;
+        }) || [1,0];
+        const torchX=position.x+wallDirection[0]*(DUNGEON_CELL*.39);
+        const torchZ=position.z+wallDirection[1]*(DUNGEON_CELL*.39);
+        const holder=new THREE.Mesh(
+            new THREE.CylinderGeometry(.08,.12,1.2,5),
+            new THREE.MeshBasicMaterial({color:0x4a2515})
+        );
+        holder.position.set(torchX,3.6,torchZ);
+        holder.rotation.z=.32;
+        scene.add(holder);
+        const flame=new THREE.Mesh(
+            new THREE.SphereGeometry(.28,6,6),
+            new THREE.MeshBasicMaterial({color:0xffb12b})
+        );
+        flame.scale.set(.72,1.45,.72);
+        flame.position.set(torchX,4.3,torchZ);
+        scene.add(flame);
+        const light=new THREE.PointLight(0xff8b32,1.35,27,2);
+        light.position.set(torchX,4.25,torchZ);
+        scene.add(light);
+    });
+
+    const entrance=dungeonWorldPosition(dungeonEntrance.x,dungeonEntrance.z);
+    const exit=dungeonWorldPosition(dungeonExit.x,dungeonExit.z);
+    addDungeonGate(entrance.x,entrance.z,0x4eb8ff);
+    addDungeonGate(exit.x,exit.z,0x62ff9d);
+    camera.position.set(entrance.x,2.15,entrance.z);
+    camera.rotation.set(0,0,0);
+    mapHeading=0;
+    mapTargetHeading=0;
+    gyroViewHeading=0;
+    rebuildDungeonMiniMap();
+}
+
 function init3D(){
 
     /*
@@ -3580,6 +3873,10 @@ function init3D(){
 
 
             function(texture){
+                if(DUNGEON_MODE){
+                    texture.dispose();
+                    return;
+                }
                 /* 원본 하늘 비율을 유지하고 화면 밖만 잘라낸다. */
                 const image=texture.image;
                 const area=$("playArea");
@@ -3790,6 +4087,16 @@ function init3D(){
         scene.add(
             directional
         );
+
+        if(DUNGEON_MODE){
+            buildDungeon(loader);
+            spawnMonster(0);
+            createWolfSentinels();
+            initialized=true;
+            lastTime=performance.now();
+            requestAnimationFrame(loop);
+            return true;
+        }
 
 
         /*
@@ -4487,6 +4794,65 @@ function temporaryMonster(index){
 
 function getWolfTextures(){
     if(wolfTextures){return wolfTextures;}
+    if(DUNGEON_MODE){
+        function skeletonTexture(pose){
+            const canvas=document.createElement("canvas");
+            canvas.width=128;
+            canvas.height=128;
+            const ctx=canvas.getContext("2d");
+            ctx.imageSmoothingEnabled=false;
+            const bone=pose==="hit" ? "#ff8179" : "#e8e1c9";
+            const shade=pose==="hit" ? "#9d302f" : "#a69e8b";
+            const shift=pose==="walk2" ? 3 : (pose==="walk1" ? -3 : 0);
+            ctx.fillStyle="rgba(0,0,0,.35)";
+            ctx.fillRect(31,111,66,7);
+            ctx.fillStyle=bone;
+            ctx.fillRect(42,13,44,34);
+            ctx.fillRect(36,21,56,18);
+            ctx.fillStyle="#17131d";
+            ctx.fillRect(50,25,9,9);
+            ctx.fillRect(69,25,9,9);
+            ctx.fillRect(59,38,10,5);
+            ctx.fillStyle=shade;
+            ctx.fillRect(42,42,44,6);
+            ctx.fillStyle=bone;
+            ctx.fillRect(61,47,7,46);
+            for(let y=52;y<=78;y+=9){
+                ctx.fillRect(43,y,42,5);
+            }
+            ctx.fillRect(39,50,6,35);
+            ctx.fillRect(84,50,6,35);
+            if(pose==="attack"){
+                ctx.fillRect(25,45,17,7);
+                ctx.fillRect(88,45,17,7);
+                ctx.fillStyle="#ffb52e";
+                ctx.fillRect(47,23,12,12);
+                ctx.fillRect(69,23,12,12);
+            }
+            else{
+                ctx.fillRect(33,82,13,6);
+                ctx.fillRect(84,82,13,6);
+            }
+            ctx.fillStyle=bone;
+            ctx.fillRect(50+shift,88,8,25);
+            ctx.fillRect(71-shift,88,8,25);
+            ctx.fillRect(43+shift,108,17,6);
+            ctx.fillRect(69-shift,108,17,6);
+            const texture=new THREE.CanvasTexture(canvas);
+            texture.colorSpace=THREE.SRGBColorSpace;
+            texture.magFilter=THREE.NearestFilter;
+            texture.minFilter=THREE.NearestFilter;
+            return texture;
+        }
+        wolfTextures={
+            idle:skeletonTexture("idle"),
+            walk1:skeletonTexture("walk1"),
+            walk2:skeletonTexture("walk2"),
+            attack:skeletonTexture("attack"),
+            hit:skeletonTexture("hit")
+        };
+        return wolfTextures;
+    }
     const loader=new THREE.TextureLoader();
     function load(url){
         const texture=loader.load(url);
@@ -5389,14 +5755,18 @@ function updateWolfQuestUI(){
 }
 
 function showWolfLoot(){
-    wolfMeatCount+=1;
-    wolfHideCount+=1;
+    if(!DUNGEON_MODE){
+        wolfMeatCount+=1;
+        wolfHideCount+=1;
+    }
     updateWolfQuestUI();
 
     const completed=defeatedWolfIndices.size>=GYRO_MONSTER_POSITIONS.length;
     if(completed){
         const burstText=$("chestBurstText");
-        burstText.innerHTML="MISSION CLEAR<span>늑대 소탕 완료.</span>";
+        burstText.innerHTML=DUNGEON_MODE
+            ? "DUNGEON CLEAR<span>해골 소탕 완료.</span>"
+            : "MISSION CLEAR<span>늑대 소탕 완료.</span>";
         chestCelebration(5000);
     }
 
@@ -7329,7 +7699,12 @@ function startGame(){
         $("dialogueBox").classList.remove("show");
     }
 
-    showDialogueMessages("늑대를 잡아보자.",5000);
+    showDialogueMessages(
+        DUNGEON_MODE
+            ? "던전 깊은 곳의 해골 6마리를 처치하고 출구를 찾아가자."
+            : "늑대를 잡아보자.",
+        5000
+    );
 
 
     updateSwordIdle();
@@ -7849,8 +8224,21 @@ function loop(now){
                         wolfGrowlSound();
                     }
                     wolfWasChasing=true;
-                    const chaseDX=camera.position.x-monsterHomeX;
-                    const chaseDZ=camera.position.z-monsterHomeZ;
+                    if(
+                        DUNGEON_MODE &&
+                        (!dungeonChaseWaypoint || performance.now()-dungeonChasePathAt>260)
+                    ){
+                        dungeonChaseWaypoint=findDungeonChaseWaypoint(
+                            monsterHomeX,monsterHomeZ,
+                            camera.position.x,camera.position.z
+                        );
+                        dungeonChasePathAt=performance.now();
+                    }
+                    const chaseTarget=DUNGEON_MODE && dungeonChaseWaypoint
+                        ? dungeonChaseWaypoint
+                        : camera.position;
+                    const chaseDX=chaseTarget.x-monsterHomeX;
+                    const chaseDZ=chaseTarget.z-monsterHomeZ;
                     const chaseLength=Math.max(
                         .001,
                         Math.hypot(chaseDX,chaseDZ)
