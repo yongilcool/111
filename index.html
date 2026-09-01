@@ -3982,24 +3982,30 @@ function buildDungeon(loader){
     });
     stoneTexture.wrapS=stoneTexture.wrapT=THREE.RepeatWrapping;
     const stoneMaterial=new THREE.MeshLambertMaterial({
-        color:0xffffff,
-        emissive:0x383440,
-        emissiveIntensity:.112,
-        map:stoneTexture
+        color:0xcac5d2,
+        emissive:0x302b38,
+        emissiveIntensity:.18,
+        map:stoneTexture,
+        depthTest:true,
+        depthWrite:true
     });
     const floorMaterial=new THREE.MeshLambertMaterial({
-        color:0xf0edf8,
-        emissive:0x302d38,
-        emissiveIntensity:.098,
+        color:0xbdb8c8,
+        emissive:0x28242f,
+        emissiveIntensity:.16,
         map:stoneTexture,
-        side:THREE.DoubleSide
+        side:THREE.DoubleSide,
+        depthTest:true,
+        depthWrite:true
     });
     const ceilingMaterial=new THREE.MeshLambertMaterial({
-        color:0xd5d0e1,
-        emissive:0x292631,
-        emissiveIntensity:.084,
+        color:0xaaa5b5,
+        emissive:0x24212b,
+        emissiveIntensity:.14,
         map:stoneTexture,
-        side:THREE.DoubleSide
+        side:THREE.DoubleSide,
+        depthTest:true,
+        depthWrite:true
     });
     const span=DUNGEON_SIZE*DUNGEON_CELL;
     const floor=new THREE.Mesh(new THREE.PlaneGeometry(span,span),floorMaterial);
@@ -4024,6 +4030,12 @@ function buildDungeon(loader){
             walls.setMatrixAt(wallIndex++,matrix);
         });
     });
+    /* 모바일 WebGL에서는 setMatrixAt 뒤 갱신 표시가 없으면 모든 벽이
+       원점 한곳에 겹치거나 통째로 사라질 수 있다. */
+    walls.instanceMatrix.needsUpdate=true;
+    walls.computeBoundingSphere();
+    walls.frustumCulled=false;
+    walls.renderOrder=0;
     scene.add(walls);
 
     const torchCells=[];
