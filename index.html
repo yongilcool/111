@@ -1979,7 +1979,7 @@ const MONSTER_AGGRO_DISTANCE=30;
 const MONSTER_LOCK_DISTANCE=30;
 /* 추격 정지·몸 충돌·서로의 공격 사거리를 같은 거리로 통일한다. */
 const MONSTER_ATTACK_DISTANCE=DUNGEON_MODE ? 6 : 8;
-const MONSTER_BLOCK_DISTANCE=DUNGEON_MODE ? 1.65 : 8;
+const MONSTER_BLOCK_DISTANCE=DUNGEON_MODE ? 1.5 : 8;
 const MONSTER_DISENGAGE_DISTANCE=30;
 const MONSTER_CHASE_SPEED=4.5;
 const WOLF_IDLE_URL="https://static.wixstatic.com/media/172435_91e8afed612c4a6ababa985a8414d211~mv2.png";
@@ -1987,7 +1987,7 @@ const WOLF_WALK_1_URL="https://static.wixstatic.com/media/172435_3abac1336d7f487
 const WOLF_WALK_2_URL="https://static.wixstatic.com/media/172435_5f50d836c1434b99a2982e54068031f6~mv2.png";
 const WOLF_ATTACK_URL="https://static.wixstatic.com/media/172435_4d0ae03f956f469bad1b23638ee66bcb~mv2.png";
 const WOLF_HIT_URL="https://static.wixstatic.com/media/172435_cbf98c9fbd0640e79ea80d9a4620cb90~mv2.png";
-const WOLF_BASE_SIZE=DUNGEON_MODE ? 4.25 : 5.4;
+const WOLF_BASE_SIZE=DUNGEON_MODE ? 3.8 : 5.4;
 /* 원래 크기를 복원하되 이미지의 투명 여백을 고려해 지면 쪽으로 내린다. */
 const WOLF_BASE_Y=2.58;
 const WORLD_BOUNDS={minX:-84,maxX:84,minZ:-84,maxZ:84};
@@ -3873,16 +3873,16 @@ function openDungeonTreasureChest(chest){
     }
     chest.userData.collected=true;
     const lid=chest.getObjectByName("chestLid");
-    const model=chest.userData.imageSprite || chest.userData.modelMesh;
+    const model=chest.userData.modelMesh || chest.userData.imageSprite;
     const startedAt=performance.now();
     (function animateOpen(now){
         const progress=Math.min(1,(now-startedAt)/520);
         if(lid){lid.rotation.x=-progress*1.2;lid.position.z=-progress*.7;}
         if(model){
-            const pulse=1+Math.sin(progress*Math.PI)*.12;
-            model.position.y=2.6+Math.sin(progress*Math.PI)*.7;
-            model.scale.set(5.4*pulse,5.4*pulse,1);
-            if(model.material){model.material.opacity=Math.max(.45,1-progress*.55);}
+            model.position.y=2.7+Math.sin(progress*Math.PI)*.8;
+            const pulse=1+Math.sin(progress*Math.PI)*.14;
+            model.scale.set(5.7*pulse,5.7*pulse,1);
+            if(model.material){model.material.opacity=Math.max(.35,1-progress*.65);}
         }
         if(progress<1){requestAnimationFrame(animateOpen);}
     })(startedAt);
@@ -3928,12 +3928,10 @@ function createDungeonTreasureChests(){
         const texture=new THREE.TextureLoader().load(DUNGEON_CHEST_IMAGE_URL);
         texture.colorSpace=THREE.SRGBColorSpace;
         texture.magFilter=THREE.NearestFilter;
-        const sprite=new THREE.Sprite(new THREE.SpriteMaterial({
-            map:texture,transparent:true,alphaTest:.04,
-            depthTest:true,depthWrite:true,fog:true
-        }));
-        sprite.scale.set(5.4,5.4,1);
-        sprite.position.y=2.6;
+        const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,alphaTest:.04,depthTest:true,depthWrite:true,fog:true}));
+        sprite.scale.set(5.7,5.7,1);
+        sprite.position.y=2.7;
+        sprite.userData.isDungeonChestImage=true;
         chest.add(sprite);
         chest.position.set(position.x,0,position.z);
         chest.userData.collected=false;
@@ -3984,24 +3982,30 @@ function buildDungeon(loader){
     });
     stoneTexture.wrapS=stoneTexture.wrapT=THREE.RepeatWrapping;
     const stoneMaterial=new THREE.MeshLambertMaterial({
-        color:0xffffff,
-        emissive:0x383440,
-        emissiveIntensity:.112,
-        map:stoneTexture
+        color:0xcac5d2,
+        emissive:0x302b38,
+        emissiveIntensity:.18,
+        map:stoneTexture,
+        depthTest:true,
+        depthWrite:true
     });
     const floorMaterial=new THREE.MeshLambertMaterial({
-        color:0xf0edf8,
-        emissive:0x302d38,
-        emissiveIntensity:.098,
+        color:0xbdb8c8,
+        emissive:0x28242f,
+        emissiveIntensity:.16,
         map:stoneTexture,
-        side:THREE.DoubleSide
+        side:THREE.DoubleSide,
+        depthTest:true,
+        depthWrite:true
     });
     const ceilingMaterial=new THREE.MeshLambertMaterial({
-        color:0xd5d0e1,
-        emissive:0x292631,
-        emissiveIntensity:.084,
+        color:0xaaa5b5,
+        emissive:0x24212b,
+        emissiveIntensity:.14,
         map:stoneTexture,
-        side:THREE.DoubleSide
+        side:THREE.DoubleSide,
+        depthTest:true,
+        depthWrite:true
     });
     const span=DUNGEON_SIZE*DUNGEON_CELL;
     const floor=new THREE.Mesh(new THREE.PlaneGeometry(span,span),floorMaterial);
@@ -4026,6 +4030,12 @@ function buildDungeon(loader){
             walls.setMatrixAt(wallIndex++,matrix);
         });
     });
+    /* 모바일 WebGL에서는 setMatrixAt 뒤 갱신 표시가 없으면 모든 벽이
+       원점 한곳에 겹치거나 통째로 사라질 수 있다. */
+    walls.instanceMatrix.needsUpdate=true;
+    walls.computeBoundingSphere();
+    walls.frustumCulled=false;
+    walls.renderOrder=0;
     scene.add(walls);
 
     const torchCells=[];
@@ -4040,6 +4050,7 @@ function buildDungeon(loader){
             const hasHorizontal=openDirections.some(function(direction){return direction[0]!==0;});
             const hasVertical=openDirections.some(function(direction){return direction[1]!==0;});
             const isCorner=hasHorizontal && hasVertical;
+            /* 코너는 반드시 밝히고, 직선 구간은 약 2칸(약 30걸음)마다 둔다. */
             const isThirtyStepInterval=((x+z)%2===0);
             if(dungeonGrid[z][x]===0 && besideWall && (isCorner || isThirtyStepInterval)){
                 torchCells.push({x:x,z:z});
