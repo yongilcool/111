@@ -1973,6 +1973,10 @@ let dungeonGrid=[];
 let dungeonOpenCells=[];
 let dungeonChestAssetPromise=null;
 let dungeonGold=0;
+let dungeonTorchSources=[];
+let dungeonTorchLights=[];
+let dungeonTorchAssignments=[];
+let dungeonTorchAssignmentAt=0;
 let dungeonEntrance={x:1,z:DUNGEON_SIZE-1};
 let dungeonExit={x:1,z:DUNGEON_ACTIVE_START};
 let dungeonExitCleared=false;
@@ -4057,21 +4061,42 @@ function buildDungeon(loader){
     const wallGeometry=new THREE.BoxGeometry(DUNGEON_CELL,8,DUNGEON_CELL);
     let wallCount=0;
     dungeonGrid.forEach(function(row){row.forEach(function(cell){if(cell===1){wallCount++;}});});
-    const walls=new THREE.InstancedMesh(wallGeometry,stoneMaterial,wallCount);
-    const matrix=new THREE.Matrix4();
-    let wallIndex=0;
-    dungeonGrid.forEach(function(row,z){
-        row.forEach(function(cell,x){
-            if(cell!==1){return;}
-            const position=dungeonWorldPosition(x,z);
-            matrix.makeTranslation(position.x,4,position.z);
-            walls.setMatrixAt(wallIndex++,matrix);
+    if(isAndroid()){
+        /* 일부 갤럭시 WebGL 드라이버는 InstancedMesh 벽을 누락시키므로
+           안드로이드에서는 숲맵처럼 일반 Mesh로 안전하게 그린다. */
+        const androidWalls=new THREE.Group();
+        dungeonGrid.forEach(function(row,z){
+            row.forEach(function(cell,x){
+                if(cell!==1){return;}
+                const position=dungeonWorldPosition(x,z);
+                const wall=new THREE.Mesh(wallGeometry,stoneMaterial);
+                wall.position.set(position.x,4,position.z);
+                wall.frustumCulled=false;
+                androidWalls.add(wall);
+            });
         });
-    });
-    /* 갤럭시·안드로이드 WebGL에서 던전 벽 좌표를 확실하게 반영 */
-    walls.instanceMatrix.needsUpdate=true;
-    scene.add(walls);
+        scene.add(androidWalls);
+    }
+    else{
+        const walls=new THREE.InstancedMesh(wallGeometry,stoneMaterial,wallCount);
+        const matrix=new THREE.Matrix4();
+        let wallIndex=0;
+        dungeonGrid.forEach(function(row,z){
+            row.forEach(function(cell,x){
+                if(cell!==1){return;}
+                const position=dungeonWorldPosition(x,z);
+                matrix.makeTranslation(position.x,4,position.z);
+                walls.setMatrixAt(wallIndex++,matrix);
+            });
+        });
+        walls.instanceMatrix.needsUpdate=true;
+        scene.add(walls);
+    }
 
+    dungeonTorchSources=[];
+    dungeonTorchLights=[];
+    dungeonTorchAssignments=[];
+    dungeonTorchAssignmentAt=0;
     const torchCells=[];
     for(let z=DUNGEON_ACTIVE_START;z<DUNGEON_SIZE-1;z++){
         for(let x=2;x<DUNGEON_SIZE-2;x++){
@@ -4086,11 +4111,33 @@ function buildDungeon(loader){
             const isCorner=hasHorizontal && hasVertical;
             const isThirtyStepInterval=((x+z)%2===0);
             if(dungeonGrid[z][x]===0 && besideWall && (isCorner || isThirtyStepInterval)){
-                torchCells.push({x:x,z:z});
+                torchCells.push({x:x,z:z,isCorner:isCorner});
             }
         }
     }
-    torchCells.slice(0,160).forEach(function(cell,torchIndex){
+    /* 코너 횃불을 우선하면서, 어떤 이동 가능 지점에서도 동시에 보이는
+       횃불이 여섯 개를 넘지 않도록 생성 단계에서 과밀 배치를 제거한다. */
+    torchCells.sort(function(a,b){return Number(b.isCorner)-Number(a.isCorner);});
+    const placedTorchCells=[];
+    torchCells.slice(0,160).forEach(function(candidate){
+        const candidatePosition=dungeonWorldPosition(candidate.x,candidate.z);
+        const safeEverywhere=dungeonOpenCells.every(function(viewCell){
+            const viewPosition=dungeonWorldPosition(viewCell.x,viewCell.z);
+            const candidateVisible=
+                Math.hypot(viewPosition.x-candidatePosition.x,viewPosition.z-candidatePosition.z)<=68 &&
+                hasDungeonLineOfSight(viewPosition.x,viewPosition.z,candidatePosition.x,candidatePosition.z);
+            if(!candidateVisible){return true;}
+            const visibleAlready=placedTorchCells.filter(function(placed){
+                const placedPosition=dungeonWorldPosition(placed.x,placed.z);
+                return Math.hypot(viewPosition.x-placedPosition.x,viewPosition.z-placedPosition.z)<=68 &&
+                    hasDungeonLineOfSight(viewPosition.x,viewPosition.z,placedPosition.x,placedPosition.z);
+            }).length;
+            return visibleAlready<6;
+        });
+        if(safeEverywhere){placedTorchCells.push(candidate);}
+    });
+
+    placedTorchCells.forEach(function(cell,torchIndex){
         const position=dungeonWorldPosition(cell.x,cell.z);
         const wallDirection=[[1,0],[-1,0],[0,1],[0,-1]].find(function(direction){
             return dungeonGrid[cell.z+direction[1]][cell.x+direction[0]]===1;
@@ -4111,12 +4158,18 @@ function buildDungeon(loader){
         flame.scale.set(.72,1.45,.72);
         flame.position.set(torchX,4.3,torchZ);
         scene.add(flame);
-        if(torchIndex<80){
-            const light=new THREE.PointLight(0xffa13b,3.1,48,2);
-            light.position.set(torchX,4.25,torchZ);
-            scene.add(light);
-        }
+        dungeonTorchSources.push({
+            x:torchX,y:4.25,z:torchZ,flame:flame,
+            phase:torchIndex*1.731
+        });
     });
+    /* 실제 PointLight는 항상 여섯 개만 만들고 플레이어 주변 횃불로 이동시킨다. */
+    for(let lightIndex=0;lightIndex<6;lightIndex++){
+        const light=new THREE.PointLight(0xffa13b,0,48,2);
+        light.visible=false;
+        scene.add(light);
+        dungeonTorchLights.push(light);
+    }
 
     const entrance=dungeonWorldPosition(dungeonEntrance.x,dungeonEntrance.z);
     const exit=dungeonWorldPosition(dungeonExit.x,dungeonExit.z);
@@ -4129,6 +4182,47 @@ function buildDungeon(loader){
     mapTargetHeading=0;
     gyroViewHeading=0;
     rebuildDungeonMiniMap();
+}
+
+function updateDungeonTorchLighting(now){
+    if(!DUNGEON_MODE || !camera || !dungeonTorchSources.length){return;}
+    if(now-dungeonTorchAssignmentAt>220){
+        dungeonTorchAssignmentAt=now;
+        dungeonTorchAssignments=dungeonTorchSources
+            .map(function(source,index){
+                const distance=Math.hypot(camera.position.x-source.x,camera.position.z-source.z);
+                const visible=distance<=68 && hasDungeonLineOfSight(
+                    camera.position.x,camera.position.z,source.x,source.z
+                );
+                return {index:index,distance:distance,visible:visible};
+            })
+            .filter(function(item){return item.visible;})
+            .sort(function(a,b){return a.distance-b.distance;})
+            .slice(0,6);
+    }
+
+    const seconds=now*.001;
+    dungeonTorchSources.forEach(function(source){
+        /* 두 개의 서로 다른 파동을 섞어 반복 티가 적은 미세한 불꽃 움직임을 만든다. */
+        const flicker=Math.sin(seconds*8.7+source.phase)*.035+
+            Math.sin(seconds*13.9+source.phase*1.37)*.02;
+        source.flame.scale.set(.72*(1+flicker),1.45*(1+flicker*.8),.72*(1+flicker));
+    });
+
+    dungeonTorchLights.forEach(function(light,index){
+        const assignment=dungeonTorchAssignments[index];
+        if(!assignment || assignment.distance>68){
+            light.visible=false;
+            return;
+        }
+        const source=dungeonTorchSources[assignment.index];
+        const flicker=Math.sin(seconds*9.1+source.phase)*.13+
+            Math.sin(seconds*15.3+source.phase*.71)*.07;
+        light.visible=true;
+        light.position.set(source.x,source.y,source.z);
+        light.intensity=3.05+flicker;
+        light.distance=48+Math.sin(seconds*7.4+source.phase)*1.2;
+    });
 }
 
 function init3D(){
@@ -8819,6 +8913,7 @@ function loop(now){
 
         updateMapPlayerFromCamera();
         checkDungeonExitClear();
+        updateDungeonTorchLighting(now);
         collectNearbyWorldTreasure();
         updateMonsterShadowPosition();
 
