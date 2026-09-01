@@ -1964,10 +1964,10 @@ const DUNGEON_TEXTURE_URL="https://static.wixstatic.com/media/172435_a67fcd4a280
 const DUNGEON_CHEST_STL_URL="https://17243552-1e44-4735-9364-cd93fc6ed895.usrfiles.com/ugd/172435_5b0bba87c0c149bf949fef30c572b3be.stl";
 const DUNGEON_CHEST_TEXTURE_URL="https://static.wixstatic.com/media/172435_deef4938249647d99e8172f4addf9813~mv2.png";
 const DUNGEON_CHEST_IMAGE_URL="https://static.wixstatic.com/media/172435_64ca5a5b73c34f9db47a0f297402dad0~mv2.png";
-/* 터널 한 칸 크기는 유지하고 원래 21×21 맵의 하단 1/3만 사용한다. */
-const DUNGEON_SIZE=21;
-const DUNGEON_ACTIVE_ROWS=7;
-const DUNGEON_ACTIVE_START=DUNGEON_SIZE-DUNGEON_ACTIVE_ROWS;
+/* 통로 폭은 그대로 유지하면서 작은 정사각형 미로를 새로 생성한다. */
+const DUNGEON_SIZE=11;
+const DUNGEON_ACTIVE_ROWS=DUNGEON_SIZE;
+const DUNGEON_ACTIVE_START=0;
 const DUNGEON_CELL=16;
 let dungeonGrid=[];
 let dungeonOpenCells=[];
@@ -3763,11 +3763,16 @@ function generateDungeonMaze(){
             queue.push({x:nx,z:nz,distance:current.distance+1});
         });
     }
-    dungeonExit=open.reduce(function(best,cell){
+    const farthestTopCell=open.reduce(function(best,cell){
         if(!best || cell.z<best.z){return cell;}
         if(cell.z===best.z && Math.abs(cell.x-dungeonEntrance.x)>Math.abs(best.x-dungeonEntrance.x)){return cell;}
         return best;
     },null) || {x:dungeonEntrance.x,z:DUNGEON_ACTIVE_START};
+    dungeonExit={x:farthestTopCell.x,z:Math.max(0,farthestTopCell.z-1)};
+    dungeonGrid[dungeonExit.z][dungeonExit.x]=0;
+    if(!open.some(function(cell){return cell.x===dungeonExit.x&&cell.z===dungeonExit.z;})){
+        open.push({x:dungeonExit.x,z:dungeonExit.z});
+    }
     dungeonOpenCells=open.slice();
     GYRO_MONSTER_POSITIONS.length=0;
     Array.from({length:6},function(_,index){return (index+1)/7;})
@@ -3960,7 +3965,7 @@ function handleDungeonChestPointer(event){
 function createDungeonTreasureChests(){
     worldTreasureChests.forEach(function(chest){scene.remove(chest);});
     worldTreasureChests=[];
-    Array.from({length:10},function(_,index){return (index+1)/11;})
+    Array.from({length:2},function(_,index){return (index+1)/3;})
     .forEach(function(fraction,index){
         const cell=dungeonOpenCells[
             Math.min(dungeonOpenCells.length-1,Math.floor(dungeonOpenCells.length*fraction))
@@ -4061,37 +4066,21 @@ function buildDungeon(loader){
     const wallGeometry=new THREE.BoxGeometry(DUNGEON_CELL,8,DUNGEON_CELL);
     let wallCount=0;
     dungeonGrid.forEach(function(row){row.forEach(function(cell){if(cell===1){wallCount++;}});});
-    if(isAndroid()){
-        /* 일부 갤럭시 WebGL 드라이버는 InstancedMesh 벽을 누락시키므로
-           안드로이드에서는 숲맵처럼 일반 Mesh로 안전하게 그린다. */
-        const androidWalls=new THREE.Group();
-        dungeonGrid.forEach(function(row,z){
-            row.forEach(function(cell,x){
-                if(cell!==1){return;}
-                const position=dungeonWorldPosition(x,z);
-                const wall=new THREE.Mesh(wallGeometry,stoneMaterial);
-                wall.position.set(position.x,4,position.z);
-                wall.frustumCulled=false;
-                androidWalls.add(wall);
-            });
+    /* 실제 원인은 과도한 PointLight였으므로 벽은 다시 한 번에 그려
+       안드로이드의 드로우콜과 CPU 부담을 크게 줄인다. */
+    const walls=new THREE.InstancedMesh(wallGeometry,stoneMaterial,wallCount);
+    const matrix=new THREE.Matrix4();
+    let wallIndex=0;
+    dungeonGrid.forEach(function(row,z){
+        row.forEach(function(cell,x){
+            if(cell!==1){return;}
+            const position=dungeonWorldPosition(x,z);
+            matrix.makeTranslation(position.x,4,position.z);
+            walls.setMatrixAt(wallIndex++,matrix);
         });
-        scene.add(androidWalls);
-    }
-    else{
-        const walls=new THREE.InstancedMesh(wallGeometry,stoneMaterial,wallCount);
-        const matrix=new THREE.Matrix4();
-        let wallIndex=0;
-        dungeonGrid.forEach(function(row,z){
-            row.forEach(function(cell,x){
-                if(cell!==1){return;}
-                const position=dungeonWorldPosition(x,z);
-                matrix.makeTranslation(position.x,4,position.z);
-                walls.setMatrixAt(wallIndex++,matrix);
-            });
-        });
-        walls.instanceMatrix.needsUpdate=true;
-        scene.add(walls);
-    }
+    });
+    walls.instanceMatrix.needsUpdate=true;
+    scene.add(walls);
 
     dungeonTorchSources=[];
     dungeonTorchLights=[];
@@ -4202,7 +4191,8 @@ function updateDungeonTorchLighting(now){
     }
 
     const seconds=now*.001;
-    dungeonTorchSources.forEach(function(source){
+    dungeonTorchAssignments.forEach(function(assignment){
+        const source=dungeonTorchSources[assignment.index];
         /* 두 개의 서로 다른 파동을 섞어 반복 티가 적은 미세한 불꽃 움직임을 만든다. */
         const flicker=Math.sin(seconds*8.7+source.phase)*.035+
             Math.sin(seconds*13.9+source.phase*1.37)*.02;
@@ -4415,7 +4405,7 @@ function init3D(){
 
                 window.devicePixelRatio || 1,
 
-                CONFIG.MAX_PIXEL_RATIO
+                isAndroid() ? 1 : CONFIG.MAX_PIXEL_RATIO
 
             )
 
@@ -8490,6 +8480,38 @@ function showSettingsNotice(message){
     notice.classList.add("show");
 }
 
+function clearUnusedGameCaches(){
+    /* 세이브가 들어 있는 localStorage는 보존하고, 이 사이트가 별도로 만든
+       Cache Storage만 비운다. 일반 HTTP 캐시는 브라우저가 직접 관리한다. */
+    try{
+        if(window.caches && caches.keys){
+            caches.keys().then(function(keys){
+                keys.forEach(function(key){caches.delete(key).catch(function(){});});
+            }).catch(function(){});
+        }
+    }catch(error){}
+}
+
+function releaseGameMemory(){
+    clearUnusedGameCaches();
+    stopAndroidAutofocusWatch();
+    stopQRContinuousAttack();
+    stopQRSmallAssist();
+    document.querySelectorAll("video").forEach(function(video){
+        if(video.srcObject && video.srcObject.getTracks){
+            video.srcObject.getTracks().forEach(function(track){track.stop();});
+            video.srcObject=null;
+        }
+    });
+    [swordAudio,playerHitAudio,enemyHitAudio,bgmAudio,wolfGrowlAudio,wolfAttackAudio]
+        .concat(footstepAudios,footstepBoostAudios)
+        .forEach(function(audio){try{audio.pause();audio.removeAttribute("src");audio.load();}catch(error){}});
+    if(renderer){
+        if(renderer.renderLists){renderer.renderLists.dispose();}
+        renderer.dispose();
+    }
+}
+
 try{
     const savedAudio=JSON.parse(localStorage.getItem(DUNGEON_AUDIO_KEY)||"null");
     if(savedAudio){
@@ -8512,6 +8534,7 @@ function saveDungeonGame(){
     };
     try{
         localStorage.setItem(DUNGEON_SAVE_KEY,JSON.stringify(data));
+        clearUnusedGameCaches();
         showSettingsNotice("저장완료되었습니다.\n눌러서 닫기");
     }catch(error){showSettingsNotice("저장할 수 없습니다.\n눌러서 닫기");}
 }
@@ -8552,7 +8575,17 @@ $("bgmVolumeSlider").addEventListener("input",function(){
     bgmMasterVolume=Number(this.value);bgmAudio.pause();bgmStarted=false;saveAudioSettings();
     /* 현재 던전에는 BGM을 재생하지 않고 수치만 다음 음악용으로 저장한다. */
 });
-$("quitGameButton").addEventListener("click",function(){location.reload();});
+$("quitGameButton").addEventListener("click",function(){
+    releaseGameMemory();
+    setTimeout(function(){location.reload();},80);
+});
+
+/* 플레이 중에도 전투가 아닐 때 오래된 WebGL 렌더 목록과 임시 캐시를 정리한다. */
+setInterval(function(){
+    if(!started || battle || gamePaused){return;}
+    if(renderer && renderer.renderLists){renderer.renderLists.dispose();}
+    clearUnusedGameCaches();
+},60000);
 
 function renderFullDungeonMap(){
     const content=$("fullMapContent");
@@ -9529,7 +9562,11 @@ document.addEventListener(
     }
 );
 
-window.addEventListener("pagehide",pauseBGMWhenHidden);
+window.addEventListener("pagehide",function(event){
+    pauseBGMWhenHidden();
+    if(event.persisted){return;}
+    releaseGameMemory();
+});
 window.addEventListener("pageshow",resumeBGMWhenVisible);
 
 
