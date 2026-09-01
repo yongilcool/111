@@ -4026,6 +4026,8 @@ function buildDungeon(loader){
             walls.setMatrixAt(wallIndex++,matrix);
         });
     });
+    /* 갤럭시·안드로이드 WebGL에서 던전 벽 좌표를 확실하게 반영 */
+    walls.instanceMatrix.needsUpdate=true;
     scene.add(walls);
 
     const torchCells=[];
