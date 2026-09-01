@@ -1550,7 +1550,7 @@ html.ios-device #qrPanel{
         <button id="questButton" aria-label="퀘스트 열기"><img src="https://static.wixstatic.com/media/172435_db0fd22ef0cd4fd48cde2f64dee535bc~mv2.png" alt="퀘스트"></button>
         <button id="inventoryButton" aria-label="인벤토리 열기"><img src="https://static.wixstatic.com/media/172435_513831dd8ed049688a5282ba36bc3b3e~mv2.png" alt="아이템"></button>
         <button id="settingsButton" aria-label="설정 열기">⚙</button>
-        <div id="questPanel">퀘스트<br><div style="margin-top:8px;text-align:left">지하 던전<br>해골 소탕<br><b id="questProgress">0 / 18</b></div></div>
+        <div id="questPanel">퀘스트<br><div style="margin-top:8px;text-align:left">지하 던전<br>해골 소탕<br><b id="questProgress">0 / 6</b></div></div>
         <div id="inventoryPanel"><b>인벤토리</b><div class="inventoryRow"><img src="https://static.wixstatic.com/media/172435_76a4ea719647489baf3cf65188c8754c~mv2.png" alt="늑대고기"><span>늑대고기 × <b id="meatCount">0</b></span></div><div class="inventoryRow"><img src="https://static.wixstatic.com/media/172435_18c122b6a5c945718007e1ce6cfc5189~mv2.png" alt="늑대가죽"><span>늑대가죽 × <b id="hideCount">0</b></span></div></div>
         <div id="lootToast"><div class="lootRow"><span>해골 처치!</span></div></div>
         <div id="pauseOverlay">PAUSED</div>
@@ -1964,14 +1964,18 @@ const DUNGEON_TEXTURE_URL="https://static.wixstatic.com/media/172435_a67fcd4a280
 const DUNGEON_CHEST_STL_URL="https://17243552-1e44-4735-9364-cd93fc6ed895.usrfiles.com/ugd/172435_5b0bba87c0c149bf949fef30c572b3be.stl";
 const DUNGEON_CHEST_TEXTURE_URL="https://static.wixstatic.com/media/172435_deef4938249647d99e8172f4addf9813~mv2.png";
 const DUNGEON_CHEST_IMAGE_URL="https://static.wixstatic.com/media/172435_64ca5a5b73c34f9db47a0f297402dad0~mv2.png";
+/* 터널 한 칸 크기는 유지하고 원래 21×21 맵의 하단 1/3만 사용한다. */
 const DUNGEON_SIZE=21;
+const DUNGEON_ACTIVE_ROWS=7;
+const DUNGEON_ACTIVE_START=DUNGEON_SIZE-DUNGEON_ACTIVE_ROWS;
 const DUNGEON_CELL=16;
 let dungeonGrid=[];
 let dungeonOpenCells=[];
 let dungeonChestAssetPromise=null;
 let dungeonGold=0;
-let dungeonEntrance={x:1,z:20};
-let dungeonExit={x:19,z:0};
+let dungeonEntrance={x:1,z:DUNGEON_SIZE-1};
+let dungeonExit={x:1,z:DUNGEON_ACTIVE_START};
+let dungeonExitCleared=false;
 const GYRO_WALK_SPEED=20;
 const GYRO_LOOK_SENSITIVITY=1.65;
 const CONTROL_TURN_SPEED=4.7;
@@ -2448,9 +2452,11 @@ function updateMapPlayerFromCamera(){
     if(DUNGEON_MODE){
         const mapWidth=116;
         const mapHeight=92;
-        const span=(DUNGEON_SIZE-1)*DUNGEON_CELL;
-        const left=(camera.position.x+span/2)/span*mapWidth;
-        const top=(camera.position.z+span/2)/span*mapHeight;
+        const spanX=(DUNGEON_SIZE-1)*DUNGEON_CELL;
+        const minZ=dungeonWorldPosition(0,DUNGEON_ACTIVE_START).z;
+        const spanZ=(DUNGEON_ACTIVE_ROWS-1)*DUNGEON_CELL;
+        const left=(camera.position.x+spanX/2)/spanX*mapWidth;
+        const top=(camera.position.z-minZ)/spanZ*mapHeight;
         const heading=gyroEnabled ? gyroViewHeading : mapHeading;
         const world=$("miniMapWorld");
         world.style.transformOrigin=left+"px "+top+"px";
@@ -2467,8 +2473,8 @@ function updateMapPlayerFromCamera(){
                 return;
             }
             dot.style.display="block";
-            dot.style.left=((enemy.x+span/2)/span*mapWidth)+"px";
-            dot.style.top=((enemy.z+span/2)/span*mapHeight)+"px";
+            dot.style.left=((enemy.x+spanX/2)/spanX*mapWidth)+"px";
+            dot.style.top=((enemy.z-minZ)/spanZ*mapHeight)+"px";
         });
         return;
     }
@@ -2496,6 +2502,17 @@ function updateMapPlayerFromCamera(){
         dot.style.left=(58+wolf.x)+"px";
         dot.style.top=(17+(wolf.z+45)*.725)+"px";
     });
+}
+
+function checkDungeonExitClear(){
+    if(!DUNGEON_MODE || dungeonExitCleared || !started || !camera){return;}
+    const exit=dungeonWorldPosition(dungeonExit.x,dungeonExit.z);
+    const distance=Math.hypot(camera.position.x-exit.x,camera.position.z-exit.z);
+    if(distance>5.5){return;}
+    dungeonExitCleared=true;
+    const burstText=$("chestBurstText");
+    burstText.innerHTML="MISSION CLEAR<span>던전 탈출 완료.</span>";
+    chestCelebration(5000);
 }
 
 function showDialogueMessages(messages,autoHideMs){
@@ -3717,17 +3734,39 @@ function generateDungeonMaze(){
         if(!carved){stack.pop();}
     }
     dungeonGrid[dungeonEntrance.z][dungeonEntrance.x]=0;
-    dungeonGrid[dungeonExit.z][dungeonExit.x]=0;
-
-    const open=[];
-    for(let z=1;z<DUNGEON_SIZE-1;z++){
-        for(let x=1;x<DUNGEON_SIZE-1;x++){
-            if(dungeonGrid[z][x]===0){open.push({x:x,z:z});}
-        }
+    /* 원래 미로의 위쪽 2/3는 완전히 제거한다. 2는 렌더링하지 않는 영역이다. */
+    for(let z=0;z<DUNGEON_ACTIVE_START;z++){
+        dungeonGrid[z].fill(2);
     }
+
+    /* 남긴 1/3 구역 안에서 입구와 실제로 연결된 길만 게임에 사용한다. */
+    const open=[];
+    const queue=[{x:dungeonEntrance.x,z:dungeonEntrance.z,distance:0}];
+    const visited=new Set([dungeonEntrance.x+","+dungeonEntrance.z]);
+    while(queue.length){
+        const current=queue.shift();
+        open.push({x:current.x,z:current.z});
+        [[1,0],[-1,0],[0,1],[0,-1]].forEach(function(direction){
+            const nx=current.x+direction[0];
+            const nz=current.z+direction[1];
+            const key=nx+","+nz;
+            if(
+                nx<0 || nx>=DUNGEON_SIZE ||
+                nz<DUNGEON_ACTIVE_START || nz>=DUNGEON_SIZE ||
+                dungeonGrid[nz][nx]!==0 || visited.has(key)
+            ){return;}
+            visited.add(key);
+            queue.push({x:nx,z:nz,distance:current.distance+1});
+        });
+    }
+    dungeonExit=open.reduce(function(best,cell){
+        if(!best || cell.z<best.z){return cell;}
+        if(cell.z===best.z && Math.abs(cell.x-dungeonEntrance.x)>Math.abs(best.x-dungeonEntrance.x)){return cell;}
+        return best;
+    },null) || {x:dungeonEntrance.x,z:DUNGEON_ACTIVE_START};
     dungeonOpenCells=open.slice();
     GYRO_MONSTER_POSITIONS.length=0;
-    Array.from({length:18},function(_,index){return (index+1)/19;})
+    Array.from({length:6},function(_,index){return (index+1)/7;})
     .forEach(function(fraction){
         const cell=open[Math.min(open.length-1,Math.floor(open.length*fraction))];
         GYRO_MONSTER_POSITIONS.push(dungeonWorldPosition(cell.x,cell.z));
@@ -3746,9 +3785,9 @@ function rebuildDungeonMiniMap(){
             tile.style.cssText=
                 "position:absolute;background:#b8925e;width:"+
                 (mapWidth/DUNGEON_SIZE+1)+"px;height:"+
-                (mapHeight/DUNGEON_SIZE+1)+"px;left:"+
+                (mapHeight/DUNGEON_ACTIVE_ROWS+1)+"px;left:"+
                 (x*mapWidth/DUNGEON_SIZE)+"px;top:"+
-                (z*mapHeight/DUNGEON_SIZE)+"px";
+                ((z-DUNGEON_ACTIVE_START)*mapHeight/DUNGEON_ACTIVE_ROWS)+"px";
             world.appendChild(tile);
         });
     });
@@ -3759,7 +3798,7 @@ function rebuildDungeonMiniMap(){
         world.appendChild(enemy);
     });
     const exit=document.createElement("i");
-    exit.style.cssText="position:absolute;width:8px;height:8px;border-radius:2px;background:#72ffae;box-shadow:0 0 7px #72ffae;right:1px;top:1px";
+    exit.style.cssText="position:absolute;width:8px;height:8px;border-radius:2px;background:#72ffae;box-shadow:0 0 7px #72ffae;left:"+(dungeonExit.x*mapWidth/DUNGEON_SIZE)+"px;top:"+((dungeonExit.z-DUNGEON_ACTIVE_START)*mapHeight/DUNGEON_ACTIVE_ROWS)+"px";
     world.appendChild(exit);
 }
 
@@ -3969,11 +4008,11 @@ function buildDungeon(loader){
         texture.magFilter=THREE.NearestFilter;
         const floorTexture=texture.clone();
         floorTexture.wrapS=floorTexture.wrapT=THREE.RepeatWrapping;
-        floorTexture.repeat.set(DUNGEON_SIZE,DUNGEON_SIZE);
+        floorTexture.repeat.set(DUNGEON_SIZE,DUNGEON_ACTIVE_ROWS);
         floorTexture.needsUpdate=true;
         const ceilingTexture=texture.clone();
         ceilingTexture.wrapS=ceilingTexture.wrapT=THREE.RepeatWrapping;
-        ceilingTexture.repeat.set(DUNGEON_SIZE,DUNGEON_SIZE);
+        ceilingTexture.repeat.set(DUNGEON_SIZE,DUNGEON_ACTIVE_ROWS);
         ceilingTexture.needsUpdate=true;
         stoneMaterial.map=texture;
         floorMaterial.map=floorTexture;
@@ -4004,12 +4043,15 @@ function buildDungeon(loader){
         side:THREE.DoubleSide
     });
     const span=DUNGEON_SIZE*DUNGEON_CELL;
-    const floor=new THREE.Mesh(new THREE.PlaneGeometry(span,span),floorMaterial);
+    const activeDepth=DUNGEON_ACTIVE_ROWS*DUNGEON_CELL;
+    const activeCenterZ=dungeonWorldPosition(0,DUNGEON_ACTIVE_START+(DUNGEON_ACTIVE_ROWS-1)/2).z;
+    const floor=new THREE.Mesh(new THREE.PlaneGeometry(span,activeDepth),floorMaterial);
     floor.rotation.x=-Math.PI/2;
+    floor.position.z=activeCenterZ;
     scene.add(floor);
-    const ceiling=new THREE.Mesh(new THREE.PlaneGeometry(span,span),ceilingMaterial);
+    const ceiling=new THREE.Mesh(new THREE.PlaneGeometry(span,activeDepth),ceilingMaterial);
     ceiling.rotation.x=Math.PI/2;
-    ceiling.position.y=8;
+    ceiling.position.set(0,8,activeCenterZ);
     scene.add(ceiling);
 
     const wallGeometry=new THREE.BoxGeometry(DUNGEON_CELL,8,DUNGEON_CELL);
@@ -4031,7 +4073,7 @@ function buildDungeon(loader){
     scene.add(walls);
 
     const torchCells=[];
-    for(let z=2;z<DUNGEON_SIZE-2;z++){
+    for(let z=DUNGEON_ACTIVE_START;z<DUNGEON_SIZE-1;z++){
         for(let x=2;x<DUNGEON_SIZE-2;x++){
             const openDirections=[[1,0],[-1,0],[0,1],[0,-1]].filter(function(direction){
                 return dungeonGrid[z+direction[1]][x+direction[0]]===0;
@@ -8423,29 +8465,30 @@ function renderFullDungeonMap(){
     const tileSize=22;
     content.innerHTML="";
     content.style.width=(DUNGEON_SIZE*tileSize)+"px";
-    content.style.height=(DUNGEON_SIZE*tileSize)+"px";
+    content.style.height=(DUNGEON_ACTIVE_ROWS*tileSize)+"px";
     dungeonGrid.forEach(function(row,z){row.forEach(function(cell,x){
+        if(z<DUNGEON_ACTIVE_START){return;}
         const tile=document.createElement("i");
-        tile.style.cssText="position:absolute;box-sizing:border-box;left:"+(x*tileSize)+"px;top:"+(z*tileSize)+"px;width:"+tileSize+"px;height:"+tileSize+"px;background:"+(cell===0?"#b8925e":"#302534")+";border:1px solid rgba(0,0,0,.16)";
+        tile.style.cssText="position:absolute;box-sizing:border-box;left:"+(x*tileSize)+"px;top:"+((z-DUNGEON_ACTIVE_START)*tileSize)+"px;width:"+tileSize+"px;height:"+tileSize+"px;background:"+(cell===0?"#b8925e":"#302534")+";border:1px solid rgba(0,0,0,.16)";
         content.appendChild(tile);
     });});
     GYRO_MONSTER_POSITIONS.forEach(function(position,index){
         if(defeatedWolfIndices.has(index)){return;}
         const cell=dungeonCellFromWorld(position.x,position.z);
         const dot=document.createElement("i");
-        dot.style.cssText="position:absolute;z-index:2;width:10px;height:10px;border-radius:50%;background:#ff792f;box-shadow:0 0 7px #ff792f;left:"+(cell.x*tileSize+6)+"px;top:"+(cell.z*tileSize+6)+"px";
+        dot.style.cssText="position:absolute;z-index:2;width:10px;height:10px;border-radius:50%;background:#ff792f;box-shadow:0 0 7px #ff792f;left:"+(cell.x*tileSize+6)+"px;top:"+((cell.z-DUNGEON_ACTIVE_START)*tileSize+6)+"px";
         content.appendChild(dot);
     });
     worldTreasureChests.forEach(function(chest){
         if(chest.userData.collected){return;}
         const cell=dungeonCellFromWorld(chest.position.x,chest.position.z);
         const dot=document.createElement("i");dot.textContent="◆";
-        dot.style.cssText="position:absolute;z-index:2;color:#ffd44c;font-size:16px;left:"+(cell.x*tileSize+3)+"px;top:"+(cell.z*tileSize+1)+"px";content.appendChild(dot);
+        dot.style.cssText="position:absolute;z-index:2;color:#ffd44c;font-size:16px;left:"+(cell.x*tileSize+3)+"px;top:"+((cell.z-DUNGEON_ACTIVE_START)*tileSize+1)+"px";content.appendChild(dot);
     });
     if(camera){
         const cell=dungeonCellFromWorld(camera.position.x,camera.position.z);
         const player=document.createElement("i");player.textContent="▲";
-        player.style.cssText="position:absolute;z-index:3;color:#42cfff;font-size:20px;text-shadow:0 0 8px #42cfff;left:"+(cell.x*tileSize+1)+"px;top:"+(cell.z*tileSize-2)+"px;transform:rotate("+gyroViewHeading+"rad)";content.appendChild(player);
+        player.style.cssText="position:absolute;z-index:3;color:#42cfff;font-size:20px;text-shadow:0 0 8px #42cfff;left:"+(cell.x*tileSize+1)+"px;top:"+((cell.z-DUNGEON_ACTIVE_START)*tileSize-2)+"px;transform:rotate("+gyroViewHeading+"rad)";content.appendChild(player);
     }
 }
 
@@ -8775,6 +8818,7 @@ function loop(now){
 
 
         updateMapPlayerFromCamera();
+        checkDungeonExitClear();
         collectNearbyWorldTreasure();
         updateMonsterShadowPosition();
 
