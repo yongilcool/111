@@ -7453,6 +7453,18 @@ let lastQRFocusRecoveryAt=0;
 
 let lastValidQRSeenAt=0;
 
+/* QR로 칼을 확인한 뒤 전면 카메라의 큰 손 휘두름을 감지한다. */
+let gestureAttackArmedUntil=0;
+let gestureMotionTimer=null;
+let gestureMotionCanvas=null;
+let gesturePreviousFrame=null;
+let gesturePreviousCenter=null;
+let gestureLastAttackAt=0;
+let gestureMotionStreak=0;
+
+const GESTURE_ARM_DURATION=12000;
+const GESTURE_ATTACK_COOLDOWN=430;
+
 const QR_ATTACK_COOLDOWN=650;
 
 const IOS_QR_ATTACK_COOLDOWN=350;
@@ -7563,7 +7575,121 @@ function processDecodedQR(decodedText){
     }
 
     lastValidQRSeenAt=performance.now();
+    gestureAttackArmedUntil=lastValidQRSeenAt+GESTURE_ARM_DURATION;
     tryQRAttack();
+}
+
+function stopLargeGestureAttack(){
+    if(gestureMotionTimer){
+        clearInterval(gestureMotionTimer);
+        gestureMotionTimer=null;
+    }
+    gesturePreviousFrame=null;
+    gesturePreviousCenter=null;
+    gestureMotionStreak=0;
+}
+
+function startLargeGestureAttack(video){
+    stopLargeGestureAttack();
+    if(!video){return;}
+    if(!gestureMotionCanvas){gestureMotionCanvas=document.createElement("canvas");}
+
+    /* 저해상도 분석으로 QR 판독 속도를 방해하지 않는다. */
+    const width=40;
+    const height=30;
+    gestureMotionCanvas.width=width;
+    gestureMotionCanvas.height=height;
+    const context=gestureMotionCanvas.getContext("2d",{willReadFrequently:true});
+
+    gestureMotionTimer=setInterval(function(){
+        if(!qrRunning || inputMode!=="qr" || video.readyState<2 || !video.videoWidth){return;}
+        try{
+            context.drawImage(video,0,0,width,height);
+            const pixels=context.getImageData(0,0,width,height).data;
+            const frame=new Uint8Array(width*height);
+            let frameMean=0;
+            for(let index=0,pixel=0;index<pixels.length;index+=4,pixel++){
+                const gray=(pixels[index]*3+pixels[index+1]*6+pixels[index+2])/10;
+                frame[pixel]=gray;
+                frameMean+=gray;
+            }
+            frameMean/=frame.length;
+
+            if(!gesturePreviousFrame){
+                gesturePreviousFrame={data:frame,mean:frameMean};
+                return;
+            }
+
+            const meanShift=Math.abs(frameMean-gesturePreviousFrame.mean);
+            let changed=0;
+            let sumX=0;
+            let sumY=0;
+            let minX=width;
+            let maxX=0;
+            let minY=height;
+            let maxY=0;
+
+            /* 평균 밝기 차이를 빼서 방 조명 변화는 움직임으로 세지 않는다. */
+            const signedMean=frameMean-gesturePreviousFrame.mean;
+            for(let index=0;index<frame.length;index++){
+                const difference=Math.abs((frame[index]-gesturePreviousFrame.data[index])-signedMean);
+                if(difference<34){continue;}
+                const x=index%width;
+                const y=Math.floor(index/width);
+                changed++;
+                sumX+=x;
+                sumY+=y;
+                minX=Math.min(minX,x);maxX=Math.max(maxX,x);
+                minY=Math.min(minY,y);maxY=Math.max(maxY,y);
+            }
+
+            gesturePreviousFrame={data:frame,mean:frameMean};
+            const changedRatio=changed/frame.length;
+            const spanX=changed ? (maxX-minX+1)/width : 0;
+            const spanY=changed ? (maxY-minY+1)/height : 0;
+            const center=changed ? {x:sumX/changed/width,y:sumY/changed/height} : null;
+
+            /* 얼굴의 작은 움직임은 배제하고 카메라의 절반 이상을 가로지르는
+               빠른 동작만 후보로 인정한다. 전체 조명 점멸도 제외한다. */
+            const largeMotion=
+                meanShift<24 &&
+                changedRatio>=.11 && changedRatio<=.62 &&
+                (spanX>=.52 || spanY>=.58);
+
+            if(largeMotion && center){
+                const travel=gesturePreviousCenter
+                    ? Math.hypot(center.x-gesturePreviousCenter.x,center.y-gesturePreviousCenter.y)
+                    : 0;
+                gestureMotionStreak++;
+                const now=performance.now();
+                const sweeping=
+                    (gestureMotionStreak>=2 && travel>=.12) ||
+                    (changedRatio>=.23 && (spanX>=.72 || spanY>=.72));
+
+                if(
+                    sweeping &&
+                    now<=gestureAttackArmedUntil &&
+                    now-gestureLastAttackAt>=GESTURE_ATTACK_COOLDOWN
+                ){
+                    if(attack()){
+                        gestureLastAttackAt=now;
+                        gestureMotionStreak=0;
+                        gesturePreviousCenter=null;
+                        $("statusText").textContent="손동작 공격!";
+                        setTimeout(function(){
+                            if(inputMode==="qr" && qrRunning){$("statusText").textContent="";}
+                        },260);
+                    }
+                }
+                gesturePreviousCenter=center;
+            }
+            else{
+                gestureMotionStreak=0;
+                if(changedRatio<.035){gesturePreviousCenter=null;}
+            }
+        }
+        catch(error){}
+    },72);
 }
 
 function stopQRSmallAssist(){
@@ -7926,6 +8052,8 @@ async function startQR(){
                 focusPromise.catch(function(){});
             }
 
+            startLargeGestureAttack(qrVideoElement);
+
         }
 
         /* html5-qrcode를 주 판독기로 두고 가벼운 jsQR만 보조한다. */
@@ -7984,6 +8112,7 @@ async function stopQR(){
 
     stopQRSmallAssist();
     stopQRContinuousAttack();
+    stopLargeGestureAttack();
     stopAndroidAutofocusWatch();
 
     const focusVideo=$("qrFocusVideo");
