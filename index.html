@@ -1379,17 +1379,21 @@ html.ios-device #qrPanel{
 .chestParticle{position:absolute;z-index:189;left:50%;top:47%;width:12px;height:12px;border-radius:3px;background:#ffd83e;box-shadow:0 0 9px #fff176;pointer-events:none;animation:chestParticleBurst .85s ease-out forwards}
 @keyframes chestParticleBurst{0%{opacity:1;transform:translate(-50%,-50%) scale(.5) rotate(0)}75%{opacity:1}100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1.25) rotate(var(--spin))}}
 
-/* 던전 조작 UI: 세 버튼을 조이스틱 바로 위에 가로로 정렬한다. */
+/* 던전 조작 UI: 퀘스트-아이템-설정을 조이스틱 위에 세로로 정렬한다. */
 #game.control-experiment #questButton,
 #game.control-experiment #inventoryButton,
-#game.control-experiment #settingsButton{bottom:226px;width:60px;height:60px}
-#game.control-experiment #questButton{left:10px}
-#game.control-experiment #inventoryButton{left:78px}
-#game.control-experiment #settingsButton{left:146px;font-size:30px}
+#game.control-experiment #settingsButton{left:10px;width:60px;height:60px}
+#game.control-experiment #questButton{bottom:362px}
+#game.control-experiment #inventoryButton{bottom:294px}
+#game.control-experiment #settingsButton{bottom:226px;font-size:30px}
+#game.control-experiment #questPanel{bottom:362px}
+#game.control-experiment #inventoryPanel{bottom:294px}
 @media (max-width:430px){
-    #game.control-experiment #questButton,
-    #game.control-experiment #inventoryButton,
+    #game.control-experiment #questButton{bottom:341px}
+    #game.control-experiment #inventoryButton{bottom:273px}
     #game.control-experiment #settingsButton{bottom:205px}
+    #game.control-experiment #questPanel{bottom:341px}
+    #game.control-experiment #inventoryPanel{bottom:273px}
 }
 
 /* HP와 MP를 한 묶음 안에 얇게 표시한다. */
@@ -1398,6 +1402,8 @@ html.ios-device #qrPanel{
 #hud .unit:first-child .bar{height:11px;border-width:2px}
 .mpLabel{margin-top:5px;color:#dff3ff!important}
 #playerMP{background:linear-gradient(#65ccff,#247be3 58%,#174baf)}
+#goldToast{position:absolute;z-index:189;right:5px;top:108px;display:none;padding:5px 8px;border:2px solid #70462c;border-radius:8px;background:#fff0c7;color:#4b2a18;font-size:13px;font-weight:1000;box-shadow:0 3px 8px #0007}
+#goldToast.show{display:block}
 </style>
 </head>
 
@@ -1582,6 +1588,7 @@ html.ios-device #qrPanel{
         <div id="questPanel">퀘스트<br><div style="margin-top:8px;text-align:left">지하 던전<br>해골 소탕<br><b id="questProgress">0 / 6</b></div></div>
         <div id="inventoryPanel"><b>인벤토리</b><div class="inventoryRow"><img src="https://static.wixstatic.com/media/172435_76a4ea719647489baf3cf65188c8754c~mv2.png" alt="늑대고기"><span>늑대고기 × <b id="meatCount">0</b></span></div><div class="inventoryRow"><img src="https://static.wixstatic.com/media/172435_18c122b6a5c945718007e1ce6cfc5189~mv2.png" alt="늑대가죽"><span>늑대가죽 × <b id="hideCount">0</b></span></div></div>
         <div id="lootToast"><div class="lootRow"><span>해골 처치!</span></div></div>
+        <div id="goldToast" role="status">골드 획득</div>
         <div id="pauseOverlay">PAUSED</div>
         <div id="chestBurstText">TREASURE!</div>
         <div id="settingsPanel" role="dialog" aria-label="게임 설정"><div id="settingsNotice" role="status"></div><button id="settingsCloseButton" class="settingsClose" aria-label="설정 닫기">×</button><h2>설정</h2><button id="saveGameButton" class="settingsAction">저장하기</button><button id="loadGameButton" class="settingsAction">불러오기</button><div class="volumeRow"><label for="sfxVolumeSlider">효과음</label><input id="sfxVolumeSlider" type="range" min="0" max="1" value="1" step="0.05"></div><div class="volumeRow"><label for="bgmVolumeSlider">BGM</label><input id="bgmVolumeSlider" type="range" min="0" max="1" value="0" step="0.05"></div><button id="quitGameButton" class="settingsAction quitAction">게임 종료</button></div>
@@ -1996,7 +2003,7 @@ const DUNGEON_TEXTURE_URL="https://static.wixstatic.com/media/172435_a67fcd4a280
 const DUNGEON_CHEST_STL_URL="https://17243552-1e44-4735-9364-cd93fc6ed895.usrfiles.com/ugd/172435_5b0bba87c0c149bf949fef30c572b3be.stl";
 const DUNGEON_CHEST_TEXTURE_URL="https://static.wixstatic.com/media/172435_deef4938249647d99e8172f4addf9813~mv2.png";
 const DUNGEON_CHEST_IMAGE_URL="https://static.wixstatic.com/media/172435_64ca5a5b73c34f9db47a0f297402dad0~mv2.png";
-const DUNGEON_CHEST_BASE_Y=1.45;
+const DUNGEON_CHEST_BASE_Y=.72;
 /* 통로 폭은 그대로 유지하면서 작은 정사각형 미로를 새로 생성한다. */
 const DUNGEON_SIZE=11;
 const DUNGEON_ACTIVE_ROWS=DUNGEON_SIZE;
@@ -2033,9 +2040,9 @@ const WOLF_WALK_1_URL="https://static.wixstatic.com/media/172435_3abac1336d7f487
 const WOLF_WALK_2_URL="https://static.wixstatic.com/media/172435_5f50d836c1434b99a2982e54068031f6~mv2.png";
 const WOLF_ATTACK_URL="https://static.wixstatic.com/media/172435_4d0ae03f956f469bad1b23638ee66bcb~mv2.png";
 const WOLF_HIT_URL="https://static.wixstatic.com/media/172435_cbf98c9fbd0640e79ea80d9a4620cb90~mv2.png";
-const WOLF_BASE_SIZE=DUNGEON_MODE ? 2.55 : 5.4;
+const WOLF_BASE_SIZE=DUNGEON_MODE ? 3.825 : 5.4;
 /* 원래 크기를 복원하되 이미지의 투명 여백을 고려해 지면 쪽으로 내린다. */
-const WOLF_BASE_Y=DUNGEON_MODE ? 1.55 : 2.58;
+const WOLF_BASE_Y=DUNGEON_MODE ? 2.3 : 2.58;
 const WORLD_BOUNDS={minX:-84,maxX:84,minZ:-84,maxZ:84};
 const GYRO_MONSTER_POSITIONS=[];
 
@@ -2053,8 +2060,11 @@ let playerKnockbackRemaining=0;
 let wolfWasInAttackRange=false;
 let monsterLockCandidateSince=0;
 let activeFireballs=[];
+let activeFireParticles=[];
 let fireballGeometry=null;
 let fireballMaterial=null;
+let fireParticleGeometry=null;
+let fireParticleMaterial=null;
 let wolfSentinels=[];
 let worldTreasureChests=[];
 let defeatedWolfIndices=new Set();
@@ -2868,14 +2878,9 @@ const enemyHitAudio=
 const bgmAudio=
     new Audio("https://static.wixstatic.com/mp3/172435_ae6a8c2d703548498735214801665e69.mp3");
 
-const footstepAudios=[
-    new Audio("https://static.wixstatic.com/mp3/172435_cda7f376212e426b9b3b8a769ef16467.mp3"),
-    new Audio("https://static.wixstatic.com/mp3/172435_3fb5aa14e1304da0b263fae377613d25.mp3")
-];
-const footstepBoostAudios=[
-    new Audio("https://static.wixstatic.com/mp3/172435_cda7f376212e426b9b3b8a769ef16467.mp3"),
-    new Audio("https://static.wixstatic.com/mp3/172435_3fb5aa14e1304da0b263fae377613d25.mp3")
-];
+/* 던전에서는 풀숲 MP3 대신 아래 footSound()의 터벅터벅 합성음을 쓴다. */
+const footstepAudios=[];
+const footstepBoostAudios=[];
 const wolfGrowlAudio=
     new Audio("https://static.wixstatic.com/mp3/172435_e122ba3874b041a3b67cdadc1f3eb0e2.mp3");
 const wolfAttackAudio=
@@ -2912,7 +2917,48 @@ function wolfGrowlSound(){
 
 function wolfAttackSound(){
     initAudio();
-    playEffect(wolfAttackAudio,.78);
+    if(!audioCtx){return;}
+    const now=audioCtx.currentTime;
+    /* 해골뼈가 서로 부딪히는 짧고 마른 충돌음 */
+    [720,1040,1380].forEach(function(frequency,index){
+        const oscillator=audioCtx.createOscillator();
+        const gain=audioCtx.createGain();
+        oscillator.type=index===1 ? "square" : "triangle";
+        oscillator.frequency.setValueAtTime(frequency,now+index*.035);
+        oscillator.frequency.exponentialRampToValueAtTime(frequency*.55,now+.12+index*.035);
+        gain.gain.setValueAtTime(.0001,now+index*.035);
+        gain.gain.exponentialRampToValueAtTime(.13*sfxMasterVolume,now+.008+index*.035);
+        gain.gain.exponentialRampToValueAtTime(.0001,now+.13+index*.035);
+        oscillator.connect(gain);gain.connect(audioCtx.destination);
+        oscillator.start(now+index*.035);oscillator.stop(now+.15+index*.035);
+    });
+}
+
+function fireballCastSound(){
+    initAudio();
+    if(!audioCtx){return;}
+    const now=audioCtx.currentTime;
+    const source=audioCtx.createBufferSource();
+    const filter=audioCtx.createBiquadFilter();
+    const gain=audioCtx.createGain();
+    source.buffer=noiseBuffer(.28);filter.type="bandpass";filter.Q.value=.8;
+    filter.frequency.setValueAtTime(480,now);filter.frequency.exponentialRampToValueAtTime(2400,now+.2);
+    gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(.22*sfxMasterVolume,now+.035);gain.gain.exponentialRampToValueAtTime(.0001,now+.28);
+    source.connect(filter);filter.connect(gain);gain.connect(audioCtx.destination);
+    source.start(now);source.stop(now+.29);
+}
+
+function fireImpactSound(){
+    initAudio();
+    if(!audioCtx){return;}
+    const now=audioCtx.currentTime;
+    const source=audioCtx.createBufferSource();
+    const filter=audioCtx.createBiquadFilter();
+    const gain=audioCtx.createGain();
+    source.buffer=noiseBuffer(.24);filter.type="lowpass";filter.frequency.setValueAtTime(1800,now);filter.frequency.exponentialRampToValueAtTime(260,now+.22);
+    gain.gain.setValueAtTime(.28*sfxMasterVolume,now);gain.gain.exponentialRampToValueAtTime(.0001,now+.24);
+    source.connect(filter);filter.connect(gain);gain.connect(audioCtx.destination);
+    source.start(now);source.stop(now+.25);
 }
 
 function isIOS(){
@@ -3185,18 +3231,9 @@ function swordSound(){
 ===================================================== */
 
 function footSound(){
-
-    const footstepAudio=footstepAudios[footstepIndex];
-    footstepIndex=(footstepIndex+1)%footstepAudios.length;
-
-    if(footstepAudio.readyState>=2){
-        playEffect(footstepAudio,1.0);
-        const boostAudio=footstepBoostAudios[
-            (footstepIndex+footstepBoostAudios.length-1)%footstepBoostAudios.length
-        ];
-        setTimeout(function(){playEffect(boostAudio,.72);},18);
-        return;
-    }
+    /* 풀을 스치는 MP3 대신 초기 버전의 묵직한 터벅터벅 합성음 사용 */
+    initAudio();
+    footstepIndex=(footstepIndex+1)%2;
 
     if(!audioCtx){
 
@@ -3971,21 +4008,36 @@ function openDungeonTreasureChest(chest){
         if(model){
             const pulse=1+Math.sin(progress*Math.PI)*.12;
             model.position.y=DUNGEON_CHEST_BASE_Y+Math.sin(progress*Math.PI)*.7;
-            model.scale.set(5.4*pulse,5.4*pulse,1);
+            model.scale.set(
+                (model.userData.baseScaleX || 2.7)*pulse,
+                (model.userData.baseScaleY || 2.7)*pulse,
+                1
+            );
             if(model.material){model.material.opacity=Math.max(.45,1-progress*.55);}
         }
         if(progress<1){requestAnimationFrame(animateOpen);}
     })(startedAt);
     const rewardRoll=Math.random();
     if(rewardRoll<.34){
-        showDialogueMessages("보물상자는 비어 있었다.",2200);
+        showGoldToast(0);
     }
     else{
         const gold=rewardRoll>.88 ? 100 : (rewardRoll>.62 ? 50 : 20);
         dungeonGold+=gold;
-        showDialogueMessages("골드 "+gold+" 획득! · 보유 골드 "+dungeonGold,2600);
-        chestCelebration();
+        showGoldToast(gold);
     }
+}
+
+function showGoldToast(amount){
+    const toast=$("goldToast");
+    toast.textContent=amount>0
+        ? "골드 획득 × "+amount+" · 총 "+dungeonGold
+        : "빈 보물상자";
+    toast.classList.remove("show");
+    void toast.offsetWidth;
+    toast.classList.add("show");
+    clearTimeout(toast._hideTimer);
+    toast._hideTimer=setTimeout(function(){toast.classList.remove("show");},1800);
 }
 
 function handleDungeonChestPointer(event){
@@ -4028,12 +4080,14 @@ function castFireball(event){
     const direction=raycaster.ray.direction.clone().normalize();
     let travelDistance=42;
     let hitMonster=false;
+    let hitsSurface=false;
 
     if(monster && !monsterDead){
         const monsterHits=raycaster.intersectObject(monster,true);
         if(monsterHits.length){
             travelDistance=Math.min(travelDistance,Math.max(2,monsterHits[0].distance));
             hitMonster=true;
+            hitsSurface=true;
         }
     }
     if(dungeonWallMesh){
@@ -4041,33 +4095,69 @@ function castFireball(event){
         if(wallHits.length && wallHits[0].distance<travelDistance){
             travelDistance=Math.max(1.5,wallHits[0].distance-.25);
             hitMonster=false;
+            hitsSurface=true;
         }
     }
 
-    if(!fireballGeometry){fireballGeometry=new THREE.SphereGeometry(.32,10,8);}
+    if(!fireballGeometry){fireballGeometry=new THREE.SphereGeometry(.48,12,9);}
     if(!fireballMaterial){
         fireballMaterial=new THREE.MeshBasicMaterial({color:0xff7a16,transparent:true,opacity:.96});
     }
     const orb=new THREE.Mesh(fireballGeometry,fireballMaterial);
-    orb.position.copy(camera.position).add(direction.clone().multiplyScalar(1.15));
+    const start=camera.position.clone().add(direction.clone().multiplyScalar(1.15));
+    const target=start.clone().add(direction.clone().multiplyScalar(travelDistance));
+    orb.position.copy(start);
     scene.add(orb);
-    activeFireballs.push({mesh:orb,direction:direction,distance:travelDistance,traveled:0,hitMonster:hitMonster});
+    activeFireballs.push({mesh:orb,start:start,target:target,distance:travelDistance,traveled:0,hitMonster:hitMonster,hitsSurface:hitsSurface});
     playerMP=Math.max(0,playerMP-10);
     updateMP();
+    fireballCastSound();
+}
+
+function burstFireParticles(position){
+    if(!fireParticleGeometry){fireParticleGeometry=new THREE.SphereGeometry(.11,6,4);}
+    if(!fireParticleMaterial){fireParticleMaterial=new THREE.MeshBasicMaterial({color:0xff9d22,transparent:true,opacity:1});}
+    for(let i=0;i<10;i++){
+        const particle=new THREE.Mesh(fireParticleGeometry,fireParticleMaterial.clone());
+        particle.position.copy(position);
+        scene.add(particle);
+        activeFireParticles.push({
+            mesh:particle,life:.32+Math.random()*.18,
+            velocity:new THREE.Vector3((Math.random()-.5)*5,1.8+Math.random()*4,(Math.random()-.5)*5)
+        });
+    }
 }
 
 function updateFireballs(dt){
     for(let index=activeFireballs.length-1;index>=0;index--){
         const shot=activeFireballs[index];
         const step=Math.min(30*dt,shot.distance-shot.traveled);
-        shot.mesh.position.addScaledVector(shot.direction,step);
         shot.traveled+=step;
+        const progress=Math.min(1,shot.traveled/shot.distance);
+        shot.mesh.position.lerpVectors(shot.start,shot.target,progress);
+        /* 직선 대신 위로 솟았다가 목표로 떨어지는 포물선 */
+        shot.mesh.position.y+=Math.min(5,shot.distance*.13)*4*progress*(1-progress);
         const pulse=1+Math.sin(shot.traveled*2.4)*.18;
         shot.mesh.scale.setScalar(pulse);
         if(shot.traveled>=shot.distance-.01){
-            if(shot.hitMonster && monster && !monsterDead){damageMonster(50);}
+            if(shot.hitsSurface){burstFireParticles(shot.mesh.position);}
+            if(shot.hitMonster && monster && !monsterDead){damageMonster(50,"fire");}
+            else if(shot.hitsSurface){fireImpactSound();}
             scene.remove(shot.mesh);
             activeFireballs.splice(index,1);
+        }
+    }
+    for(let index=activeFireParticles.length-1;index>=0;index--){
+        const particle=activeFireParticles[index];
+        particle.life-=dt;
+        particle.velocity.y-=11*dt;
+        particle.mesh.position.addScaledVector(particle.velocity,dt);
+        particle.mesh.material.opacity=Math.max(0,particle.life*2.4);
+        particle.mesh.scale.setScalar(Math.max(.2,particle.life*2));
+        if(particle.life<=0){
+            scene.remove(particle.mesh);
+            particle.mesh.material.dispose();
+            activeFireParticles.splice(index,1);
         }
     }
 }
@@ -4083,14 +4173,22 @@ function createDungeonTreasureChests(){
         if(!cell){return;}
         const position=dungeonWorldPosition(cell.x,cell.z);
         const chest=new THREE.Group();
-        const texture=new THREE.TextureLoader().load(DUNGEON_CHEST_IMAGE_URL);
+        const texture=new THREE.TextureLoader().load(DUNGEON_CHEST_IMAGE_URL,function(loaded){
+            const image=loaded.image;
+            const aspect=image && image.height ? image.width/image.height : 1;
+            sprite.userData.baseScaleY=2.7;
+            sprite.userData.baseScaleX=2.7*aspect;
+            sprite.scale.set(sprite.userData.baseScaleX,sprite.userData.baseScaleY,1);
+        });
         texture.colorSpace=THREE.SRGBColorSpace;
         texture.magFilter=THREE.NearestFilter;
         const sprite=new THREE.Sprite(new THREE.SpriteMaterial({
             map:texture,transparent:true,alphaTest:.04,
             depthTest:true,depthWrite:true,fog:true
         }));
-        sprite.scale.set(5.4,5.4,1);
+        sprite.userData.baseScaleX=2.7;
+        sprite.userData.baseScaleY=2.7;
+        sprite.scale.set(2.7,2.7,1);
         sprite.position.y=DUNGEON_CHEST_BASE_Y;
         chest.add(sprite);
         chest.position.set(position.x,0,position.z);
@@ -6202,7 +6300,7 @@ function attack(){
    MONSTER DAMAGE
 ===================================================== */
 
-function damageMonster(damageAmount){
+function damageMonster(damageAmount,damageType){
 
     if(
         !monster ||
@@ -6228,7 +6326,12 @@ function damageMonster(damageAmount){
     updateHP();
 
 
-    hitSound();
+    if(damageType==="fire"){
+        fireImpactSound();
+    }
+    else{
+        hitSound();
+    }
 
 
     /*
@@ -7453,18 +7556,6 @@ let lastQRFocusRecoveryAt=0;
 
 let lastValidQRSeenAt=0;
 
-/* QR로 칼을 확인한 뒤 전면 카메라의 큰 손 휘두름을 감지한다. */
-let gestureAttackArmedUntil=0;
-let gestureMotionTimer=null;
-let gestureMotionCanvas=null;
-let gesturePreviousFrame=null;
-let gesturePreviousCenter=null;
-let gestureLastAttackAt=0;
-let gestureMotionStreak=0;
-
-const GESTURE_ARM_DURATION=12000;
-const GESTURE_ATTACK_COOLDOWN=430;
-
 const QR_ATTACK_COOLDOWN=650;
 
 const IOS_QR_ATTACK_COOLDOWN=350;
@@ -7575,121 +7666,7 @@ function processDecodedQR(decodedText){
     }
 
     lastValidQRSeenAt=performance.now();
-    gestureAttackArmedUntil=lastValidQRSeenAt+GESTURE_ARM_DURATION;
     tryQRAttack();
-}
-
-function stopLargeGestureAttack(){
-    if(gestureMotionTimer){
-        clearInterval(gestureMotionTimer);
-        gestureMotionTimer=null;
-    }
-    gesturePreviousFrame=null;
-    gesturePreviousCenter=null;
-    gestureMotionStreak=0;
-}
-
-function startLargeGestureAttack(video){
-    stopLargeGestureAttack();
-    if(!video){return;}
-    if(!gestureMotionCanvas){gestureMotionCanvas=document.createElement("canvas");}
-
-    /* 저해상도 분석으로 QR 판독 속도를 방해하지 않는다. */
-    const width=40;
-    const height=30;
-    gestureMotionCanvas.width=width;
-    gestureMotionCanvas.height=height;
-    const context=gestureMotionCanvas.getContext("2d",{willReadFrequently:true});
-
-    gestureMotionTimer=setInterval(function(){
-        if(!qrRunning || inputMode!=="qr" || video.readyState<2 || !video.videoWidth){return;}
-        try{
-            context.drawImage(video,0,0,width,height);
-            const pixels=context.getImageData(0,0,width,height).data;
-            const frame=new Uint8Array(width*height);
-            let frameMean=0;
-            for(let index=0,pixel=0;index<pixels.length;index+=4,pixel++){
-                const gray=(pixels[index]*3+pixels[index+1]*6+pixels[index+2])/10;
-                frame[pixel]=gray;
-                frameMean+=gray;
-            }
-            frameMean/=frame.length;
-
-            if(!gesturePreviousFrame){
-                gesturePreviousFrame={data:frame,mean:frameMean};
-                return;
-            }
-
-            const meanShift=Math.abs(frameMean-gesturePreviousFrame.mean);
-            let changed=0;
-            let sumX=0;
-            let sumY=0;
-            let minX=width;
-            let maxX=0;
-            let minY=height;
-            let maxY=0;
-
-            /* 평균 밝기 차이를 빼서 방 조명 변화는 움직임으로 세지 않는다. */
-            const signedMean=frameMean-gesturePreviousFrame.mean;
-            for(let index=0;index<frame.length;index++){
-                const difference=Math.abs((frame[index]-gesturePreviousFrame.data[index])-signedMean);
-                if(difference<34){continue;}
-                const x=index%width;
-                const y=Math.floor(index/width);
-                changed++;
-                sumX+=x;
-                sumY+=y;
-                minX=Math.min(minX,x);maxX=Math.max(maxX,x);
-                minY=Math.min(minY,y);maxY=Math.max(maxY,y);
-            }
-
-            gesturePreviousFrame={data:frame,mean:frameMean};
-            const changedRatio=changed/frame.length;
-            const spanX=changed ? (maxX-minX+1)/width : 0;
-            const spanY=changed ? (maxY-minY+1)/height : 0;
-            const center=changed ? {x:sumX/changed/width,y:sumY/changed/height} : null;
-
-            /* 얼굴의 작은 움직임은 배제하고 카메라의 절반 이상을 가로지르는
-               빠른 동작만 후보로 인정한다. 전체 조명 점멸도 제외한다. */
-            const largeMotion=
-                meanShift<24 &&
-                changedRatio>=.11 && changedRatio<=.62 &&
-                (spanX>=.52 || spanY>=.58);
-
-            if(largeMotion && center){
-                const travel=gesturePreviousCenter
-                    ? Math.hypot(center.x-gesturePreviousCenter.x,center.y-gesturePreviousCenter.y)
-                    : 0;
-                gestureMotionStreak++;
-                const now=performance.now();
-                const sweeping=
-                    (gestureMotionStreak>=2 && travel>=.12) ||
-                    (changedRatio>=.23 && (spanX>=.72 || spanY>=.72));
-
-                if(
-                    sweeping &&
-                    now<=gestureAttackArmedUntil &&
-                    now-gestureLastAttackAt>=GESTURE_ATTACK_COOLDOWN
-                ){
-                    if(attack()){
-                        gestureLastAttackAt=now;
-                        gestureMotionStreak=0;
-                        gesturePreviousCenter=null;
-                        $("statusText").textContent="손동작 공격!";
-                        setTimeout(function(){
-                            if(inputMode==="qr" && qrRunning){$("statusText").textContent="";}
-                        },260);
-                    }
-                }
-                gesturePreviousCenter=center;
-            }
-            else{
-                gestureMotionStreak=0;
-                if(changedRatio<.035){gesturePreviousCenter=null;}
-            }
-        }
-        catch(error){}
-    },72);
 }
 
 function stopQRSmallAssist(){
@@ -8052,8 +8029,6 @@ async function startQR(){
                 focusPromise.catch(function(){});
             }
 
-            startLargeGestureAttack(qrVideoElement);
-
         }
 
         /* html5-qrcode를 주 판독기로 두고 가벼운 jsQR만 보조한다. */
@@ -8112,7 +8087,6 @@ async function stopQR(){
 
     stopQRSmallAssist();
     stopQRContinuousAttack();
-    stopLargeGestureAttack();
     stopAndroidAutofocusWatch();
 
     const focusVideo=$("qrFocusVideo");
@@ -9032,7 +9006,7 @@ function loop(now){
             false;
 
         if(playerMP<PLAYER_MAX_MP){
-            playerMP=Math.min(PLAYER_MAX_MP,playerMP+10*dt);
+            playerMP=Math.min(PLAYER_MAX_MP,playerMP+5*dt);
             updateMP();
         }
 
