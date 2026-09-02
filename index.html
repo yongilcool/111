@@ -1750,17 +1750,17 @@ html.ios-device #qrPanel{
 ===================================================== -->
 
 <script
-src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js">
+src="https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.min.js">
 </script>
 <script>
 /* 일부 모바일 통신망에서 jsDelivr가 늦거나 차단될 때 다른 CDN으로 즉시 복구 */
 if(!window.THREE){
-    document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"><\/script>');
+    document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.159.0/three.min.js"><\/script>');
 }
 </script>
 <script>
 if(!window.THREE){
-    document.write('<script src="https://unpkg.com/three@0.160.0/build/three.min.js"><\/script>');
+    document.write('<script src="https://unpkg.com/three@0.159.0/build/three.min.js"><\/script>');
 }
 </script>
 
@@ -4515,7 +4515,7 @@ function buildTavernInterior(loader){
     });
     scene.add(new THREE.AmbientLight(0xffc999,.72));
 
-    const atlas=loader.load("assets/tavern-npcs.png",function(texture){
+    const atlas=loader.load("https://static.wixstatic.com/media/172435_0d435df95b74424786f9587ff9657510~mv2.png",function(texture){
         texture.colorSpace=THREE.SRGBColorSpace;texture.magFilter=texture.minFilter=THREE.NearestFilter;
         const data=[
             {name:"주인 로웬",col:0,row:1,x:0,z:-18,scale:[5.4,7.0],dialogue:["어서 오시오, 여행자! 빈자리에 앉아 쉬어 가시오.","오늘의 스튜는 은화 두 닢이오."]},
@@ -4535,7 +4535,9 @@ function buildTavernInterior(loader){
     });
 
     camera.position.set(0,2.15,22);camera.rotation.set(0,0,0);gyroViewHeading=0;mapHeading=0;mapTargetHeading=0;
-    monsterDead=true;battle=false;lockTarget=false;
+    /* lockTarget은 이동 처리 함수 안의 지역 변수라 여기서 대입하면
+       선술집 초기화 전체가 중단된다. 전투 상태만 안전하게 해제한다. */
+    monsterDead=true;battle=false;
     if($("enemyText")){$("enemyText").style.display="none";}
     if($("battleExitButton")){$("battleExitButton").style.display="none";}
 
@@ -5181,6 +5183,11 @@ function init3D(){
             "THREE INIT ERROR:",
             error
         );
+
+        const errorTitle=$("engineError").querySelector("h2");
+        const errorBody=$("engineError").querySelector("p");
+        if(errorTitle){errorTitle.textContent="게임 화면을 준비하지 못했습니다";}
+        if(errorBody){errorBody.textContent="페이지를 새로고침하거나 다시 실행해주세요.";}
 
 
         $("engineError")
