@@ -1716,17 +1716,6 @@ html.ios-device #qrPanel{
 <script
 src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js">
 </script>
-<!-- jsDelivr가 모바일 통신망에서 실패하면 문서 파싱 중 즉시 다른 CDN으로 재시도한다. -->
-<script>
-if(!window.THREE){
-    document.write('<script src="https://unpkg.com/three@0.160.0/build/three.min.js"><\/script>');
-}
-</script>
-<script>
-if(!window.THREE){
-    document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"><\/script>');
-}
-</script>
 
 
 
@@ -4098,7 +4087,8 @@ function buildDungeon(loader){
     dungeonTorchAssignments=[];
     dungeonTorchAssignmentAt=0;
     const torchCells=[];
-    for(let z=DUNGEON_ACTIVE_START;z<DUNGEON_SIZE-1;z++){
+    /* 위·아래 이웃을 검사하므로 배열 경계인 0에서 시작하면 안 된다. */
+    for(let z=Math.max(1,DUNGEON_ACTIVE_START);z<DUNGEON_SIZE-1;z++){
         for(let x=2;x<DUNGEON_SIZE-2;x++){
             const openDirections=[[1,0],[-1,0],[0,1],[0,-1]].filter(function(direction){
                 return dungeonGrid[z+direction[1]][x+direction[0]]===0;
