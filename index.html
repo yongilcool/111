@@ -4550,12 +4550,12 @@ function buildTavernInterior(loader){
         const hit=raycaster.intersectObjects(tavernNPCs,false)[0];
         if(!hit){return;}
         const distance=hit.object.position.distanceTo(camera.position);
-        if(distance>15){showDialogue([hit.object.userData.npcName+"에게 조금 더 가까이 가보자."]);return;}
+        if(distance>15){showDialogueMessages([hit.object.userData.npcName+"에게 조금 더 가까이 가보자."]);return;}
         tavernTalked.add(hit.object.userData.npcName);
         if($("questProgress")){$("questProgress").textContent=tavernTalked.size+" / 6";}
-        showDialogue([hit.object.userData.npcName].concat(hit.object.userData.dialogue));
+        showDialogueMessages([hit.object.userData.npcName].concat(hit.object.userData.dialogue));
     },{passive:true});
-    showDialogue(["따뜻한 불빛과 이야기 소리가 가득한 선술집이다.","사람에게 가까이 가서 화면의 인물을 누르면 대화할 수 있다."],7000);
+    showDialogueMessages(["따뜻한 불빛과 이야기 소리가 가득한 선술집이다.","사람에게 가까이 가서 화면의 인물을 누르면 대화할 수 있다."],7000);
 }
 
 function updateDungeonVisibleWalls(now,force){
