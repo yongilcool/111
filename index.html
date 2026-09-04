@@ -1038,7 +1038,7 @@ canvas{
 #tavernTalkButton,#tavernDoorButton{position:absolute;z-index:181;left:50%;bottom:34%;display:none;transform:translateX(-50%);width:148px;height:54px;padding:0 12px;border:3px solid #6b3924;border-radius:15px;background:linear-gradient(#ffe1a8,#c8874f);color:#432516;font-size:17px;font-weight:1000;box-sizing:border-box;box-shadow:inset 0 0 0 2px #fff3ce,0 5px 0 rgba(48,22,12,.58);touch-action:manipulation}
 #tavernTalkButton.show,#tavernDoorButton.show{display:block}
 #tavernTalkButton:active,#tavernDoorButton:active{transform:translate(-50%,4px)}
-#tavernNamePlate{position:absolute;z-index:180;display:none;transform:translate(-50%,-100%);width:188px;height:52px;padding:0 10px;border:3px solid #6b3924;border-radius:15px;background:linear-gradient(#ffe1a8,#c8874f);color:#432516;font-size:16px;font-weight:1000;box-sizing:border-box;box-shadow:inset 0 0 0 2px #fff3ce,0 5px 0 rgba(48,22,12,.58);align-items:center;justify-content:center;text-align:center;white-space:nowrap;pointer-events:none}
+#tavernNamePlate{position:absolute;z-index:180;left:50%;bottom:calc(34% + 68px);display:none;transform:translateX(-50%);width:188px;height:52px;padding:0 10px;border:3px solid #6b3924;border-radius:15px;background:linear-gradient(#ffe1a8,#c8874f);color:#432516;font-size:16px;font-weight:1000;box-sizing:border-box;box-shadow:inset 0 0 0 2px #fff3ce,0 5px 0 rgba(48,22,12,.58);align-items:center;justify-content:center;text-align:center;white-space:nowrap;pointer-events:none}
 #tavernNamePlate.show{display:flex}
 #tavernDialogueBox{position:absolute;z-index:190;display:none;width:min(72vw,430px);height:112px;min-width:min(72vw,430px);max-width:min(72vw,430px);min-height:112px;max-height:112px;box-sizing:border-box;overflow:auto;padding:12px 36px 12px 14px;border:3px solid #70462c;border-radius:14px;background:rgba(255,248,225,.98);color:#3c2417;font-size:clamp(13px,3.3vw,19px);font-weight:900;line-height:1.35;box-shadow:0 5px 14px rgba(0,0,0,.5);transform:translate(-50%,-100%);touch-action:manipulation;flex-shrink:0}
 #tavernDialogueBox.show{display:block}
@@ -2216,10 +2216,10 @@ function isInsidePlayableRoad(x,z){
 function moveGyroPlayer(dt){
     const lockTarget=battleLockOn && battle && monster && !monsterDead;
     const usingJoystick=joystickPointerId!==null;
-    /* 전진 방향에서 좌우 50도까지는 대각선이 아닌 순수 직진이다. */
+    /* 전진 방향에서 좌우 25도까지는 대각선이 아닌 순수 직진이다. */
     const joystickStraight=usingJoystick &&
         joystickY<-.18 &&
-        Math.abs(joystickX)<=Math.abs(joystickY)*1.192;
+        Math.abs(joystickX)<=Math.abs(joystickY)*.466;
     const joystickTurnX=joystickStraight ? 0 : joystickX;
     const turnInput=joystickPointerId!==null
         ? joystickTurnX
@@ -4563,13 +4563,7 @@ function updateTavernInteraction(){
     button.textContent="대화한다";
     if(namePlate){
         namePlate.classList.toggle("show",!!canTalk);
-        if(canTalk){
-            const anchor=nearestTavernNPC.position.clone();anchor.y+=(nearestTavernNPC.userData.baseScale.y*.53)+.65;anchor.project(camera);
-            const left=Math.max(104,Math.min(innerWidth-104,(anchor.x*.5+.5)*innerWidth));
-            const hudBottom=$("hud") ? $("hud").getBoundingClientRect().bottom : 80;
-            const top=Math.max(hudBottom+62,Math.min(innerHeight-170,(-anchor.y*.5+.5)*innerHeight));
-            namePlate.style.left=left+"px";namePlate.style.top=top+"px";namePlate.textContent=nearestTavernNPC.userData.npcName;
-        }
+        if(canTalk){namePlate.textContent=nearestTavernNPC.userData.npcName;}
     }
     nearestTavernDoor=null;let nearestDoorDistance=Infinity;
     tavernDoors.forEach(function(door){if(!door.userData.opened){const distance=Math.hypot(camera.position.x-door.position.x,camera.position.z-door.position.z);if(distance<nearestDoorDistance){nearestDoorDistance=distance;nearestTavernDoor=door;}}});
@@ -4699,22 +4693,22 @@ function tavernBox(w,h,d,x,y,z,material){
 
 function tavernFakeShadow(x,z,w,d,y){
     if(!tavernShadowMesh){
-        tavernShadowMesh=new THREE.InstancedMesh(new THREE.CircleGeometry(1,16),new THREE.MeshBasicMaterial({color:0x090503,transparent:true,opacity:.52,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4}),32);
-        const hidden=new THREE.Matrix4().makeScale(0,0,0);for(let i=0;i<32;i++){tavernShadowMesh.setMatrixAt(i,hidden);}tavernShadowMesh.renderOrder=4;scene.add(tavernShadowMesh);
+        tavernShadowMesh=new THREE.InstancedMesh(new THREE.CircleGeometry(1,16),new THREE.MeshBasicMaterial({color:0x090503,transparent:true,opacity:.52,depthTest:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:4,polygonOffsetUnits:4}),32);
+        const hidden=new THREE.Matrix4().makeScale(0,0,0);for(let i=0;i<32;i++){tavernShadowMesh.setMatrixAt(i,hidden);}tavernShadowMesh.renderOrder=-10;scene.add(tavernShadowMesh);
     }
     if(tavernShadowCount>=32){return;}
     const matrix=new THREE.Matrix4();
-    matrix.compose(new THREE.Vector3(x,(y||0)+.255,z),new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2,0,0)),new THREE.Vector3(w,d,1));
+    matrix.compose(new THREE.Vector3(x,(y||0)+.232,z),new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2,0,0)),new THREE.Vector3(w,d,1));
     tavernShadowMesh.setMatrixAt(tavernShadowCount++,matrix);tavernShadowMesh.instanceMatrix.needsUpdate=true;
 }
 
 function tavernFakeRectShadow(x,z,w,d,y){
     if(!tavernRectShadowMesh){
-        tavernRectShadowMesh=new THREE.InstancedMesh(new THREE.PlaneGeometry(2,2),new THREE.MeshBasicMaterial({color:0x090503,transparent:true,opacity:.42,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4}),12);
-        const hidden=new THREE.Matrix4().makeScale(0,0,0);for(let i=0;i<12;i++){tavernRectShadowMesh.setMatrixAt(i,hidden);}tavernRectShadowMesh.renderOrder=4;scene.add(tavernRectShadowMesh);
+        tavernRectShadowMesh=new THREE.InstancedMesh(new THREE.PlaneGeometry(2,2),new THREE.MeshBasicMaterial({color:0x090503,transparent:true,opacity:.42,depthTest:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:4,polygonOffsetUnits:4}),12);
+        const hidden=new THREE.Matrix4().makeScale(0,0,0);for(let i=0;i<12;i++){tavernRectShadowMesh.setMatrixAt(i,hidden);}tavernRectShadowMesh.renderOrder=-10;scene.add(tavernRectShadowMesh);
     }
     if(tavernRectShadowCount>=12){return;}
-    const matrix=new THREE.Matrix4();matrix.compose(new THREE.Vector3(x,(y||0)+.25,z),new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2,0,0)),new THREE.Vector3(w,d,1));
+    const matrix=new THREE.Matrix4();matrix.compose(new THREE.Vector3(x,(y||0)+.231,z),new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2,0,0)),new THREE.Vector3(w,d,1));
     tavernRectShadowMesh.setMatrixAt(tavernRectShadowCount++,matrix);tavernRectShadowMesh.instanceMatrix.needsUpdate=true;
 }
 
@@ -4780,6 +4774,10 @@ function buildTavernInterior(loader){
     /* 단층 선술집: 공간을 줄이고 천장을 낮춘다. */
     tavernBox(44,10.5,1.2,0,5.25,-22,wallMat);tavernBox(44,10.5,1.2,0,5.25,22,wallMat);
     tavernBox(1.2,10.5,44,-22,5.25,0,wallMat);tavernBox(1.2,10.5,44,22,5.25,0,wallMat);
+    /* 바닥·벽·천장이 맞닿는 선을 나무 몰딩으로 둘러 틈을 감춘다. */
+    [-21.45,21.45].forEach(function(z){tavernBox(44,.55,.55,0,.48,z,tableMat);tavernBox(44,.55,.55,0,10.18,z,tableMat);});
+    [-21.45,21.45].forEach(function(x){tavernBox(.55,.55,44,x,.48,0,tableMat);tavernBox(.55,.55,44,x,10.18,0,tableMat);});
+    [[-21.45,-21.45],[-21.45,21.45],[21.45,-21.45],[21.45,21.45]].forEach(function(v){tavernBox(.55,10.25,.55,v[0],5.25,v[1],tableMat);});
     [-18,-6,6,18].forEach(function(x){tavernBox(.5,7,.5,x,3.5,-21.7,beamMat);tavernBox(.5,7,.5,x,3.5,21.7,beamMat);});
 
     /* 바깥으로 나가는 정문 */
@@ -4828,7 +4826,8 @@ function buildTavernInterior(loader){
         tavernBox(8,.65,5,position[0],2.95,position[1],tableMat);
         addTavernObstacle(position[0],position[1],4.45,2.85,0,4);
         tavernFakeRectShadow(position[0],position[1],4.6,3,0);
-        [-3.1,3.1].forEach(function(dx){tavernBox(1.1,2.0,4.7,position[0]+dx,1.0,position[1],beamMat);});
+        /* 높아진 상판까지 받침도 함께 늘리고 같은 나무 텍스처를 쓴다. */
+        [-3.1,3.1].forEach(function(dx){tavernBox(1.1,2.7,4.7,position[0]+dx,1.35,position[1],tableMat);});
         const mugMat=new THREE.MeshLambertMaterial({color:0xc18a45});
         const mug=new THREE.Mesh(new THREE.CylinderGeometry(.34,.3,.75,8),mugMat);mug.position.set(position[0]+(index%2?1:-1),3.65,position[1]);scene.add(mug);
     });
@@ -4848,7 +4847,7 @@ function buildTavernInterior(loader){
         const data=[
             {name:"주인 로웬",crop:[0,0,360,508],x:0,z:-18.9,scale:[5.6,7.1],floorOffset:-.18,block:2.45,dialogue:["어서 오시오, 여행자! 따뜻한 식사와 맥주가 준비되어 있소.","뒷문은 내 오른편에 있소."]},
             {name:"서빙하는 엘라",crop:[371,0,384,508],x:6,z:-12.8,scale:[5.2,6.8],floorOffset:-.22,block:2.05,dialogue:["오늘은 구운 고기와 달걀이 아주 잘됐어요.","빈 잔이 보이면 언제든 저를 불러주세요."]},
-            {name:"후드 쓴 여행자",crop:[766,0,408,508],x:-11,z:-2.1,scale:[5.7,6.5],floorOffset:-.42,block:3.25,dialogue:["낯선 얼굴이군. 동쪽 숲길에서는 등불을 끄지 마.","내가 여기 있다는 말은 아무에게도 하지 말게."]},
+            {name:"후드 쓴 여행자",crop:[766,0,408,508],x:-11,z:-2.1,scale:[5.7,6.5],floorOffset:-.27,block:3.25,dialogue:["낯선 얼굴이군. 동쪽 숲길에서는 등불을 끄지 마.","내가 여기 있다는 말은 아무에게도 하지 말게."]},
             {name:"노련한 이야기꾼",crop:[0,519,360,538],x:-11,z:12.1,scale:[5.5,6.5],floorOffset:-.52,block:3.25,dialogue:["이 선술집에는 백 년도 넘은 이야기가 쌓여 있지.","한 잔 사준다면 옛 왕국 이야기를 들려주겠네."]},
             {name:"용병 브란",crop:[371,519,384,538],x:11,z:-1.1,scale:[5.5,6.4],floorOffset:-.48,block:3.25,dialogue:["검은 힘보다 타이밍이 중요하지.","북문 밖에서 일거리를 찾고 있다면 나를 다시 찾아오게."]},
             {name:"상인 미로",crop:[766,519,408,538],x:10,z:13.0,scale:[5.7,6.4],floorOffset:-.58,block:3.25,dialogue:["희귀한 물건은 값보다 보는 눈이 중요하다네.","내일이면 남쪽 도시에서 새 물건이 도착할 걸세."]},
@@ -4856,7 +4855,8 @@ function buildTavernInterior(loader){
         ];
         data.forEach(function(item){
             const crop=tavernCroppedTexture(texture.image,item.crop);
-            const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:crop,transparent:true,alphaTest:.03,depthTest:true,depthWrite:false,fog:true}));
+            const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:crop,transparent:true,opacity:1,alphaTest:.08,depthTest:true,depthWrite:true,fog:false}));
+            sprite.renderOrder=10;
             const floorY=item.floorY || 0;
             const originalAspect=item.crop[2]/item.crop[3];
             sprite.position.set(item.x,floorY+item.scale[1]*.48+(item.floorOffset||0),item.z);
