@@ -4520,7 +4520,9 @@ function tavernLoadTexture(loader,url,repeatX,repeatY){
     texture.wrapS=texture.wrapT=THREE.RepeatWrapping;
     texture.repeat.set(repeatX || 1,repeatY || 1);
     texture.colorSpace=THREE.SRGBColorSpace;
-    texture.magFilter=THREE.NearestFilter;
+    texture.magFilter=THREE.LinearFilter;
+    texture.minFilter=THREE.LinearMipmapLinearFilter;
+    texture.generateMipmaps=true;
     return texture;
 }
 
@@ -4593,7 +4595,9 @@ function talkToNearestTavernNPC(){
     /* 이름표 바로 위(사용자가 표시한 영역)에 말칸의 아래쪽을 맞춘다. */
     let top=(-anchor.y*.5+.5)*innerHeight-40;
     left=Math.max(170,Math.min(innerWidth-170,left));
-    top=Math.max(145,Math.min(innerHeight-155,top));
+    const hud=$("hud");
+    const hudBottom=hud ? hud.getBoundingClientRect().bottom : 90;
+    top=Math.max(hudBottom+126,Math.min(innerHeight-155,top));
     dialogue.style.left=left+"px";dialogue.style.top=top+"px";
     dialogue.classList.add("show");
     tavernDialogueReadyAt=performance.now()+280;
@@ -4683,7 +4687,7 @@ function tavernCroppedTexture(image,crop){
     function seed(index){if(!seen[index]&&background(index)){seen[index]=1;queue.push(index);}}
     for(let x=0;x<w;x++){seed(x);seed((h-1)*w+x);}for(let y=0;y<h;y++){seed(y*w);seed(y*w+w-1);}
     for(let q=0;q<queue.length;q++){const i=queue[q],x=i%w,y=(i/w)|0,p=i*4;data[p+3]=0;if(x){seed(i-1);}if(x<w-1){seed(i+1);}if(y){seed(i-w);}if(y<h-1){seed(i+w);}}
-    context.putImageData(pixels,0,0);const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.magFilter=texture.minFilter=THREE.NearestFilter;return texture;
+    context.putImageData(pixels,0,0);const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.magFilter=THREE.LinearFilter;texture.minFilter=THREE.LinearMipmapLinearFilter;texture.generateMipmaps=true;return texture;
 }
 
 function tavernLabel(text){
@@ -4757,9 +4761,9 @@ function buildTavernInterior(loader){
     tavernBox(41,.18,.18,-5.5,14.35,-7.8,beamMat);
 
     /* 바깥으로 나가는 정문 */
-    tavernBox(6.4,7.8,.55,0,3.9,26.72,beamMat);
-    const exitDoor=tavernBox(5.2,7,.48,0,3.5,26.38,doorMat);
-    const exitKnob=new THREE.Mesh(new THREE.SphereGeometry(.16,7,6),new THREE.MeshBasicMaterial({color:0xe1b34e}));exitKnob.position.set(1.75,3.4,26.05);scene.add(exitKnob);
+    tavernBox(6.4,7.8,.55,-10.5,3.9,26.72,beamMat);
+    const exitDoor=tavernBox(5.2,7,.48,-10.5,3.5,26.38,doorMat);
+    const exitKnob=new THREE.Mesh(new THREE.SphereGeometry(.16,7,6),new THREE.MeshBasicMaterial({color:0x7b5132}));exitKnob.position.set(-8.75,3.4,26.05);scene.add(exitKnob);
 
     /* 바와 진열장 */
     tavernBox(26,2.5,3.8,0,1.25,-22,tableMat);addTavernObstacle(0,-22,13,2.2,0,4);
@@ -4796,8 +4800,7 @@ function buildTavernInterior(loader){
     /* 벽난로, 장작과 이미지 무늬를 입힌 나무통 */
     tavernBox(10,5.7,1.5,0,2.85,26.7,stoneMat);
     tavernBox(6.3,2.7,2.1,0,1.35,25.7,new THREE.MeshLambertMaterial({color:0x1b0d09}));
-    const fireLight=new THREE.PointLight(0xff7b28,2.1,28,2);fireLight.position.set(0,2.2,23.9);scene.add(fireLight);
-    const fireGroup=new THREE.Group();fireGroup.position.copy(fireLight.position);
+    const fireGroup=new THREE.Group();fireGroup.position.set(0,2.2,23.9);
     [[0xff4d18,.75,1.65],[0xff9b25,.48,1.25],[0xffe56b,.25,.8]].forEach(function(spec,index){const flame=new THREE.Mesh(new THREE.ConeGeometry(spec[1],spec[2],7),new THREE.MeshBasicMaterial({color:spec[0],transparent:true,opacity:.94}));flame.position.set((index-1)*.18,spec[2]/2-.35,index*.06);fireGroup.add(flame);});scene.add(fireGroup);
     addTavernObstacle(0,25.7,5.2,1.7,0,6);
     [[-23,-20],[-20,-20],[23,-18],[20,20],[-22,19]].forEach(function(position,index){
@@ -4806,20 +4809,16 @@ function buildTavernInterior(loader){
         addTavernObstacle(position[0],position[1],1.2,1.2,0,3);
     });
 
-    /* 따뜻한 샹들리에와 벽 조명 */
-    (isMobileGameDevice()?[[0,4]]:[[0,0],[-18,15],[18,15]]).forEach(function(position){
-        const light=new THREE.PointLight(0xffa44f,1.2,30,2);light.position.set(position[0],5.7,position[1]);scene.add(light);
-    });
-    scene.add(new THREE.AmbientLight(0xffc999,.72));
+    /* 집 안의 노란 실시간 점광원은 제거한다. */
+    scene.add(new THREE.AmbientLight(0xffffff,.58));
 
     const atlas=loader.load(TAVERN_PEOPLE_URL,function(texture){
-        texture.colorSpace=THREE.SRGBColorSpace;texture.magFilter=texture.minFilter=THREE.NearestFilter;
+        texture.colorSpace=THREE.SRGBColorSpace;texture.magFilter=THREE.LinearFilter;texture.minFilter=THREE.LinearMipmapLinearFilter;texture.generateMipmaps=true;
         /* people2 원본의 흰 구분선을 기준으로 실제 8개 영역을 개별 크롭한다. */
         const data=[
             {name:"주인 로웬",crop:[0,0,360,508],x:0,z:-23.5,scale:[5.6,7.1],block:2.45,dialogue:["어서 오시오, 여행자! 따뜻한 식사와 맥주가 준비되어 있소.","방이 필요하면 이층으로 올라가시오."]},
             {name:"서빙하는 엘라",crop:[371,0,384,508],x:8,z:-17.6,scale:[5.2,6.8],block:2.05,dialogue:["오늘은 구운 고기와 달걀이 아주 잘됐어요.","빈 잔이 보이면 언제든 저를 불러주세요."]},
             {name:"후드 쓴 여행자",crop:[766,0,408,508],x:-15,z:-5.4,scale:[5.7,6.5],block:2.55,dialogue:["낯선 얼굴이군. 동쪽 숲길에서는 등불을 끄지 마.","내가 여기 있다는 말은 아무에게도 하지 말게."]},
-            {name:"떠돌이 꼬마",crop:[1190,0,305,437],x:1,z:2,scale:[3.7,5.2],floorOffset:.42,block:1.55,dialogue:["주방에서 빵 냄새가 나! 혹시 하나 얻어줄래?","이층 끝방에서는 밤마다 이상한 소리가 들려."]},
             {name:"노련한 이야기꾼",crop:[0,519,360,538],x:-15,z:14.1,scale:[5.5,6.5],block:2.55,dialogue:["이 선술집에는 백 년도 넘은 이야기가 쌓여 있지.","한 잔 사준다면 옛 왕국 이야기를 들려주겠네."]},
             {name:"용병 브란",crop:[371,519,384,538],x:15,z:-4.2,scale:[5.5,6.4],block:2.5,dialogue:["검은 힘보다 타이밍이 중요하지.","북문 밖에서 일거리를 찾고 있다면 나를 다시 찾아오게."]},
             {name:"상인 미로",crop:[766,519,408,538],x:14,z:15.1,scale:[5.7,6.4],block:2.55,dialogue:["희귀한 물건은 값보다 보는 눈이 중요하다네.","내일이면 남쪽 도시에서 새 물건이 도착할 걸세."]},
@@ -5145,7 +5144,7 @@ function init3D(){
 
 
         /* QR 영상 해상도와 무관한 3D 캔버스만 모바일에서 가볍게 렌더링한다. */
-        renderer.setPixelRatio(isMobileGameDevice() ? (isAndroid() ? .72 : .82) : Math.min(window.devicePixelRatio || 1,CONFIG.MAX_PIXEL_RATIO));
+        renderer.setPixelRatio(isMobileGameDevice() ? (isAndroid() ? .85 : .9) : Math.min(window.devicePixelRatio || 1,CONFIG.MAX_PIXEL_RATIO));
 
 
         renderer.setSize(
