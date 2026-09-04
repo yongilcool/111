@@ -1035,9 +1035,11 @@ canvas{
 #battleExitButton{position:absolute;z-index:176;left:50%;top:155px;display:none;transform:translateX(-50%);padding:11px 20px;border:3px solid #6b3924;border-radius:14px;background:linear-gradient(#f2d4a3,#bd7d4d);color:#4b2819;font-size:15px;font-weight:1000;box-shadow:inset 0 0 0 2px #fff0c9,0 5px 0 rgba(48,22,12,.55);touch-action:manipulation}
 #game.in-battle #battleExitButton{display:block}
 #battleExitButton:active{transform:translate(-50%,4px)}
-#tavernTalkButton{position:absolute;z-index:181;left:50%;bottom:34%;display:none;transform:translateX(-50%);min-width:132px;padding:12px 22px;border:3px solid #6b3924;border-radius:15px;background:linear-gradient(#ffe1a8,#c8874f);color:#432516;font-size:17px;font-weight:1000;box-shadow:inset 0 0 0 2px #fff3ce,0 5px 0 rgba(48,22,12,.58);touch-action:manipulation}
-#tavernTalkButton.show{display:block}
-#tavernTalkButton:active{transform:translate(-50%,4px)}
+#tavernTalkButton,#tavernDoorButton{position:absolute;z-index:181;left:50%;bottom:34%;display:none;transform:translateX(-50%);width:148px;height:54px;padding:0 12px;border:3px solid #6b3924;border-radius:15px;background:linear-gradient(#ffe1a8,#c8874f);color:#432516;font-size:17px;font-weight:1000;box-sizing:border-box;box-shadow:inset 0 0 0 2px #fff3ce,0 5px 0 rgba(48,22,12,.58);touch-action:manipulation}
+#tavernTalkButton.show,#tavernDoorButton.show{display:block}
+#tavernTalkButton:active,#tavernDoorButton:active{transform:translate(-50%,4px)}
+#tavernNamePlate{position:absolute;z-index:180;display:none;transform:translate(-50%,-100%);width:188px;height:52px;padding:0 10px;border:3px solid #6b3924;border-radius:15px;background:linear-gradient(#ffe1a8,#c8874f);color:#432516;font-size:16px;font-weight:1000;box-sizing:border-box;box-shadow:inset 0 0 0 2px #fff3ce,0 5px 0 rgba(48,22,12,.58);align-items:center;justify-content:center;text-align:center;white-space:nowrap;pointer-events:none}
+#tavernNamePlate.show{display:flex}
 #tavernDialogueBox{position:absolute;z-index:190;display:none;width:min(72vw,430px);height:112px;min-width:min(72vw,430px);max-width:min(72vw,430px);min-height:112px;max-height:112px;box-sizing:border-box;overflow:auto;padding:12px 36px 12px 14px;border:3px solid #70462c;border-radius:14px;background:rgba(255,248,225,.98);color:#3c2417;font-size:clamp(13px,3.3vw,19px);font-weight:900;line-height:1.35;box-shadow:0 5px 14px rgba(0,0,0,.5);transform:translate(-50%,-100%);touch-action:manipulation;flex-shrink:0}
 #tavernDialogueBox.show{display:block}
 #tavernDialogueBox::after{content:"";position:absolute;left:50%;bottom:-15px;margin-left:-12px;border-left:12px solid transparent;border-right:12px solid transparent;border-top:15px solid #70462c}
@@ -1589,7 +1591,9 @@ html.ios-device #qrPanel{
 
         <button id="pauseButton" aria-label="일시정지">⏸</button>
         <button id="battleExitButton">전투 나가기</button>
+        <div id="tavernNamePlate" aria-hidden="true"></div>
         <button id="tavernTalkButton" aria-label="가까운 인물과 대화하기">대화한다</button>
+        <button id="tavernDoorButton" aria-label="문 열기">열기</button>
         <div id="tavernDialogueBox" role="button" aria-label="대화창 닫기"><span id="tavernDialogueText"></span><span id="tavernDialogueNext">▼</span></div>
         <button id="questButton" aria-label="퀘스트 열기"><img src="https://static.wixstatic.com/media/172435_db0fd22ef0cd4fd48cde2f64dee535bc~mv2.png" alt="퀘스트"></button>
         <button id="inventoryButton" aria-label="인벤토리 열기"><img src="https://static.wixstatic.com/media/172435_513831dd8ed049688a5282ba36bc3b3e~mv2.png" alt="아이템"></button>
@@ -2212,9 +2216,10 @@ function isInsidePlayableRoad(x,z){
 function moveGyroPlayer(dt){
     const lockTarget=battleLockOn && battle && monster && !monsterDead;
     const usingJoystick=joystickPointerId!==null;
+    /* 전진 방향에서 좌우 50도까지는 대각선이 아닌 순수 직진이다. */
     const joystickStraight=usingJoystick &&
-        Math.abs(joystickY)>.18 &&
-        Math.abs(joystickX)<Math.abs(joystickY)*.268;
+        joystickY<-.18 &&
+        Math.abs(joystickX)<=Math.abs(joystickY)*1.192;
     const joystickTurnX=joystickStraight ? 0 : joystickX;
     const turnInput=joystickPointerId!==null
         ? joystickTurnX
@@ -4493,6 +4498,10 @@ let tavernNPCs=[];
 let tavernObstacles=[];
 let tavernShadowMesh=null;
 let tavernShadowCount=0;
+let tavernRectShadowMesh=null;
+let tavernRectShadowCount=0;
+let tavernDoors=[];
+let nearestTavernDoor=null;
 const tavernTalked=new Set();
 let tavernBuilt=false;
 let nearestTavernNPC=null;
@@ -4537,9 +4546,11 @@ function updateTavernInteraction(){
         const verticalDistance=Math.abs(tavernPlayerFloorHeight-(npc.userData.floorY || 0));
         const distance=verticalDistance<=3 ? horizontalDistance : Infinity;
         if(distance<nearestDistance){nearestDistance=distance;nearestTavernNPC=npc;}
-        if(npc.userData.label){npc.userData.label.visible=!tavernConversationLocked && distance<=TAVERN_TALK_DISTANCE;}
+        if(npc.userData.label){npc.userData.label.visible=false;}
     });
     const button=$("tavernTalkButton");
+    const namePlate=$("tavernNamePlate");
+    const doorButton=$("tavernDoorButton");
     if(!button){return;}
     let facingDot=-1;
     if(nearestTavernNPC && nearestDistance>0){
@@ -4550,6 +4561,28 @@ function updateTavernInteraction(){
     const canTalk=!tavernConversationLocked && nearestTavernNPC && nearestDistance<=TAVERN_TALK_DISTANCE && facingDot>.48;
     button.classList.toggle("show",!!canTalk);
     button.textContent="대화한다";
+    if(namePlate){
+        namePlate.classList.toggle("show",!!canTalk);
+        if(canTalk){
+            const anchor=nearestTavernNPC.position.clone();anchor.y+=(nearestTavernNPC.userData.baseScale.y*.53)+.65;anchor.project(camera);
+            const left=Math.max(104,Math.min(innerWidth-104,(anchor.x*.5+.5)*innerWidth));
+            const hudBottom=$("hud") ? $("hud").getBoundingClientRect().bottom : 80;
+            const top=Math.max(hudBottom+62,Math.min(innerHeight-170,(-anchor.y*.5+.5)*innerHeight));
+            namePlate.style.left=left+"px";namePlate.style.top=top+"px";namePlate.textContent=nearestTavernNPC.userData.npcName;
+        }
+    }
+    nearestTavernDoor=null;let nearestDoorDistance=Infinity;
+    tavernDoors.forEach(function(door){if(!door.userData.opened){const distance=Math.hypot(camera.position.x-door.position.x,camera.position.z-door.position.z);if(distance<nearestDoorDistance){nearestDoorDistance=distance;nearestTavernDoor=door;}}});
+    let doorFacing=-1;
+    if(nearestTavernDoor && nearestDoorDistance>0){const dx=nearestTavernDoor.position.x-camera.position.x,dz=nearestTavernDoor.position.z-camera.position.z;doorFacing=(dx*(-Math.sin(gyroViewHeading))+dz*(-Math.cos(gyroViewHeading)))/nearestDoorDistance;}
+    const canOpen=!tavernConversationLocked && !canTalk && nearestTavernDoor && nearestDoorDistance<=5 && doorFacing>.42;
+    if(doorButton){doorButton.classList.toggle("show",!!canOpen);doorButton.textContent="열기";}
+}
+
+function openNearestTavernDoor(){
+    if(!nearestTavernDoor || nearestTavernDoor.userData.opened){return;}
+    nearestTavernDoor.userData.opened=true;nearestTavernDoor.rotation.y+=(nearestTavernDoor.userData.openDirection || 1)*Math.PI*.48;
+    if($("tavernDoorButton")){$("tavernDoorButton").classList.remove("show");}
 }
 
 function talkToNearestTavernNPC(){
@@ -4567,6 +4600,8 @@ function talkToNearestTavernNPC(){
     gyroViewHeading=Math.atan2(camera.position.x-nearestTavernNPC.position.x,camera.position.z-nearestTavernNPC.position.z);
     tavernConversationLocked=true;
     if($("tavernTalkButton")){$("tavernTalkButton").classList.remove("show");}
+    if($("tavernNamePlate")){$("tavernNamePlate").classList.remove("show");}
+    if($("tavernDoorButton")){$("tavernDoorButton").classList.remove("show");}
     if(nearestTavernNPC.userData.label){nearestTavernNPC.userData.label.visible=false;}
     tavernTalked.add(nearestTavernNPC.userData.npcName);
     if($("questProgress")){$("questProgress").textContent=tavernTalked.size+" / 7";}
@@ -4673,6 +4708,16 @@ function tavernFakeShadow(x,z,w,d,y){
     tavernShadowMesh.setMatrixAt(tavernShadowCount++,matrix);tavernShadowMesh.instanceMatrix.needsUpdate=true;
 }
 
+function tavernFakeRectShadow(x,z,w,d,y){
+    if(!tavernRectShadowMesh){
+        tavernRectShadowMesh=new THREE.InstancedMesh(new THREE.PlaneGeometry(2,2),new THREE.MeshBasicMaterial({color:0x090503,transparent:true,opacity:.42,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4}),12);
+        const hidden=new THREE.Matrix4().makeScale(0,0,0);for(let i=0;i<12;i++){tavernRectShadowMesh.setMatrixAt(i,hidden);}tavernRectShadowMesh.renderOrder=4;scene.add(tavernRectShadowMesh);
+    }
+    if(tavernRectShadowCount>=12){return;}
+    const matrix=new THREE.Matrix4();matrix.compose(new THREE.Vector3(x,(y||0)+.25,z),new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2,0,0)),new THREE.Vector3(w,d,1));
+    tavernRectShadowMesh.setMatrixAt(tavernRectShadowCount++,matrix);tavernRectShadowMesh.instanceMatrix.needsUpdate=true;
+}
+
 function addTavernObstacle(x,z,halfW,halfD,minY,maxY){
     tavernObstacles.push({x:x,z:z,halfW:halfW,halfD:halfD,minY:minY===undefined?0:minY,maxY:maxY===undefined?4:maxY});
 }
@@ -4700,7 +4745,7 @@ function tavernLabel(text){
 }
 
 function buildTavernInterior(loader){
-    if(tavernBuilt){return;}tavernBuilt=true;tavernObstacles=[];tavernShadowCount=0;
+    if(tavernBuilt){return;}tavernBuilt=true;tavernObstacles=[];tavernShadowCount=0;tavernRectShadowCount=0;tavernDoors=[];
     scene.background=new THREE.Color(0x17100d);scene.fog=new THREE.Fog(0x17100d,38,72);
     dungeonTorchSources.forEach(function(source){
         if(source.flame){source.flame.visible=false;}if(source.holder){source.holder.visible=false;}
@@ -4731,32 +4776,36 @@ function buildTavernInterior(loader){
     const floor=new THREE.Mesh(new THREE.PlaneGeometry(span,span),floorMat);floor.rotation.x=-Math.PI/2;floor.position.y=.22;floor.renderOrder=3;scene.add(floor);
     const ceilingTexture=floorTexture.clone();ceilingTexture.needsUpdate=true;
     const ceilingMat=new THREE.MeshLambertMaterial({map:ceilingTexture,color:0xb38a67,side:THREE.DoubleSide});
-    const ceiling=new THREE.Mesh(new THREE.PlaneGeometry(44,44),ceilingMat);ceiling.rotation.x=Math.PI/2;ceiling.position.y=12;scene.add(ceiling);
+    const ceiling=new THREE.Mesh(new THREE.PlaneGeometry(44,44),ceilingMat);ceiling.rotation.x=Math.PI/2;ceiling.position.y=10.5;scene.add(ceiling);
     /* 단층 선술집: 공간을 줄이고 천장을 낮춘다. */
-    tavernBox(44,12,1.2,0,6,-22,wallMat);tavernBox(44,12,1.2,0,6,22,wallMat);
-    tavernBox(1.2,12,44,-22,6,0,wallMat);tavernBox(1.2,12,44,22,6,0,wallMat);
+    tavernBox(44,10.5,1.2,0,5.25,-22,wallMat);tavernBox(44,10.5,1.2,0,5.25,22,wallMat);
+    tavernBox(1.2,10.5,44,-22,5.25,0,wallMat);tavernBox(1.2,10.5,44,22,5.25,0,wallMat);
     [-18,-6,6,18].forEach(function(x){tavernBox(.5,7,.5,x,3.5,-21.7,beamMat);tavernBox(.5,7,.5,x,3.5,21.7,beamMat);});
 
     /* 바깥으로 나가는 정문 */
-    tavernBox(6.4,7.8,.55,-10,3.9,21.72,beamMat);
-    const exitDoor=tavernBox(5.2,7,.48,-10,3.5,21.38,doorMat);
+    tavernBox(6.4,10,.62,-10,5,21.72,tableMat);
+    const exitDoor=tavernBox(5.2,9.3,.48,-10,4.65,21.38,doorMat);exitDoor.userData.openDirection=-1;tavernDoors.push(exitDoor);
     const exitKnob=new THREE.Mesh(new THREE.SphereGeometry(.16,7,6),new THREE.MeshBasicMaterial({color:0x7b5132}));exitKnob.position.set(-8.25,3.4,21.05);scene.add(exitKnob);
 
     /* 바와 진열장 */
-    tavernBox(23,2.5,3.5,0,1.25,-17.2,tableMat);addTavernObstacle(0,-17.2,11.5,2.05,0,4);tavernFakeShadow(0,-17.2,11.8,2.25,0);
+    tavernBox(23,2.5,3.5,0,1.25,-17.2,tableMat);addTavernObstacle(0,-17.2,11.5,2.05,0,4);tavernFakeRectShadow(0,-17.2,11.8,2.25,0);
     /* 주인 뒤의 찬장과 술 진열 선반 */
     tavernBox(18,5.3,1.2,0,3.0,-21.2,beamMat);
     [1.25,3.05,4.85].forEach(function(y){tavernBox(18,.32,1.45,0,y,-20.5,tableMat);});
     /* 주인 옆 뒷문 */
-    tavernBox(4.8,6.8,.45,13.8,3.4,-21.35,doorMat);
+    tavernBox(6,9.6,.62,13.8,4.8,-21.7,tableMat);
+    const backDoor=tavernBox(4.8,9,.45,13.8,4.5,-21.35,doorMat);backDoor.userData.openDirection=1;tavernDoors.push(backDoor);
     /* 문과 같은 나무 텍스처를 사용한 양쪽 창문과 주인 옆 창문 */
-    [[-21.35,5,-8,.45,4.2,5.2],[-21.35,5,8,.45,4.2,5.2],[21.35,5,0,.45,4.2,5.2]].forEach(function(spec){
-        const windowPanel=tavernBox(spec[3],spec[4],spec[5],spec[0],spec[1],spec[2],doorMat);
-        tavernBox(spec[3]+.12,.28,spec[5]+.45,spec[0]-(spec[0]>0?.08:-.08),spec[1],spec[2],beamMat);
-        tavernBox(spec[3]+.12,spec[4]+.45,.28,spec[0]-(spec[0]>0?.08:-.08),spec[1],spec[2],beamMat);
-    });
-    const ownerWindow=tavernBox(5.2,4.2,.45,-13.8,5,-21.35,doorMat);
-    tavernBox(5.65,.28,.58,-13.8,5,-21.05,beamMat);tavernBox(.28,4.65,.58,-13.8,5,-21.05,beamMat);
+    function sideWindow(x,z){
+        const innerX=x-(x>0?.08:-.08);
+        tavernBox(.45,4.2,2.42,x,5,z-1.31,doorMat);tavernBox(.45,4.2,2.42,x,5,z+1.31,doorMat);
+        tavernBox(.62,.32,5.75,innerX,7.25,z,tableMat);tavernBox(.62,.32,5.75,innerX,2.75,z,tableMat);
+        tavernBox(.62,4.82,.32,innerX,5,z-2.72,tableMat);tavernBox(.62,4.82,.32,innerX,5,z+2.72,tableMat);
+    }
+    sideWindow(-21.35,-8);sideWindow(-21.35,8);sideWindow(21.35,0);
+    tavernBox(2.42,4.2,.45,-15.11,5,-21.35,doorMat);tavernBox(2.42,4.2,.45,-12.49,5,-21.35,doorMat);
+    tavernBox(5.75,.32,.62,-13.8,7.25,-21.05,tableMat);tavernBox(5.75,.32,.62,-13.8,2.75,-21.05,tableMat);
+    tavernBox(.32,4.82,.62,-16.52,5,-21.05,tableMat);tavernBox(.32,4.82,.62,-11.08,5,-21.05,tableMat);
     /* 술병 35개를 35개의 개별 오브젝트로 만들지 않고 색상별 3회에 묶어 그린다. */
     const bottleGroups=[[],[],[]];
     for(let row=0;row<3;row++){[-8,-6,-4,-2,0,2,4,6,8].forEach(function(x,index){bottleGroups[(index+row)%3].push([x,1.86+row*1.8,-20.15]);});}
@@ -4776,12 +4825,12 @@ function buildTavernInterior(loader){
 
     /* 테이블, 의자, 벤치 */
     [[-11,-7],[11,-6],[-11,7],[10,8]].forEach(function(position,index){
-        tavernBox(8,.65,5,position[0],2.25,position[1],tableMat);
+        tavernBox(8,.65,5,position[0],2.95,position[1],tableMat);
         addTavernObstacle(position[0],position[1],4.45,2.85,0,4);
-        tavernFakeShadow(position[0],position[1],4.6,3,0);
+        tavernFakeRectShadow(position[0],position[1],4.6,3,0);
         [-3.1,3.1].forEach(function(dx){tavernBox(1.1,2.0,4.7,position[0]+dx,1.0,position[1],beamMat);});
         const mugMat=new THREE.MeshLambertMaterial({color:0xc18a45});
-        const mug=new THREE.Mesh(new THREE.CylinderGeometry(.34,.3,.75,8),mugMat);mug.position.set(position[0]+(index%2?1:-1),2.95,position[1]);scene.add(mug);
+        const mug=new THREE.Mesh(new THREE.CylinderGeometry(.34,.3,.75,8),mugMat);mug.position.set(position[0]+(index%2?1:-1),3.65,position[1]);scene.add(mug);
     });
     [[-18,-15],[18,-14],[18,16],[-18,15]].forEach(function(position,index){
         const barrel=new THREE.Mesh(new THREE.CylinderGeometry(1.05,1.05,2.5,16),barrelMat);
@@ -4797,13 +4846,13 @@ function buildTavernInterior(loader){
         texture.colorSpace=THREE.SRGBColorSpace;texture.magFilter=THREE.LinearFilter;texture.minFilter=THREE.LinearMipmapLinearFilter;texture.generateMipmaps=true;
         /* people2 원본의 흰 구분선을 기준으로 실제 8개 영역을 개별 크롭한다. */
         const data=[
-            {name:"주인 로웬",crop:[0,0,360,508],x:0,z:-18.9,scale:[5.6,7.1],block:2.45,dialogue:["어서 오시오, 여행자! 따뜻한 식사와 맥주가 준비되어 있소.","뒷문은 내 오른편에 있소."]},
-            {name:"서빙하는 엘라",crop:[371,0,384,508],x:6,z:-12.8,scale:[5.2,6.8],block:2.05,dialogue:["오늘은 구운 고기와 달걀이 아주 잘됐어요.","빈 잔이 보이면 언제든 저를 불러주세요."]},
-            {name:"후드 쓴 여행자",crop:[766,0,408,508],x:-11,z:-10.6,scale:[5.7,6.5],block:3.25,dialogue:["낯선 얼굴이군. 동쪽 숲길에서는 등불을 끄지 마.","내가 여기 있다는 말은 아무에게도 하지 말게."]},
-            {name:"노련한 이야기꾼",crop:[0,519,360,538],x:-11,z:3.5,scale:[5.5,6.5],floorOffset:-.25,block:3.25,dialogue:["이 선술집에는 백 년도 넘은 이야기가 쌓여 있지.","한 잔 사준다면 옛 왕국 이야기를 들려주겠네."]},
-            {name:"용병 브란",crop:[371,519,384,538],x:11,z:-9.6,scale:[5.5,6.4],floorOffset:-.22,block:3.25,dialogue:["검은 힘보다 타이밍이 중요하지.","북문 밖에서 일거리를 찾고 있다면 나를 다시 찾아오게."]},
-            {name:"상인 미로",crop:[766,519,408,538],x:10,z:4.5,scale:[5.7,6.4],floorOffset:-.35,block:3.25,dialogue:["희귀한 물건은 값보다 보는 눈이 중요하다네.","내일이면 남쪽 도시에서 새 물건이 도착할 걸세."]},
-            {name:"마법사 세리아",crop:[1190,449,305,608],x:-15,z:15,scale:[4.5,7.0],floorOffset:-.18,block:2.0,dialogue:["이곳에서는 마법을 쉬게 해두었어요. 술잔이 깨지면 곤란하니까요.","달빛이 강한 밤에는 오래된 주문이 더 선명해진답니다."]}
+            {name:"주인 로웬",crop:[0,0,360,508],x:0,z:-18.9,scale:[5.6,7.1],floorOffset:-.18,block:2.45,dialogue:["어서 오시오, 여행자! 따뜻한 식사와 맥주가 준비되어 있소.","뒷문은 내 오른편에 있소."]},
+            {name:"서빙하는 엘라",crop:[371,0,384,508],x:6,z:-12.8,scale:[5.2,6.8],floorOffset:-.22,block:2.05,dialogue:["오늘은 구운 고기와 달걀이 아주 잘됐어요.","빈 잔이 보이면 언제든 저를 불러주세요."]},
+            {name:"후드 쓴 여행자",crop:[766,0,408,508],x:-11,z:-2.1,scale:[5.7,6.5],floorOffset:-.42,block:3.25,dialogue:["낯선 얼굴이군. 동쪽 숲길에서는 등불을 끄지 마.","내가 여기 있다는 말은 아무에게도 하지 말게."]},
+            {name:"노련한 이야기꾼",crop:[0,519,360,538],x:-11,z:12.1,scale:[5.5,6.5],floorOffset:-.52,block:3.25,dialogue:["이 선술집에는 백 년도 넘은 이야기가 쌓여 있지.","한 잔 사준다면 옛 왕국 이야기를 들려주겠네."]},
+            {name:"용병 브란",crop:[371,519,384,538],x:11,z:-1.1,scale:[5.5,6.4],floorOffset:-.48,block:3.25,dialogue:["검은 힘보다 타이밍이 중요하지.","북문 밖에서 일거리를 찾고 있다면 나를 다시 찾아오게."]},
+            {name:"상인 미로",crop:[766,519,408,538],x:10,z:13.0,scale:[5.7,6.4],floorOffset:-.58,block:3.25,dialogue:["희귀한 물건은 값보다 보는 눈이 중요하다네.","내일이면 남쪽 도시에서 새 물건이 도착할 걸세."]},
+            {name:"마법사 세리아",crop:[1190,449,305,608],x:-15,z:15,scale:[4.5,7.0],floorOffset:-.36,block:2.0,dialogue:["이곳에서는 마법을 쉬게 해두었어요. 술잔이 깨지면 곤란하니까요.","달빛이 강한 밤에는 오래된 주문이 더 선명해진답니다."]}
         ];
         data.forEach(function(item){
             const crop=tavernCroppedTexture(texture.image,item.crop);
@@ -4817,7 +4866,7 @@ function buildTavernInterior(loader){
             sprite.userData.blockRadius=Math.max(3.15,item.block || 2.25);
             sprite.userData.floorY=floorY;
             sprite.userData.dialogue=item.dialogue;sprite.userData.npcName=item.name;scene.add(sprite);tavernNPCs.push(sprite);
-            tavernFakeShadow(item.x,item.z,Math.max(1.15,sprite.scale.x*.38),.72,floorY);
+            tavernFakeShadow(item.x,item.z,Math.max(.82,sprite.scale.x*.28),.58,floorY);
             const label=tavernLabel(item.name);label.position.set(item.x,item.scale[1]+.4,item.z);label.visible=false;label.userData.owner=sprite;scene.add(label);sprite.userData.label=label;
         });
     });
@@ -4842,6 +4891,7 @@ function buildTavernInterior(loader){
         nearestTavernNPC=hit.object;talkToNearestTavernNPC();
     },{passive:true});
     if($("tavernTalkButton")){$("tavernTalkButton").addEventListener("click",talkToNearestTavernNPC);}
+    if($("tavernDoorButton")){$("tavernDoorButton").addEventListener("click",openNearestTavernDoor);}
     document.addEventListener("pointerup",function(event){if(tavernConversationLocked){advanceTavernDialogue();}},{passive:true});
     showDialogueMessages(["따뜻한 불빛과 이야기 소리가 가득한 선술집이다.","사람에게 세 걸음 안으로 다가가면 대화 버튼이 나타난다."],7000);
 }
@@ -9811,21 +9861,10 @@ function loop(now){
             );
 
 
-        camera.position.y=
-
-            (TAVERN_MODE ? 5.2+tavernFloorHeightAt(camera.position.x,camera.position.z) : 2.15) +
-
-            Math.sin(
-                walkPhase
-            ) *
-
-            (
-                walking
-                ?
-                .045
-                :
-                .015
-            );
+        /* 선술집에서는 정지·이동 호흡 흔들림을 모두 끈다. */
+        camera.position.y=TAVERN_MODE
+            ? 5.2+tavernFloorHeightAt(camera.position.x,camera.position.z)
+            : 2.15+Math.sin(walkPhase)*(walking ? .045 : .015);
 
 
         /* =============================================
