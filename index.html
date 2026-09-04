@@ -1046,6 +1046,8 @@ canvas{
 #tavernDialogueBox.show{display:block}
 #tavernDialogueBox::after{content:"";position:absolute;left:50%;bottom:-15px;margin-left:-12px;border-left:12px solid transparent;border-right:12px solid transparent;border-top:15px solid #70462c}
 #tavernDialogueNext{position:absolute;right:13px;bottom:12px;color:#8b5a32;font-size:22px;animation:dialogueBlink .65s steps(2,end) infinite}
+#gameExitConfirm{position:absolute;z-index:400;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.62);padding:20px;box-sizing:border-box}
+#gameExitConfirm.show{display:flex}#gameExitConfirmCard{width:min(88vw,390px);padding:22px 18px 17px;border:4px solid #6b3924;border-radius:18px;background:linear-gradient(#fff0c7,#dca56c);color:#432516;text-align:center;font-size:17px;font-weight:1000;line-height:1.45;box-shadow:inset 0 0 0 3px #fff3d0,0 10px 30px #000b}.gameExitActions{display:flex;justify-content:center;gap:14px;margin-top:18px}.gameExitActions button{width:112px;height:48px;border:3px solid #6b3924;border-radius:13px;background:#ffe0a8;color:#432516;font-size:17px;font-weight:1000;box-shadow:inset 0 0 0 2px #fff4d2,0 4px 0 #5a2e1e}.gameExitActions button:last-child{background:#87503a;color:#fff3dc}
 #pauseOverlay{position:absolute;inset:0;z-index:150;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.42);color:white;font-size:34px;font-weight:1000;text-shadow:0 3px 8px #000;pointer-events:none}
 #pauseOverlay.show{display:flex}
 
@@ -1597,11 +1599,12 @@ html.ios-device #qrPanel{
         <button id="tavernTalkButton" aria-label="가까운 인물과 대화하기">대화한다</button>
         <button id="tavernDoorButton" aria-label="문 열기">열기</button>
         <div id="tavernDialogueBox" role="button" aria-label="대화창 닫기"><span id="tavernDialogueText"></span><span id="tavernDialogueNext">▼</span></div>
+        <div id="gameExitConfirm" role="dialog" aria-modal="true" aria-label="게임 종료 확인"><div id="gameExitConfirmCard">게임을 나가시겠습니까?<br>나가면 저장되지 않고 종료됩니다.<div class="gameExitActions"><button id="gameExitNo">아니오</button><button id="gameExitYes">예</button></div></div></div>
         <button id="questButton" aria-label="퀘스트 열기"><img src="https://static.wixstatic.com/media/172435_db0fd22ef0cd4fd48cde2f64dee535bc~mv2.png" alt="퀘스트"></button>
         <button id="inventoryButton" aria-label="인벤토리 열기"><img src="https://static.wixstatic.com/media/172435_513831dd8ed049688a5282ba36bc3b3e~mv2.png" alt="아이템"></button>
         <button id="settingsButton" aria-label="설정 열기">⚙</button>
         <div id="questPanel">퀘스트<br><div style="margin-top:8px;text-align:left">선술집 사람들과<br>대화하기<br><b id="questProgress">0 / 6</b></div></div>
-        <div id="inventoryPanel"><b>인벤토리</b><div class="inventoryRow"><img src="https://static.wixstatic.com/media/172435_76a4ea719647489baf3cf65188c8754c~mv2.png" alt="늑대고기"><span>늑대고기 × <b id="meatCount">0</b></span></div><div class="inventoryRow"><img src="https://static.wixstatic.com/media/172435_18c122b6a5c945718007e1ce6cfc5189~mv2.png" alt="늑대가죽"><span>늑대가죽 × <b id="hideCount">0</b></span></div></div>
+        <div id="inventoryPanel"><b>인벤토리</b></div>
         <div id="lootToast"><div class="lootRow"><span>새로운 이야기를 들었다.</span></div></div>
         <div id="goldToast" role="status">골드 획득</div>
         <div id="pauseOverlay">PAUSED</div>
@@ -4514,6 +4517,7 @@ let tavernConversationLocked=false;
 let tavernDialogueLines=[];
 let tavernDialogueLineIndex=0;
 let tavernDialogueReadyAt=0;
+let tavernTalkSuppressedNPC=null;
 const TAVERN_TALK_DISTANCE=5.5; /* 게임 이동 감각 기준 약 3걸음 */
 const TAVERN_PEOPLE_URL="https://static.wixstatic.com/media/172435_e5d3897a87884494b392ac860028863a~mv2.png";
 const TAVERN_BARREL_URL="https://static.wixstatic.com/media/172435_69e63975ce2a4ba5a79c408a70026adb~mv2.png";
@@ -4548,6 +4552,7 @@ function updateTavernInteraction(){
         const horizontalDistance=Math.hypot(camera.position.x-npc.position.x,camera.position.z-npc.position.z);
         const verticalDistance=Math.abs(tavernPlayerFloorHeight-(npc.userData.floorY || 0));
         const distance=verticalDistance<=3 ? horizontalDistance : Infinity;
+        if(tavernTalkSuppressedNPC===npc && distance>TAVERN_TALK_DISTANCE+1){tavernTalkSuppressedNPC=null;}
         if(distance<nearestDistance){nearestDistance=distance;nearestTavernNPC=npc;}
         if(npc.userData.label){npc.userData.label.visible=false;}
     });
@@ -4561,7 +4566,7 @@ function updateTavernInteraction(){
         const dz=nearestTavernNPC.position.z-camera.position.z;
         facingDot=(dx*(-Math.sin(gyroViewHeading))+dz*(-Math.cos(gyroViewHeading)))/nearestDistance;
     }
-    const canTalk=!tavernConversationLocked && nearestTavernNPC && nearestDistance<=TAVERN_TALK_DISTANCE && facingDot>.48;
+    const canTalk=!tavernConversationLocked && nearestTavernNPC && nearestTavernNPC!==tavernTalkSuppressedNPC && nearestDistance<=TAVERN_TALK_DISTANCE && facingDot>.48;
     button.classList.toggle("show",!!canTalk);
     button.textContent="대화한다";
     if(namePlate){
@@ -4658,6 +4663,7 @@ function showTavernSpeech(npc,text){
 
 function closeTavernDialogue(){
     if($("tavernDialogueBox")){$("tavernDialogueBox").classList.remove("show");}
+    tavernTalkSuppressedNPC=talkingTavernNPC;
     talkingTavernNPC=null;
     tavernConversationLocked=false;
 }
@@ -4726,7 +4732,7 @@ function addTavernObstacle(x,z,halfW,halfD,minY,maxY){
     tavernObstacles.push({x:x,z:z,halfW:halfW,halfD:halfD,minY:minY===undefined?0:minY,maxY:maxY===undefined?4:maxY});
 }
 
-function tavernCroppedTexture(image,crop){
+function tavernCroppedTexture(image,crop,solidInterior){
     const canvas=document.createElement("canvas"),w=crop[2],h=crop[3];canvas.width=w;canvas.height=h;
     const context=canvas.getContext("2d",{willReadFrequently:true});context.drawImage(image,crop[0],crop[1],w,h,0,0,w,h);
     const pixels=context.getImageData(0,0,w,h),data=pixels.data,seen=new Uint8Array(w*h),queue=[];
@@ -4734,6 +4740,15 @@ function tavernCroppedTexture(image,crop){
     function seed(index){if(!seen[index]&&background(index)){seen[index]=1;queue.push(index);}}
     for(let x=0;x<w;x++){seed(x);seed((h-1)*w+x);}for(let y=0;y<h;y++){seed(y*w);seed(y*w+w-1);}
     for(let q=0;q<queue.length;q++){const i=queue[q],x=i%w,y=(i/w)|0,p=i*4;data[p+3]=0;if(x){seed(i-1);}if(x<w-1){seed(i+1);}if(y){seed(i-w);}if(y<h-1){seed(i+w);}}
+    /* 후드 안쪽처럼 검은 배경과 통로로 이어져 잘못 지워지는 내부는
+       행별 실루엣 사이를 어두운 천 색으로 막아 벽이 비치지 않게 한다. */
+    if(solidInterior){
+        for(let y=35;y<Math.min(h,285);y++){
+            let first=-1,last=-1;
+            for(let x=0;x<w;x++){if(data[(y*w+x)*4+3]>0){if(first<0){first=x;}last=x;}}
+            if(first>=0 && last-first>35){for(let x=first;x<=last;x++){const p=(y*w+x)*4;if(data[p+3]===0){data[p]=30;data[p+1]=20;data[p+2]=15;data[p+3]=255;}}}
+        }
+    }
     /* 외곽 배경으로 판정되어 지운 픽셀만 투명하게 두고, 캐릭터에
        속한 모든 픽셀은 원본의 반투명값과 관계없이 완전 불투명으로 만든다. */
     for(let i=0;i<w*h;i++){const alpha=i*4+3;if(data[alpha]>0){data[alpha]=255;}}
@@ -4866,7 +4881,7 @@ function buildTavernInterior(loader){
             {name:"상인 미로",crop:[766,519,408,538],x:10,z:13.0,scale:[5.7,6.4],floorOffset:-.58,block:3.25,dialogue:["희귀한 물건은 값보다 보는 눈이 중요하다네.","내일이면 남쪽 도시에서 새 물건이 도착할 걸세."]}
         ];
         data.forEach(function(item){
-            const crop=tavernCroppedTexture(texture.image,item.crop);
+            const crop=tavernCroppedTexture(texture.image,item.crop,item.name==="후드 쓴 여행자");
             const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:crop,transparent:true,opacity:1,alphaTest:.08,depthTest:true,depthWrite:true,fog:false}));
             sprite.renderOrder=10;
             const floorY=item.floorY || 0;
@@ -4878,7 +4893,7 @@ function buildTavernInterior(loader){
             sprite.userData.blockRadius=Math.max(3.15,item.block || 2.25);
             sprite.userData.floorY=floorY;
             sprite.userData.dialogue=item.dialogue;sprite.userData.npcName=item.name;scene.add(sprite);tavernNPCs.push(sprite);
-            const characterShadowSize=Math.max(2.46,sprite.scale.x*.84);
+            const characterShadowSize=Math.max(.82,sprite.scale.x*.28);
             tavernFakeShadow(item.x,item.z,characterShadowSize,characterShadowSize,floorY);
             const label=tavernLabel(item.name);label.position.set(item.x,item.scale[1]+.4,item.z);label.visible=false;label.userData.owner=sprite;scene.add(label);sprite.userData.label=label;
         });
@@ -6962,8 +6977,8 @@ function damageMonster(damageAmount,damageType){
 function updateWolfQuestUI(){
     const defeated=Math.min(GYRO_MONSTER_POSITIONS.length,defeatedWolfIndices.size);
     $("questProgress").textContent=defeated+" / "+GYRO_MONSTER_POSITIONS.length;
-    $("meatCount").textContent=wolfMeatCount;
-    $("hideCount").textContent=wolfHideCount;
+    if($("meatCount")){$("meatCount").textContent=wolfMeatCount;}
+    if($("hideCount")){$("hideCount").textContent=wolfHideCount;}
 }
 
 function showWolfLoot(){
@@ -8810,6 +8825,17 @@ $("qrButton")
    GAME START
 ===================================================== */
 let gameBackLockInstalled=false;
+let gameExitAllowed=false;
+let gameExitConfirmOpen=false;
+function showGameExitConfirm(){
+    if(gameExitConfirmOpen){return;}gameExitConfirmOpen=true;
+    releaseVirtualJoystick();
+    if($("gameExitConfirm")){$("gameExitConfirm").classList.add("show");}
+}
+function hideGameExitConfirm(){
+    gameExitConfirmOpen=false;
+    if($("gameExitConfirm")){$("gameExitConfirm").classList.remove("show");}
+}
 function installGameBackLock(){
     if(gameBackLockInstalled){return;}gameBackLockInstalled=true;
     try{
@@ -8818,11 +8844,9 @@ function installGameBackLock(){
         history.pushState({gameGuard:2},"",location.href);
     }catch(error){}
     window.addEventListener("popstate",function(){
-        if(!started){return;}
-        try{
-            history.pushState({gameGuard:1},"",location.href);
-            history.pushState({gameGuard:2},"",location.href);
-        }catch(error){}
+        if(!started || gameExitAllowed){return;}
+        try{history.pushState({gameGuard:2},"",location.href);}catch(error){}
+        showGameExitConfirm();
     });
     /* 일부 안드로이드 WebView가 뒤로가기를 키 입력으로 전달하는 경우도 막는다. */
     window.addEventListener("keydown",function(event){
@@ -8836,9 +8860,15 @@ function installGameBackLock(){
         try{history.pushState({gameGuard:1},"",location.href);history.pushState({gameGuard:2},"",location.href);}catch(error){}
     });
     window.addEventListener("beforeunload",function(event){
-        if(!started){return;}
+        if(!started || gameExitAllowed){return;}
         event.preventDefault();event.returnValue="";
     });
+    if($("gameExitNo")){$("gameExitNo").addEventListener("click",function(event){event.stopPropagation();hideGameExitConfirm();});}
+    if($("gameExitYes")){$("gameExitYes").addEventListener("click",function(event){
+        event.stopPropagation();gameExitAllowed=true;gameExitConfirmOpen=false;started=false;
+        if($("gameExitConfirm")){$("gameExitConfirm").classList.remove("show");}
+        try{history.go(-3);}catch(error){history.back();}
+    });}
 }
 
 function startGame(){
