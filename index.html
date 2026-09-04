@@ -1919,6 +1919,8 @@ let monsterIndex=0;
 
 let lastTime=
     performance.now();
+let mobileLoopFrameAt=0;
+let tavernInteractionAt=0;
 
 
 let monsterAttackTimer=null;
@@ -2834,6 +2836,11 @@ function isAndroid(){
         navigator.userAgent || ""
     );
 
+}
+
+function isMobileGameDevice(){
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "") ||
+        (navigator.maxTouchPoints>1 && Math.min(screen.width,screen.height)<1100);
 }
 
 
@@ -4533,6 +4540,9 @@ function tavernFloorHeightAt(x,z){
 
 function updateTavernInteraction(){
     if(!TAVERN_MODE || !camera){return;}
+    const interactionNow=performance.now();
+    if(interactionNow-tavernInteractionAt<80){return;}
+    tavernInteractionAt=interactionNow;
     nearestTavernNPC=null;
     let nearestDistance=Infinity;
     tavernNPCs.forEach(function(npc){
@@ -4795,7 +4805,7 @@ function buildTavernInterior(loader){
     });
 
     /* 따뜻한 샹들리에와 벽 조명 */
-    [[0,0],[-18,15],[18,15]].forEach(function(position){
+    (isMobileGameDevice()?[[0,4]]:[[0,0],[-18,15],[18,15]]).forEach(function(position){
         const light=new THREE.PointLight(0xffa44f,1.2,30,2);light.position.set(position[0],5.7,position[1]);scene.add(light);
     });
     scene.add(new THREE.AmbientLight(0xffc999,.72));
@@ -5132,17 +5142,8 @@ function init3D(){
             });
 
 
-        renderer.setPixelRatio(
-
-            Math.min(
-
-                window.devicePixelRatio || 1,
-
-                isAndroid() ? 1 : CONFIG.MAX_PIXEL_RATIO
-
-            )
-
-        );
+        /* QR 영상 해상도와 무관한 3D 캔버스만 모바일에서 가볍게 렌더링한다. */
+        renderer.setPixelRatio(isMobileGameDevice() ? (isAndroid() ? .72 : .82) : Math.min(window.devicePixelRatio || 1,CONFIG.MAX_PIXEL_RATIO));
 
 
         renderer.setSize(
@@ -9464,6 +9465,11 @@ function loop(now){
 
         return;
     }
+
+    /* 모바일에서는 게임 시뮬레이션과 렌더링을 안정적인 40fps로 제한한다.
+       QR 판독 루프는 별도이므로 이 제한의 영향을 받지 않는다. */
+    if(isMobileGameDevice() && now-mobileLoopFrameAt<25){return;}
+    mobileLoopFrameAt=now;
 
 
     const dt=
