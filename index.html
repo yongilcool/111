@@ -4734,6 +4734,9 @@ function tavernCroppedTexture(image,crop){
     function seed(index){if(!seen[index]&&background(index)){seen[index]=1;queue.push(index);}}
     for(let x=0;x<w;x++){seed(x);seed((h-1)*w+x);}for(let y=0;y<h;y++){seed(y*w);seed(y*w+w-1);}
     for(let q=0;q<queue.length;q++){const i=queue[q],x=i%w,y=(i/w)|0,p=i*4;data[p+3]=0;if(x){seed(i-1);}if(x<w-1){seed(i+1);}if(y){seed(i-w);}if(y<h-1){seed(i+w);}}
+    /* 외곽 배경으로 판정되어 지운 픽셀만 투명하게 두고, 캐릭터에
+       속한 모든 픽셀은 원본의 반투명값과 관계없이 완전 불투명으로 만든다. */
+    for(let i=0;i<w*h;i++){const alpha=i*4+3;if(data[alpha]>0){data[alpha]=255;}}
     context.putImageData(pixels,0,0);const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.magFilter=THREE.NearestFilter;texture.minFilter=THREE.LinearMipmapLinearFilter;texture.generateMipmaps=true;return texture;
 }
 
@@ -4860,8 +4863,7 @@ function buildTavernInterior(loader){
             {name:"후드 쓴 여행자",crop:[766,0,408,508],x:-11,z:-2.1,scale:[5.7,6.5],floorOffset:-.27,block:3.25,dialogue:["낯선 얼굴이군. 동쪽 숲길에서는 등불을 끄지 마.","내가 여기 있다는 말은 아무에게도 하지 말게."]},
             {name:"노련한 이야기꾼",crop:[0,519,360,538],x:-11,z:12.1,scale:[5.5,6.5],floorOffset:-.52,block:3.25,dialogue:["이 선술집에는 백 년도 넘은 이야기가 쌓여 있지.","한 잔 사준다면 옛 왕국 이야기를 들려주겠네."]},
             {name:"용병 브란",crop:[371,519,384,538],x:11,z:-1.1,scale:[5.5,6.4],floorOffset:-.48,block:3.25,dialogue:["검은 힘보다 타이밍이 중요하지.","북문 밖에서 일거리를 찾고 있다면 나를 다시 찾아오게."]},
-            {name:"상인 미로",crop:[766,519,408,538],x:10,z:13.0,scale:[5.7,6.4],floorOffset:-.58,block:3.25,dialogue:["희귀한 물건은 값보다 보는 눈이 중요하다네.","내일이면 남쪽 도시에서 새 물건이 도착할 걸세."]},
-            {name:"마법사 세리아",crop:[1190,449,305,608],x:-15,z:15,scale:[4.5,7.0],floorOffset:-.36,block:2.0,dialogue:["이곳에서는 마법을 쉬게 해두었어요. 술잔이 깨지면 곤란하니까요.","달빛이 강한 밤에는 오래된 주문이 더 선명해진답니다."]}
+            {name:"상인 미로",crop:[766,519,408,538],x:10,z:13.0,scale:[5.7,6.4],floorOffset:-.58,block:3.25,dialogue:["희귀한 물건은 값보다 보는 눈이 중요하다네.","내일이면 남쪽 도시에서 새 물건이 도착할 걸세."]}
         ];
         data.forEach(function(item){
             const crop=tavernCroppedTexture(texture.image,item.crop);
@@ -4876,7 +4878,8 @@ function buildTavernInterior(loader){
             sprite.userData.blockRadius=Math.max(3.15,item.block || 2.25);
             sprite.userData.floorY=floorY;
             sprite.userData.dialogue=item.dialogue;sprite.userData.npcName=item.name;scene.add(sprite);tavernNPCs.push(sprite);
-            tavernFakeShadow(item.x,item.z,Math.max(.82,sprite.scale.x*.28),.58,floorY);
+            const characterShadowSize=Math.max(2.46,sprite.scale.x*.84);
+            tavernFakeShadow(item.x,item.z,characterShadowSize,characterShadowSize,floorY);
             const label=tavernLabel(item.name);label.position.set(item.x,item.scale[1]+.4,item.z);label.visible=false;label.userData.owner=sprite;scene.add(label);sprite.userData.label=label;
         });
     });
@@ -8816,7 +8819,21 @@ function installGameBackLock(){
     }catch(error){}
     window.addEventListener("popstate",function(){
         if(!started){return;}
-        try{history.pushState({gameGuard:2},"",location.href);}catch(error){}
+        try{
+            history.pushState({gameGuard:1},"",location.href);
+            history.pushState({gameGuard:2},"",location.href);
+        }catch(error){}
+    });
+    /* 일부 안드로이드 WebView가 뒤로가기를 키 입력으로 전달하는 경우도 막는다. */
+    window.addEventListener("keydown",function(event){
+        if(!started){return;}
+        if(event.key==="BrowserBack" || event.key==="GoBack" || event.keyCode===4 || (event.altKey && event.key==="ArrowLeft")){
+            event.preventDefault();event.stopImmediatePropagation();
+        }
+    },true);
+    window.addEventListener("pageshow",function(){
+        if(!started){return;}
+        try{history.pushState({gameGuard:1},"",location.href);history.pushState({gameGuard:2},"",location.href);}catch(error){}
     });
     window.addEventListener("beforeunload",function(event){
         if(!started){return;}
