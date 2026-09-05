@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- 선술집 공통 동작의 확정 기준은 outputs/TAVERN_SYSTEM_BASELINE.md를 따른다. -->
 <!-- STABLE GAME BASELINE 2026-08-29 / v2026082901
      Verified by user: iPhone + iPad + Android QR speed and sword speed.
      Preserve the QR camera layout, device-specific scan timing,
@@ -19,6 +20,8 @@
 
 <!-- 기존 게임과 독립적으로 동작하는 QR 엔진 -->
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<!-- 최대 4명 위치·채팅 시험용 WebRTC 신호 클라이언트 -->
+<script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
 
 
 <style>
@@ -1417,6 +1420,17 @@ html.ios-device #qrPanel{
 #playerMP{background:linear-gradient(#65ccff,#247be3 58%,#174baf)}
 #goldToast{position:absolute;z-index:189;right:5px;top:108px;display:none;padding:5px 8px;border:2px solid #70462c;border-radius:8px;background:#fff0c7;color:#4b2a18;font-size:13px;font-weight:1000;box-shadow:0 3px 8px #0007}
 #goldToast.show{display:block}
+
+/* =====================================================
+   MULTIPLAYER TAVERN TEST UI
+===================================================== */
+#multiStartButton{width:84%;margin-top:10px;border:0;padding:15px 20px;border-radius:11px;background:linear-gradient(#4ecbd7,#176c91);color:#fff;font-size:18px;font-weight:1000;box-shadow:0 5px 0 #0a405b;touch-action:manipulation}
+#multiLobby{position:absolute;z-index:380;inset:0;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(3,10,16,.82)}#multiLobby.show{display:flex}.multiLobbyCard{width:min(90vw,400px);padding:20px;border:4px solid #6b3924;border-radius:18px;background:linear-gradient(#f8ddb0,#c98f5b);color:#432516;text-align:center;font-weight:900;box-shadow:inset 0 0 0 3px #fff0c9,0 12px 32px #000b}.multiLobbyCard h2{margin:0 0 10px}.multiRoomCard{display:none;margin-top:15px;padding:14px;border:3px solid #70462c;border-radius:13px;background:#fff0cc}.multiRoomCard.show{display:block}.multiRoomCard button,#multiLobbyCancel{margin-top:10px;min-width:130px;padding:11px;border:3px solid #6b3924;border-radius:12px;background:#ffe0a8;color:#432516;font-size:16px;font-weight:1000}#multiLobbyStatus{line-height:1.5;white-space:pre-line}
+#multiBadge{position:absolute;z-index:178;top:82px;left:8px;display:none;padding:6px 9px;border:2px solid #6b3924;border-radius:10px;background:rgba(45,110,96,.9);color:#fff;font-size:11px;font-weight:1000}#multiBadge.show{display:block}
+#multiChatButton{position:absolute;z-index:184;right:8px;bottom:calc(var(--qr-focus-size) + 84px);display:none;width:54px;height:54px;border:3px solid #6b3924;border-radius:50%;background:linear-gradient(#ffe1a8,#c8874f);color:#432516;font-size:25px;box-shadow:inset 0 0 0 2px #fff3ce,0 4px 0 #4c281a}#multiChatButton.show{display:block}
+#multiChatComposer{position:absolute;z-index:250;left:8px;right:8px;bottom:12px;display:none;gap:7px;padding:8px;border:3px solid #6b3924;border-radius:14px;background:#7d4b35}#multiChatComposer.show{display:flex}#multiChatInput{min-width:0;flex:1;padding:12px;border:0;border-radius:9px;font-size:16px}#multiChatSend{width:68px;border:0;border-radius:9px;background:#ffe0a8;color:#432516;font-weight:1000}
+#multiChatLog{position:absolute;z-index:179;right:6px;bottom:calc(var(--qr-focus-size) + 148px);display:none;width:min(48vw,230px);max-height:110px;overflow:hidden;padding:7px;border:2px solid #6b3924;border-radius:10px;background:rgba(255,246,218,.9);color:#432516;font-size:12px;font-weight:900;line-height:1.35}#multiChatLog.show{display:block}.multiChatLine{margin:2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.remoteSpeech{position:absolute;z-index:177;transform:translate(-50%,-100%);max-width:190px;padding:7px 10px;border:2px solid #6b3924;border-radius:10px;background:#fff2ce;color:#432516;font-size:12px;font-weight:900;pointer-events:none}
 </style>
 </head>
 
@@ -1600,6 +1614,10 @@ html.ios-device #qrPanel{
         <button id="tavernDoorButton" aria-label="문 열기">열기</button>
         <div id="tavernDialogueBox" role="button" aria-label="대화창 닫기"><span id="tavernDialogueText"></span><span id="tavernDialogueNext">▼</span></div>
         <div id="gameExitConfirm" role="dialog" aria-modal="true" aria-label="게임 종료 확인"><div id="gameExitConfirmCard">게임을 나가시겠습니까?<br>나가면 저장되지 않고 종료됩니다.<div class="gameExitActions"><button id="gameExitNo">아니오</button><button id="gameExitYes">예</button></div></div></div>
+        <div id="multiBadge">MULTI · <span id="multiCount">1 / 4</span></div>
+        <div id="multiChatLog" aria-live="polite"></div>
+        <button id="multiChatButton" aria-label="멀티 채팅 열기">💬</button>
+        <div id="multiChatComposer"><input id="multiChatInput" maxlength="60" enterkeyhint="send" placeholder="대화를 입력하세요"><button id="multiChatSend">전송</button></div>
         <button id="questButton" aria-label="퀘스트 열기"><img src="https://static.wixstatic.com/media/172435_db0fd22ef0cd4fd48cde2f64dee535bc~mv2.png" alt="퀘스트"></button>
         <button id="inventoryButton" aria-label="인벤토리 열기"><img src="https://static.wixstatic.com/media/172435_513831dd8ed049688a5282ba36bc3b3e~mv2.png" alt="아이템"></button>
         <button id="settingsButton" aria-label="설정 열기">⚙</button>
@@ -1650,8 +1668,16 @@ html.ios-device #qrPanel{
                     GAME START
                 </button>
 
+                <button id="multiStartButton">
+                    MULTI PLAY TEST
+                </button>
+
             </div>
 
+        </div>
+
+        <div id="multiLobby" role="dialog" aria-modal="true" aria-label="주변 멀티플레이 방">
+            <div class="multiLobbyCard"><h2>주변 선술집</h2><div id="multiLobbyStatus">현재 위치 주변의 방을 찾는 중입니다.</div><div id="multiRoomCard" class="multiRoomCard"><div><b>근처 선술집 방</b></div><div id="multiRoomPeople">접속 가능 · 최대 4명</div><button id="multiJoinButton">같이 들어가기</button></div><button id="multiLobbyCancel">취소</button></div>
         </div>
 
 
@@ -8820,6 +8846,172 @@ $("qrButton")
 
 );
 
+
+/* =====================================================
+   LIGHTWEIGHT NEARBY MULTIPLAYER TAVERN (2-4 PLAYERS)
+   Wix 방 목록 API는 정식 연결 때 WIX_ROOM_API_BASE에 넣는다.
+   현재 시험판은 같은 약 500m 구역의 PeerJS 방을 사용한다.
+===================================================== */
+const WIX_ROOM_API_BASE="";
+let multiplayerMode=false;
+let multiplayerIsHost=false;
+let multiplayerPeer=null;
+let multiplayerHostConnection=null;
+let multiplayerRoomId="";
+let multiplayerPendingHostId="";
+let multiplayerSendTimer=null;
+const multiplayerConnections=new Map();
+const multiplayerRemotePlayers=new Map();
+const multiplayerLastStates=new Map();
+const multiplayerLocalName="여행자 "+String(Math.floor(100+Math.random()*900));
+
+function multiplayerCellPart(value){const rounded=Math.floor(value*200);return rounded<0?"m"+Math.abs(rounded):"p"+rounded;}
+function multiplayerRoomForLocation(coords){return "yc-tavern-"+multiplayerCellPart(coords.latitude)+"-"+multiplayerCellPart(coords.longitude);}
+function setMultiplayerLobbyStatus(text){if($("multiLobbyStatus")){$("multiLobbyStatus").textContent=text;}}
+function setMultiplayerCount(count){if($("multiCount")){$("multiCount").textContent=Math.max(1,Math.min(4,count))+" / 4";}}
+
+function multiplayerAvatarTexture(name,id){
+    const canvas=document.createElement("canvas");canvas.width=96;canvas.height=160;
+    const context=canvas.getContext("2d");context.imageSmoothingEnabled=false;
+    let hash=0;for(let i=0;i<id.length;i++){hash=(hash*31+id.charCodeAt(i))|0;}
+    const coats=["#2c78a0","#8e4937","#3f8053","#765094"];const coat=coats[Math.abs(hash)%coats.length];
+    context.fillStyle="#26170f";context.fillRect(31,14,34,8);context.fillRect(24,22,48,14);
+    context.fillStyle="#e3a56f";context.fillRect(31,34,34,31);context.fillStyle="#382218";context.fillRect(31,58,34,8);
+    context.fillStyle=coat;context.fillRect(20,67,56,57);context.fillRect(12,77,12,43);context.fillRect(72,77,12,43);
+    context.fillStyle="#44291d";context.fillRect(25,124,18,29);context.fillRect(53,124,18,29);
+    context.fillStyle="#f4db75";context.fillRect(28,77,40,6);
+    const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.magFilter=THREE.NearestFilter;texture.minFilter=THREE.LinearFilter;return texture;
+}
+
+function createMultiplayerRemote(id,name){
+    if(!scene || multiplayerRemotePlayers.has(id)){return multiplayerRemotePlayers.get(id);}
+    const root=new THREE.Group();
+    const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:multiplayerAvatarTexture(name,id),transparent:true,alphaTest:.08,depthTest:true,depthWrite:true,fog:false}));
+    sprite.scale.set(2.7,4.5,1);sprite.position.y=2.45;sprite.renderOrder=16;root.add(sprite);
+    const direction=new THREE.Mesh(new THREE.ConeGeometry(.25,.8,3),new THREE.MeshBasicMaterial({color:0x55ddff,depthTest:true}));direction.rotation.x=Math.PI/2;direction.position.set(0,.3,-.7);root.add(direction);
+    const shadow=new THREE.Mesh(new THREE.CircleGeometry(1,14),new THREE.MeshBasicMaterial({color:0x050302,transparent:true,opacity:.48,depthWrite:false}));shadow.rotation.x=-Math.PI/2;shadow.scale.set(1.05,1.05,1);shadow.position.y=.24;shadow.renderOrder=5;root.add(shadow);
+    root.userData={playerId:id,playerName:name,lastSeen:performance.now(),speech:null};scene.add(root);multiplayerRemotePlayers.set(id,root);return root;
+}
+
+function removeMultiplayerRemote(id){
+    const player=multiplayerRemotePlayers.get(id);if(!player){return;}
+    if(player.userData.speech){player.userData.speech.remove();}scene.remove(player);multiplayerRemotePlayers.delete(id);multiplayerLastStates.delete(id);
+}
+
+function applyMultiplayerState(data){
+    if(!data || data.id===multiplayerPeer?.id){return;}
+    const player=createMultiplayerRemote(data.id,data.name || "여행자");if(!player){return;}
+    player.position.set(Number(data.x)||0,0,Number(data.z)||0);player.rotation.y=Number(data.h)||0;player.userData.lastSeen=performance.now();
+    multiplayerLastStates.set(data.id,data);
+}
+
+function multiplayerBroadcast(data,exceptId){
+    multiplayerConnections.forEach(function(connection,id){if(id!==exceptId && connection.open){try{connection.send(data);}catch(error){}}});
+}
+
+function appendMultiplayerChat(name,text,isMine){
+    const log=$("multiChatLog");if(!log){return;}log.classList.add("show");
+    const line=document.createElement("div");line.className="multiChatLine";line.textContent=(isMine?"나":name)+" : "+text;log.appendChild(line);
+    while(log.children.length>4){log.firstElementChild.remove();}
+    clearTimeout(log._hideTimer);log._hideTimer=setTimeout(function(){log.classList.remove("show");},6500);
+}
+
+function showRemoteMultiplayerSpeech(id,name,text){
+    const player=multiplayerRemotePlayers.get(id);if(!player){return;}
+    if(player.userData.speech){player.userData.speech.remove();}
+    const bubble=document.createElement("div");bubble.className="remoteSpeech";bubble.textContent=name+" : "+text;$("game").appendChild(bubble);player.userData.speech=bubble;
+    clearTimeout(player.userData.speechTimer);player.userData.speechTimer=setTimeout(function(){if(bubble.parentNode){bubble.remove();}if(player.userData.speech===bubble){player.userData.speech=null;}},5000);
+}
+
+function handleMultiplayerData(data,sourceConnection){
+    if(!data || typeof data!=="object"){return;}
+    if(data.type==="state"){
+        applyMultiplayerState(data);
+        if(multiplayerIsHost){multiplayerBroadcast(data,sourceConnection && sourceConnection.peer);}
+    }else if(data.type==="chat"){
+        if(data.id!==multiplayerPeer?.id){appendMultiplayerChat(data.name || "여행자",String(data.text||""),false);showRemoteMultiplayerSpeech(data.id,data.name || "여행자",String(data.text||""));}
+        if(multiplayerIsHost){multiplayerBroadcast(data,sourceConnection && sourceConnection.peer);}
+    }else if(data.type==="count"){
+        setMultiplayerCount(data.count);
+    }else if(data.type==="full"){
+        setMultiplayerLobbyStatus("이 방은 이미 4명입니다. 잠시 후 다시 시도해주세요.");
+    }
+}
+
+function wireMultiplayerConnection(connection){
+    connection.on("open",function(){
+        multiplayerConnections.set(connection.peer,connection);setMultiplayerCount(1+multiplayerConnections.size);
+        if(multiplayerIsHost){multiplayerBroadcast({type:"count",count:1+multiplayerConnections.size});}
+    });
+    connection.on("data",function(data){handleMultiplayerData(data,connection);});
+    connection.on("close",function(){multiplayerConnections.delete(connection.peer);removeMultiplayerRemote(connection.peer);if(multiplayerIsHost){multiplayerBroadcast({type:"count",count:1+multiplayerConnections.size});setMultiplayerCount(1+multiplayerConnections.size);}});
+    connection.on("error",function(){});
+}
+
+function startMultiplayerGameSession(){
+    multiplayerMode=true;if(!started){startGame();}
+    $("multiLobby").classList.remove("show");$("multiBadge").classList.add("show");$("multiChatButton").classList.add("show");
+    clearInterval(multiplayerSendTimer);multiplayerSendTimer=setInterval(function(){
+        if(!multiplayerMode || !started || !camera || !multiplayerPeer?.id){return;}
+        const packet={type:"state",id:multiplayerPeer.id,name:multiplayerLocalName,x:+camera.position.x.toFixed(2),z:+camera.position.z.toFixed(2),h:+gyroViewHeading.toFixed(3)};
+        if(multiplayerIsHost){multiplayerBroadcast(packet);}else if(multiplayerHostConnection?.open){multiplayerHostConnection.send(packet);}
+        multiplayerRemotePlayers.forEach(function(player,id){if(performance.now()-player.userData.lastSeen>9000){removeMultiplayerRemote(id);}});
+        multiplayerRemotePlayers.forEach(function(player){
+            const bubble=player.userData.speech;if(!bubble){return;}const anchor=player.position.clone();anchor.y=5.2;anchor.project(camera);
+            if(anchor.z<1){bubble.style.display="block";bubble.style.left=((anchor.x*.5+.5)*innerWidth)+"px";bubble.style.top=((-anchor.y*.5+.5)*innerHeight)+"px";}else{bubble.style.display="none";}
+        });
+    },120);
+}
+
+function becomeMultiplayerHost(peer){
+    multiplayerPeer=peer;multiplayerIsHost=true;
+    peer.on("connection",function(connection){
+        if(multiplayerConnections.size>=3){connection.on("open",function(){connection.send({type:"full"});setTimeout(function(){connection.close();},300);});return;}
+        wireMultiplayerConnection(connection);
+    });
+    setMultiplayerLobbyStatus("주변에 열린 방이 없어 새 방을 만들었습니다.\n내가 방장입니다.");setMultiplayerCount(1);startMultiplayerGameSession();
+}
+
+function prepareMultiplayerGuest(hostId){
+    multiplayerPendingHostId=hostId;
+    const guest=new Peer(undefined,{debug:0});multiplayerPeer=guest;multiplayerIsHost=false;
+    guest.on("open",function(){$("multiRoomCard").classList.add("show");setMultiplayerLobbyStatus("근처에서 플레이 중인 방을 찾았습니다.");});
+    guest.on("error",function(){setMultiplayerLobbyStatus("멀티 연결을 준비하지 못했습니다. 인터넷 연결을 확인해주세요.");});
+}
+
+function joinNearbyMultiplayerRoom(){
+    if(!multiplayerPeer?.id || !multiplayerPendingHostId){return;}
+    setMultiplayerLobbyStatus("선술집 방에 접속하는 중입니다…");$("multiRoomCard").classList.remove("show");
+    const connection=multiplayerPeer.connect(multiplayerPendingHostId,{reliable:true,metadata:{name:multiplayerLocalName}});multiplayerHostConnection=connection;wireMultiplayerConnection(connection);
+    connection.on("open",function(){startMultiplayerGameSession();});
+    setTimeout(function(){if(!connection.open){setMultiplayerLobbyStatus("방 연결 시간이 오래 걸립니다. 다시 시도해주세요.");$("multiRoomCard").classList.add("show");}},7000);
+}
+
+function beginNearbyMultiplayer(){
+    if(typeof Peer==="undefined"){alert("멀티 연결 도구를 불러오지 못했습니다.");return;}
+    $("multiLobby").classList.add("show");$("multiRoomCard").classList.remove("show");setMultiplayerLobbyStatus("위치 권한을 허용하면 가까운 선술집 방을 찾습니다.\n정확한 위치값은 다른 사람에게 전송하지 않습니다.");
+    navigator.geolocation.getCurrentPosition(function(position){
+        multiplayerRoomId=multiplayerRoomForLocation(position.coords);setMultiplayerLobbyStatus("주변의 선술집 방을 찾는 중입니다…");
+        const candidate=new Peer(multiplayerRoomId,{debug:0});
+        candidate.on("open",function(){becomeMultiplayerHost(candidate);});
+        candidate.on("error",function(error){
+            if(error && error.type==="unavailable-id"){try{candidate.destroy();}catch(ignore){}prepareMultiplayerGuest(multiplayerRoomId);}
+            else{setMultiplayerLobbyStatus("방 검색에 실패했습니다. 인터넷 연결을 확인해주세요.");}
+        });
+    },function(){setMultiplayerLobbyStatus("주변 방을 찾으려면 위치 권한이 필요합니다.\n권한을 허용하고 다시 눌러주세요.");},{enableHighAccuracy:false,timeout:8000,maximumAge:120000});
+}
+
+function sendMultiplayerChat(){
+    const input=$("multiChatInput"),text=String(input.value||"").trim().slice(0,60);if(!text){return;}input.value="";$("multiChatComposer").classList.remove("show");appendMultiplayerChat(multiplayerLocalName,text,true);
+    const packet={type:"chat",id:multiplayerPeer.id,name:multiplayerLocalName,text:text};if(multiplayerIsHost){multiplayerBroadcast(packet);}else if(multiplayerHostConnection?.open){multiplayerHostConnection.send(packet);}
+}
+
+$("multiStartButton").addEventListener("click",beginNearbyMultiplayer);
+$("multiJoinButton").addEventListener("click",joinNearbyMultiplayerRoom);
+$("multiLobbyCancel").addEventListener("click",function(){$("multiLobby").classList.remove("show");if(multiplayerPeer && !multiplayerMode){try{multiplayerPeer.destroy();}catch(error){}}});
+$("multiChatButton").addEventListener("click",function(){$("multiChatComposer").classList.add("show");$("multiChatInput").focus();});
+$("multiChatSend").addEventListener("click",sendMultiplayerChat);
+$("multiChatInput").addEventListener("keydown",function(event){if(event.key==="Enter"){event.preventDefault();sendMultiplayerChat();}});
 
 /* =====================================================
    GAME START
