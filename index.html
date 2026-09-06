@@ -431,6 +431,9 @@ canvas{
     color:#111;
 }
 
+#phoneReconnectButton{display:none;order:0;min-width:38px;width:38px;padding:7px 4px;font-size:18px;line-height:1}
+body.pc-phone-host #phoneReconnectButton{display:block}
+
 
 /* =====================================================
    MONSTER COUNT
@@ -1545,6 +1548,8 @@ body.pc-phone-host #modeSwitch{right:10px!important;bottom:10px!important}
         <!-- NFC / QR -->
 
         <div id="modeSwitch">
+
+            <button id="phoneReconnectButton" class="modeButton" aria-label="휴대폰 다시 연결" title="휴대폰 다시 연결">📱</button>
 
             <button
                 id="nfcButton"
@@ -4793,7 +4798,18 @@ function tavernCroppedTexture(image,crop,solidInterior){
     const canvas=document.createElement("canvas"),w=crop[2],h=crop[3];canvas.width=w;canvas.height=h;
     const context=canvas.getContext("2d",{willReadFrequently:true});context.drawImage(image,crop[0],crop[1],w,h,0,0,w,h);
     const pixels=context.getImageData(0,0,w,h),data=pixels.data,seen=new Uint8Array(w*h),queue=[];
-    function background(index){const p=index*4,r=data[p],g=data[p+1],b=data[p+2];return (r<42&&g<42&&b<42)||(r>238&&g>238&&b>238);}
+    /* 검은 옷을 검은 배경으로 오인하지 않는다. 크롭 모서리에서 직접 얻은
+       실제 배경색과 거의 같은 픽셀만 외부 배경으로 제거한다. */
+    const cornerIndexes=[0,w-1,(h-1)*w,(h*w)-1];
+    const cornerColors=cornerIndexes.map(function(index){const p=index*4;return [data[p],data[p+1],data[p+2]];});
+    function background(index){
+        const p=index*4,r=data[p],g=data[p+1],b=data[p+2];
+        if(r>245&&g>245&&b>245){return true;}
+        return cornerColors.some(function(color){
+            const dr=r-color[0],dg=g-color[1],db=b-color[2];
+            return dr*dr+dg*dg+db*db<=100;
+        });
+    }
     function seed(index){if(!seen[index]&&background(index)){seen[index]=1;queue.push(index);}}
     for(let x=0;x<w;x++){seed(x);seed((h-1)*w+x);}for(let y=0;y<h;y++){seed(y*w);seed(y*w+w-1);}
     for(let q=0;q<queue.length;q++){const i=queue[q],x=i%w,y=(i/w)|0,p=i*4;data[p+3]=0;if(x){seed(i-1);}if(x<w-1){seed(i+1);}if(y){seed(i-w);}if(y<h-1){seed(i+w);}}
@@ -8945,7 +8961,22 @@ function createMultiplayerRoomId(){
     return "yc-tavern-room-"+bytes[0].toString(36)+bytes[1].toString(36);
 }
 function multiplayerInviteUrl(hostId){
-    const url=new URL(location.href);url.searchParams.delete("join");url.searchParams.set("join",hostId);return url.href;
+    const url=new URL(location.href);
+    url.searchParams.delete("controller");url.searchParams.delete("pcjoin");url.searchParams.delete("join");
+    url.searchParams.set("join",hostId);return url.href;
+}
+function currentMultiplayerInviteUrl(){
+    if(pcPartyMode || pcPartyPeer?.id || new URLSearchParams(location.search).get("pcjoin")){
+        const hostId=pcPartyIsHost ? pcPartyPeer?.id : new URLSearchParams(location.search).get("pcjoin");
+        return hostId ? pcPartyShareUrl(hostId) : "";
+    }
+    if(multiplayerIsHost && multiplayerPeer?.id){return multiplayerInviteUrl(multiplayerPeer.id);}
+    if(multiplayerPendingHostId){return multiplayerInviteUrl(multiplayerPendingHostId);}
+    return "";
+}
+function updateRoomCopyButton(){
+    const button=$("pcRoomCopyButton");if(!button){return;}
+    button.style.display=currentMultiplayerInviteUrl()?"block":"none";
 }
 function showMultiplayerInvite(hostId){
     const inviteUrl=multiplayerInviteUrl(hostId),qr=$("multiInviteQr");
@@ -9035,6 +9066,7 @@ function wireMultiplayerConnection(connection){
 function startMultiplayerGameSession(){
     multiplayerMode=true;if(!started){startGame();}
     $("multiLobby").classList.remove("show");$("multiBadge").classList.add("show");$("multiChatButton").classList.add("show");
+    updateRoomCopyButton();
     /* 카메라 권한·스트림·자동초점이 먼저 안정되도록 멀티 전송을 늦춘다. */
     multiplayerNetworkActiveAt=performance.now()+2500;
     clearInterval(multiplayerSendTimer);multiplayerSendTimer=setInterval(function(){
@@ -9051,6 +9083,7 @@ function startMultiplayerGameSession(){
 
 function becomeMultiplayerHost(peer){
     multiplayerPeer=peer;multiplayerIsHost=true;
+    updateRoomCopyButton();
     peer.on("connection",function(connection){
         if(multiplayerConnections.size>=3){connection.on("open",function(){connection.send({type:"full"});setTimeout(function(){connection.close();},300);});return;}
         wireMultiplayerConnection(connection);
@@ -9060,6 +9093,7 @@ function becomeMultiplayerHost(peer){
 
 function prepareMultiplayerGuest(hostId,autoJoin){
     multiplayerPendingHostId=hostId;
+    updateRoomCopyButton();
     const guest=new Peer(undefined,{debug:0});multiplayerPeer=guest;multiplayerIsHost=false;
     guest.on("open",function(){
         setMultiplayerLobbyStatus("초대받은 선술집 방을 찾았습니다.");
@@ -9230,6 +9264,10 @@ function startPhoneQrController(){
 }
 
 $("pcPhoneStartButton").addEventListener("click",beginPcPhoneControllerHost);
+$("phoneReconnectButton").addEventListener("click",function(){
+    if(!pcPhoneControllerHost){return;}
+    openPhoneReconnectQr();
+});
 function sendPhoneSensorMode(mode){
     if(!pcPhoneControllerHost){return;}
     phoneReconnectRequestedMode=mode;
@@ -9272,7 +9310,7 @@ function startPcPartyStateSync(){
 function startPcPartyGame(){
     pcPartyMode=true;multiplayerMode=true;document.body.classList.add("pc-party-mode");
     if(!started){startGame();}
-    $("multiLobby").classList.remove("show");$("multiBadge").classList.add("show");startPcPartyStateSync();
+    $("multiLobby").classList.remove("show");$("multiBadge").classList.add("show");updateRoomCopyButton();startPcPartyStateSync();
 }
 function wirePartyPhoneController(connection){
     pcPhoneSensorConnection=connection;
@@ -9319,12 +9357,12 @@ function joinPcPartyFromUrl(){
 }
 function installPcRoomCopyButton(){
     const panel=$("settingsPanel"),load=$("loadGameButton");if(!panel||!load||$("pcRoomCopyButton")){return;}
-    const button=document.createElement("button");button.id="pcRoomCopyButton";button.className="settingsAction";button.textContent="나의 방 서버 주소 복사";load.insertAdjacentElement("afterend",button);
+    const button=document.createElement("button");button.id="pcRoomCopyButton";button.className="settingsAction";button.textContent="내 방 초대 주소 복사";button.style.display="none";load.insertAdjacentElement("afterend",button);
     button.addEventListener("click",async function(){
-        if(!pcPartyRoomUrl&&pcPartyPeer?.id){pcPartyRoomUrl=pcPartyShareUrl(pcPartyIsHost?pcPartyPeer.id:new URLSearchParams(location.search).get("pcjoin"));}
-        if(!pcPartyRoomUrl){return;}
-        try{await navigator.clipboard.writeText(pcPartyRoomUrl);showSettingsNotice("방 서버 주소가 복사되었습니다.");}
-        catch(error){prompt("아래 주소를 복사해주세요.",pcPartyRoomUrl);}
+        const inviteUrl=currentMultiplayerInviteUrl();
+        if(!inviteUrl){showSettingsNotice("멀티플레이 방에 들어간 뒤 사용할 수 있습니다.");return;}
+        try{await navigator.clipboard.writeText(inviteUrl);showSettingsNotice("방 초대 주소가 복사되었습니다.");}
+        catch(error){prompt("아래 초대 주소를 복사해주세요.",inviteUrl);}
     });
 }
 $("pcPartyStartButton").addEventListener("click",beginPcPartyHost);installPcRoomCopyButton();setTimeout(joinPcPartyFromUrl,280);
