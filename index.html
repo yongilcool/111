@@ -8829,6 +8829,26 @@ $("qrButton")
 
     async function(){
 
+        /* PC 센서 조종 화면에서 QR 끄기는 통신 소켓 종료와 별개다.
+           PC에 센서 중지 사실을 직접 알려 재연결 버튼을 표시한다. */
+        if(
+            phoneQrControllerMode &&
+            (qrRunning || qrStarting || inputMode==="qr")
+        ){
+            if(phoneQrHostConnection?.open){
+                phoneQrHostConnection.send({type:"sensorStopped",reason:"qr-off"});
+            }
+            inputMode="off";
+            await stopQR();
+            stopNFC();
+            $("game").classList.remove("qr-mode");
+            $("qrButton").classList.remove("active");
+            $("qrButton").textContent="QR 켜기";
+            const controllerStatus=$("controllerConnectionStatus");
+            if(controllerStatus){controllerStatus.textContent="QR 센서가 꺼졌습니다 · PC에서 재연결을 눌러주세요";}
+            return;
+        }
+
         /* 자이로 실험판에서는 같은 QR 버튼으로 카메라를 끈다. */
         if(
             GYRO_EXPERIMENT &&
@@ -9110,6 +9130,15 @@ function phoneDisconnectedButton(){
 function markPhoneSensorDisconnected(){
     pcPhoneSensorConnection=null;phoneDisconnectedButton().classList.add("show");$("statusText").textContent="휴대폰 연결 끊김 · PC 플레이는 계속됩니다";
 }
+function cancelPhoneReconnectPause(){
+    if(!phoneReconnectPausedGame){return false;}
+    $("multiLobby").classList.remove("show");
+    if(gamePaused){toggleGamePause();}
+    phoneReconnectPausedGame=false;
+    phoneDisconnectedButton().classList.add("show");
+    $("statusText").textContent="재연결 대기 취소 · PC 플레이를 계속합니다";
+    return true;
+}
 function openPhoneReconnectQr(){
     const peer=pcPartyPeer || phoneQrPeer;if(!peer?.id){return;}
     if(!gamePaused){toggleGamePause();phoneReconnectPausedGame=true;}
@@ -9150,6 +9179,7 @@ function beginPcPhoneControllerHost(){
         connection.on("data",function(data){
             if(data?.type==="remoteAttack"){attack();}
             else if(data?.type==="controllerStatus"){$("statusText").textContent=String(data.text||"");}
+            else if(data?.type==="sensorStopped"){markPhoneSensorDisconnected();}
         });
         connection.on("open",function(){
             setMultiplayerLobbyStatus("휴대폰 QR 센서가 연결되었습니다.");
@@ -9246,7 +9276,7 @@ function startPcPartyGame(){
 }
 function wirePartyPhoneController(connection){
     pcPhoneSensorConnection=connection;
-    connection.on("data",function(data){if(data?.type==="remoteAttack"){attack();}else if(data?.type==="controllerStatus"){$("statusText").textContent=String(data.text||"");}});
+    connection.on("data",function(data){if(data?.type==="remoteAttack"){attack();}else if(data?.type==="controllerStatus"){$("statusText").textContent=String(data.text||"");}else if(data?.type==="sensorStopped"){markPhoneSensorDisconnected();}});
     connection.on("open",function(){
         clearInterval(pcPhoneHeartbeatTimer);pcPhoneHeartbeatTimer=setInterval(function(){if(connection.open){connection.send({type:"hostHeartbeat",at:Date.now()});}},1000);
         startPcPartyGame();if(phoneReconnectRequestedMode==="nfc"){connection.send({type:"sensorMode",mode:"nfc"});}finishPhoneSensorReconnect();
@@ -9988,7 +10018,9 @@ window.addEventListener("keydown",function(event){
         event.preventDefault();toggleGamePause();return;
     }
     if(event.code==="Escape"){
-        event.preventDefault();panel.classList.toggle("show");
+        event.preventDefault();
+        if(cancelPhoneReconnectPause()){return;}
+        panel.classList.toggle("show");
         if(panel.classList.contains("show")){const first=panel.querySelector("button:not(.settingsClose),input");if(first){first.focus();}}
         return;
     }
