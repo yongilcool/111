@@ -1426,6 +1426,8 @@ html.ios-device #qrPanel{
 ===================================================== */
 #multiStartButton{width:84%;margin-top:10px;border:0;padding:15px 20px;border-radius:11px;background:linear-gradient(#4ecbd7,#176c91);color:#fff;font-size:18px;font-weight:1000;box-shadow:0 5px 0 #0a405b;touch-action:manipulation}
 #pcPhoneStartButton{width:84%;margin-top:12px;border:0;padding:15px 20px;border-radius:11px;background:linear-gradient(#ae78e4,#613598);color:#fff;font-size:18px;font-weight:1000;box-shadow:0 5px 0 #351d57;touch-action:manipulation}
+#pcPartyStartButton{width:84%;margin-top:12px;border:0;padding:15px 20px;border-radius:11px;background:linear-gradient(#72b66b,#38703c);color:#fff;font-size:18px;font-weight:1000;box-shadow:0 5px 0 #214723;touch-action:manipulation}
+#pcRoomCopyButton{display:none}body.pc-party-mode #pcRoomCopyButton{display:block}
 #multiLobby{position:absolute;z-index:380;inset:0;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(3,10,16,.82)}#multiLobby.show{display:flex}.multiLobbyCard{width:min(90vw,400px);padding:20px;border:4px solid #6b3924;border-radius:18px;background:linear-gradient(#f8ddb0,#c98f5b);color:#432516;text-align:center;font-weight:900;box-shadow:inset 0 0 0 3px #fff0c9,0 12px 32px #000b}.multiLobbyCard h2{margin:0 0 10px}.multiRoomCard{display:none;margin-top:15px;padding:14px;border:3px solid #70462c;border-radius:13px;background:#fff0cc}.multiRoomCard.show{display:block}.multiRoomCard button,#multiLobbyCancel{margin-top:10px;min-width:130px;padding:11px;border:3px solid #6b3924;border-radius:12px;background:#ffe0a8;color:#432516;font-size:16px;font-weight:1000}#multiLobbyStatus{line-height:1.5;white-space:pre-line}
 #multiBadge{position:absolute;z-index:178;top:82px;left:8px;display:none;padding:6px 9px;border:2px solid #6b3924;border-radius:10px;background:rgba(45,110,96,.9);color:#fff;font-size:11px;font-weight:1000}#multiBadge.show{display:block}
 #multiChatButton{position:absolute;z-index:184;right:8px;bottom:calc(var(--qr-focus-size) + 84px);display:none;width:54px;height:54px;border:3px solid #6b3924;border-radius:50%;background:linear-gradient(#ffe1a8,#c8874f);color:#432516;font-size:25px;box-shadow:inset 0 0 0 2px #fff3ce,0 4px 0 #4c281a}#multiChatButton.show{display:block}
@@ -1679,6 +1681,10 @@ body.pc-phone-host #modeSwitch{right:10px!important;bottom:10px!important}
 
                 <button id="pcPhoneStartButton">
                     PC + PHONE QR TEST
+                </button>
+
+                <button id="pcPartyStartButton">
+                    PC MULTI + PHONE QR
                 </button>
 
             </div>
@@ -4655,9 +4661,7 @@ function talkToNearestTavernNPC(){
     let awayZ=camera.position.z-nearestTavernNPC.position.z;
     let awayLength=Math.hypot(awayX,awayZ);
     if(awayLength<.01){awayX=Math.sin(gyroViewHeading);awayZ=Math.cos(gyroViewHeading);awayLength=1;}
-    const standDistance=(nearestTavernNPC.userData.blockRadius || 2.25)+1.15;
-    camera.position.x=nearestTavernNPC.position.x+awayX/awayLength*standDistance;
-    camera.position.z=nearestTavernNPC.position.z+awayZ/awayLength*standDistance;
+    /* 대화할 때 카메라 위치/FOV/투영값은 절대 바꾸지 않고 현재 자리에서 시선만 NPC로 향한다. */
     gyroViewHeading=Math.atan2(camera.position.x-nearestTavernNPC.position.x,camera.position.z-nearestTavernNPC.position.z);
     tavernConversationLocked=true;
     if($("tavernTalkButton")){$("tavernTalkButton").classList.remove("show");}
@@ -9143,7 +9147,7 @@ function startPhoneQrController(){
     const status=$("controllerConnectionStatus");document.body.appendChild(status);status.textContent="PC에 연결하는 중…";
     const peer=new Peer(undefined,{debug:0});phoneQrPeer=peer;
     peer.on("open",function(){
-        const connection=peer.connect(hostId,{reliable:true});phoneQrHostConnection=connection;
+        const connection=peer.connect(hostId,{reliable:true,metadata:{role:"phone-controller"}});phoneQrHostConnection=connection;
         connection.on("open",function(){
             status.textContent="PC 연결됨 · QR 무기를 카메라에 보여주세요";
             started=true;inputMode="qr";$("game").classList.add("qr-mode");startQR();
@@ -9181,6 +9185,93 @@ function sendPhoneSensorMode(mode){
 }
 $("qrButton").addEventListener("click",function(event){if(pcPhoneControllerHost){event.preventDefault();event.stopImmediatePropagation();sendPhoneSensorMode("qr");}},true);
 $("nfcButton").addEventListener("click",function(event){if(pcPhoneControllerHost){event.preventDefault();event.stopImmediatePropagation();sendPhoneSensorMode("nfc");}},true);
+
+/* PC 방장 + PC/휴대폰 참가 + PC별 휴대폰 공격 센서 */
+let pcPartyMode=false,pcPartyIsHost=false,pcPartyPeer=null,pcPartyHostConnection=null,pcPartyRoomUrl="",pcPartyStateTimer=null;
+const pcPartyPlayerConnections=new Map();
+
+function pcPartyShareUrl(hostId){const url=new URL(location.href);url.searchParams.delete("controller");url.searchParams.delete("join");url.searchParams.set("pcjoin",hostId);return url.href;}
+function broadcastPcParty(data,except){pcPartyPlayerConnections.forEach(function(connection,id){if(id!==except&&connection.open){connection.send(data);}});}
+function handlePcPartyData(data,source){
+    if(!data||typeof data!=="object"){return;}
+    if(data.type==="partyState"){
+        applyMultiplayerState(data);
+        if(pcPartyIsHost){broadcastPcParty(data,source&&source.peer);}
+    }else if(data.type==="chat"){
+        handleMultiplayerData(data,source);if(pcPartyIsHost){broadcastPcParty(data,source&&source.peer);}
+    }
+}
+function wirePcPartyPlayer(connection){
+    connection.on("open",function(){pcPartyPlayerConnections.set(connection.peer,connection);setMultiplayerCount(1+pcPartyPlayerConnections.size);});
+    connection.on("data",function(data){handlePcPartyData(data,connection);});
+    connection.on("close",function(){pcPartyPlayerConnections.delete(connection.peer);removeMultiplayerRemote(connection.peer);setMultiplayerCount(1+pcPartyPlayerConnections.size);});
+}
+function startPcPartyStateSync(){
+    clearInterval(pcPartyStateTimer);pcPartyStateTimer=setInterval(function(){
+        if(!pcPartyMode||!started||!camera||!pcPartyPeer?.id){return;}
+        const packet={type:"partyState",id:pcPartyPeer.id,name:multiplayerLocalName,x:+camera.position.x.toFixed(2),z:+camera.position.z.toFixed(2),h:+gyroViewHeading.toFixed(3)};
+        if(pcPartyIsHost){broadcastPcParty(packet);}else if(pcPartyHostConnection?.open){pcPartyHostConnection.send(packet);}
+    },180);
+}
+function startPcPartyGame(){
+    pcPartyMode=true;multiplayerMode=true;document.body.classList.add("pc-party-mode");
+    if(!started){startGame();}
+    $("multiLobby").classList.remove("show");$("multiBadge").classList.add("show");startPcPartyStateSync();
+}
+function wirePartyPhoneController(connection){
+    pcPhoneSensorConnection=connection;
+    connection.on("data",function(data){if(data?.type==="remoteAttack"){attack();}else if(data?.type==="controllerStatus"){$("statusText").textContent=String(data.text||"");}});
+    connection.on("open",function(){
+        clearInterval(pcPhoneHeartbeatTimer);pcPhoneHeartbeatTimer=setInterval(function(){if(connection.open){connection.send({type:"hostHeartbeat",at:Date.now()});}},1000);
+        startPcPartyGame();
+    });
+    connection.on("close",function(){$("statusText").textContent="공격용 휴대폰 연결 끊김";});
+}
+function showOwnPhoneControllerQr(peer){
+    const invite=phoneControllerInviteUrl(peer.id);$("multiInviteQr").src="https://api.qrserver.com/v1/create-qr-code/?size=420x420&margin=10&data="+encodeURIComponent(invite);
+    $("multiInviteCode").textContent="이 PC의 공격용 휴대폰 연결";$("multiInviteCard").classList.add("show");$("multiHostEnterButton").style.display="none";
+    setMultiplayerLobbyStatus("자신의 휴대폰으로 QR을 찍어 공격 센서를 연결하세요.");
+}
+function beginPcPartyHost(){
+    if(typeof Peer==="undefined"){alert("연결 도구를 불러오지 못했습니다.");return;}
+    pcPartyMode=true;pcPartyIsHost=true;pcPhoneControllerHost=true;document.body.classList.add("pc-phone-host","pc-party-mode");
+    $("multiLobby").classList.add("show");$("multiRoomCard").classList.remove("show");
+    const peer=new Peer(createMultiplayerRoomId().replace("room","pcparty"),{debug:0});pcPartyPeer=peer;phoneQrPeer=peer;
+    peer.on("open",function(){pcPartyRoomUrl=pcPartyShareUrl(peer.id);showOwnPhoneControllerQr(peer);});
+    peer.on("connection",function(connection){
+        if(connection.metadata?.role==="phone-controller"){wirePartyPhoneController(connection);return;}
+        if(pcPartyPlayerConnections.size>=3){connection.on("open",function(){connection.send({type:"full"});connection.close();});return;}
+        wirePcPartyPlayer(connection);
+    });
+    peer.on("error",function(){setMultiplayerLobbyStatus("PC 멀티방 생성에 실패했습니다.");});
+}
+function joinPcPartyFromUrl(){
+    const hostId=new URLSearchParams(location.search).get("pcjoin");if(!hostId||!/^yc-tavern-pcparty-[a-z0-9]+$/i.test(hostId)){return false;}
+    if(typeof Peer==="undefined"){setTimeout(joinPcPartyFromUrl,500);return true;}
+    pcPartyMode=true;pcPartyIsHost=false;document.body.classList.add("pc-party-mode");
+    const peer=new Peer(undefined,{debug:0});pcPartyPeer=peer;
+    peer.on("open",function(){
+        const connection=peer.connect(hostId,{reliable:true,metadata:{role:"pc-player"}});pcPartyHostConnection=connection;wirePcPartyPlayer(connection);
+        if(isMobileGameDevice()){
+            connection.on("open",function(){multiplayerPeer=peer;startMultiplayerGameSession();startPcPartyStateSync();});
+        }else{
+            pcPhoneControllerHost=true;phoneQrPeer=peer;document.body.classList.add("pc-phone-host");$("multiLobby").classList.add("show");showOwnPhoneControllerQr(peer);
+            peer.on("connection",function(sensor){if(sensor.metadata?.role==="phone-controller"){wirePartyPhoneController(sensor);}});
+        }
+    });
+    return true;
+}
+function installPcRoomCopyButton(){
+    const panel=$("settingsPanel"),load=$("loadGameButton");if(!panel||!load||$("pcRoomCopyButton")){return;}
+    const button=document.createElement("button");button.id="pcRoomCopyButton";button.className="settingsAction";button.textContent="나의 방 서버 주소 복사";load.insertAdjacentElement("afterend",button);
+    button.addEventListener("click",async function(){
+        if(!pcPartyRoomUrl&&pcPartyPeer?.id){pcPartyRoomUrl=pcPartyShareUrl(pcPartyIsHost?pcPartyPeer.id:new URLSearchParams(location.search).get("pcjoin"));}
+        if(!pcPartyRoomUrl){return;}
+        try{await navigator.clipboard.writeText(pcPartyRoomUrl);showSettingsNotice("방 서버 주소가 복사되었습니다.");}
+        catch(error){prompt("아래 주소를 복사해주세요.",pcPartyRoomUrl);}
+    });
+}
+$("pcPartyStartButton").addEventListener("click",beginPcPartyHost);installPcRoomCopyButton();setTimeout(joinPcPartyFromUrl,280);
 setTimeout(startPhoneQrController,260);
 
 /* =====================================================
