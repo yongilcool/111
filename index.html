@@ -1438,6 +1438,7 @@ html.ios-device #qrPanel{
 #controllerConnectionStatus{display:none}body.pc-phone-host #qrButton{order:1}body.pc-phone-host #nfcButton{order:2}body.phone-qr-controller{background:#000}body.phone-qr-controller #game>*{display:none!important}body.phone-qr-controller #game #qrPanel{display:block!important;position:fixed!important;z-index:9999!important;left:50%!important;right:auto!important;top:50%!important;bottom:auto!important;width:min(88vw,680px)!important;height:min(88vw,680px)!important;transform:translate(-50%,-50%)!important;background:#000!important;border:0!important;box-shadow:none!important;overflow:hidden!important}body.phone-qr-controller #reader{display:block!important;position:absolute!important;inset:0!important;width:100%!important;height:100%!important;opacity:0!important;pointer-events:none!important}body.phone-qr-controller #qrFocusVideo{display:block!important;left:0!important;top:0!important;width:100%!important;height:100%!important;transform:scaleX(-1)!important;object-fit:cover!important;border:0!important;border-radius:0!important;opacity:1!important}body.phone-qr-controller #qrFrame{display:block!important;left:0!important;top:0!important;inset:0!important;width:100%!important;height:100%!important;transform:none!important}body.phone-qr-controller #qrPanel::after,body.phone-qr-controller #qrLabel,body.phone-qr-controller #qrMessage{display:none!important}body.phone-qr-controller #controllerConnectionStatus{display:none!important}
 body.pc-phone-host #qrPanel{display:none!important;visibility:hidden!important;width:0!important;height:0!important}
 body.pc-phone-host #modeSwitch{right:10px!important;bottom:10px!important}
+#phoneDisconnectedButton{display:none;position:absolute;z-index:205;right:10px;top:132px;padding:8px 11px;border:2px solid #6b3924;border-radius:10px;background:#9b493e;color:#fff4dd;font-size:12px;font-weight:1000;box-shadow:0 3px 0 #4a211b}#phoneDisconnectedButton.show{display:block}.settingsAction:focus,.volumeRow input:focus,.settingsClose:focus{outline:4px solid #48d9ff;outline-offset:2px}
 </style>
 </head>
 
@@ -9098,6 +9099,27 @@ let phoneQrLastAttackAt=0;
 let pcPhoneHeartbeatTimer=null;
 let phoneQrLastHeartbeat=0;
 let phoneQrDisconnectHandled=false;
+let phoneReconnectPausedGame=false;
+let phoneReconnectRequestedMode="qr";
+
+function phoneDisconnectedButton(){
+    let button=$("phoneDisconnectedButton");
+    if(!button){button=document.createElement("button");button.id="phoneDisconnectedButton";button.textContent="폰 연결 끊김";$("playArea").appendChild(button);button.addEventListener("click",openPhoneReconnectQr);}
+    return button;
+}
+function markPhoneSensorDisconnected(){
+    pcPhoneSensorConnection=null;phoneDisconnectedButton().classList.add("show");$("statusText").textContent="휴대폰 연결 끊김 · PC 플레이는 계속됩니다";
+}
+function openPhoneReconnectQr(){
+    const peer=pcPartyPeer || phoneQrPeer;if(!peer?.id){return;}
+    if(!gamePaused){toggleGamePause();phoneReconnectPausedGame=true;}
+    $("multiLobby").classList.add("show");$("multiRoomCard").classList.remove("show");showOwnPhoneControllerQr(peer);
+    setMultiplayerLobbyStatus("게임을 일시정지했습니다.\n휴대폰으로 QR을 찍으면 자동으로 다시 시작됩니다.");
+}
+function finishPhoneSensorReconnect(){
+    phoneDisconnectedButton().classList.remove("show");$("multiLobby").classList.remove("show");
+    if(phoneReconnectPausedGame&&gamePaused){toggleGamePause();}phoneReconnectPausedGame=false;
+}
 
 async function closePhoneControllerAfterDisconnect(){
     if(phoneQrDisconnectHandled){return;}phoneQrDisconnectHandled=true;
@@ -9133,15 +9155,17 @@ function beginPcPhoneControllerHost(){
             setMultiplayerLobbyStatus("휴대폰 QR 센서가 연결되었습니다.");
             clearInterval(pcPhoneHeartbeatTimer);pcPhoneHeartbeatTimer=setInterval(function(){if(connection.open){connection.send({type:"hostHeartbeat",at:Date.now()});}},1000);
             if(!started){startGame();}
-            $("multiLobby").classList.remove("show");
+            if(phoneReconnectRequestedMode==="nfc"){connection.send({type:"sensorMode",mode:"nfc"});}
+            finishPhoneSensorReconnect();
         });
-        connection.on("close",function(){$("statusText").textContent="휴대폰 QR 연결 끊김";});
+        connection.on("close",markPhoneSensorDisconnected);
     });
     peer.on("error",function(){setMultiplayerLobbyStatus("방 생성에 실패했습니다. 새로고침 후 다시 시도해주세요.");});
 }
 function startPhoneQrController(){
     const hostId=new URLSearchParams(location.search).get("controller");
-    if(!hostId || !/^yc-tavern-controller-[a-z0-9]+$/i.test(hostId)){return false;}
+    /* 3번 단독 PC방(controller)과 4번 PC 멀티방(pcparty)의 휴대폰 센서를 모두 허용한다. */
+    if(!hostId || !/^yc-tavern-(?:controller|pcparty)-[a-z0-9]+$/i.test(hostId)){return false;}
     if(typeof Peer==="undefined"){setTimeout(startPhoneQrController,500);return true;}
     phoneQrControllerMode=true;document.body.classList.add("phone-qr-controller");
     const status=$("controllerConnectionStatus");document.body.appendChild(status);status.textContent="PC에 연결하는 중…";
@@ -9178,8 +9202,10 @@ function startPhoneQrController(){
 $("pcPhoneStartButton").addEventListener("click",beginPcPhoneControllerHost);
 function sendPhoneSensorMode(mode){
     if(!pcPhoneControllerHost){return;}
+    phoneReconnectRequestedMode=mode;
     const connection=pcPhoneSensorConnection;
-    if(connection){connection.send({type:"sensorMode",mode:mode});}
+    if(!connection?.open){openPhoneReconnectQr();return;}
+    connection.send({type:"sensorMode",mode:mode});
     $("qrButton").classList.toggle("active",mode==="qr");$("nfcButton").classList.toggle("active",mode==="nfc");
     $("statusText").textContent=mode==="qr" ? "휴대폰 QR 모드 요청" : "휴대폰 NFC 모드 요청";
 }
@@ -9223,9 +9249,9 @@ function wirePartyPhoneController(connection){
     connection.on("data",function(data){if(data?.type==="remoteAttack"){attack();}else if(data?.type==="controllerStatus"){$("statusText").textContent=String(data.text||"");}});
     connection.on("open",function(){
         clearInterval(pcPhoneHeartbeatTimer);pcPhoneHeartbeatTimer=setInterval(function(){if(connection.open){connection.send({type:"hostHeartbeat",at:Date.now()});}},1000);
-        startPcPartyGame();
+        startPcPartyGame();if(phoneReconnectRequestedMode==="nfc"){connection.send({type:"sensorMode",mode:"nfc"});}finishPhoneSensorReconnect();
     });
-    connection.on("close",function(){$("statusText").textContent="공격용 휴대폰 연결 끊김";});
+    connection.on("close",markPhoneSensorDisconnected);
 }
 function showOwnPhoneControllerQr(peer){
     const invite=phoneControllerInviteUrl(peer.id);$("multiInviteQr").src="https://api.qrserver.com/v1/create-qr-code/?size=420x420&margin=10&data="+encodeURIComponent(invite);
@@ -9775,6 +9801,7 @@ window.addEventListener("keyup",function(event){
 /* PC 게임 화면 이동: W/S 전후진, A/D 좌우 회전 */
 window.addEventListener("keydown",function(event){
     if(!pcPhoneControllerHost || event.repeat && ["KeyW","KeyA","KeyS","KeyD","Space"].includes(event.code)){return;}
+    if($("settingsPanel").classList.contains("show") && ["KeyW","KeyA","KeyS","KeyD","Space"].includes(event.code)){return;}
     if(event.code==="Space"){
         event.preventDefault();
         if(tavernConversationLocked){advanceTavernDialogue();}
@@ -9952,6 +9979,33 @@ $("quitGameButton").addEventListener("click",function(){
     releaseGameMemory();
     setTimeout(function(){location.reload();},80);
 });
+
+/* PC 키보드 UI: Tab 일시정지, Esc 설정, W/S 선택, A/D 슬라이더 조절 */
+window.addEventListener("keydown",function(event){
+    if(!pcPhoneControllerHost||!started){return;}
+    const panel=$("settingsPanel");
+    if(event.code==="Tab"){
+        event.preventDefault();toggleGamePause();return;
+    }
+    if(event.code==="Escape"){
+        event.preventDefault();panel.classList.toggle("show");
+        if(panel.classList.contains("show")){const first=panel.querySelector("button:not(.settingsClose),input");if(first){first.focus();}}
+        return;
+    }
+    if(!panel.classList.contains("show")){return;}
+    const controls=Array.from(panel.querySelectorAll("button,input[type=range]")).filter(function(control){return getComputedStyle(control).display!=="none";});
+    if(!controls.length){return;}
+    let index=Math.max(0,controls.indexOf(document.activeElement));
+    if(event.code==="KeyW"||event.code==="KeyS"){
+        event.preventDefault();index=(index+(event.code==="KeyW"?-1:1)+controls.length)%controls.length;controls[index].focus();return;
+    }
+    if((event.code==="KeyA"||event.code==="KeyD")&&document.activeElement?.type==="range"){
+        event.preventDefault();const slider=document.activeElement,step=Number(slider.step)||.05;slider.value=String(Math.max(Number(slider.min),Math.min(Number(slider.max),Number(slider.value)+(event.code==="KeyA"?-step:step))));slider.dispatchEvent(new Event("input",{bubbles:true}));return;
+    }
+    if((event.code==="Space"||event.code==="Enter")&&document.activeElement?.tagName==="BUTTON"){
+        event.preventDefault();document.activeElement.click();
+    }
+},true);
 
 /* 플레이 중에도 전투가 아닐 때 오래된 WebGL 렌더 목록과 임시 캐시를 정리한다. */
 setInterval(function(){
