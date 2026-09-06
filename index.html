@@ -1434,6 +1434,8 @@ html.ios-device #qrPanel{
 .remoteSpeech{position:absolute;z-index:177;transform:translate(-50%,-100%);max-width:190px;padding:7px 10px;border:2px solid #6b3924;border-radius:10px;background:#fff2ce;color:#432516;font-size:12px;font-weight:900;pointer-events:none}
 #multiInviteCard{display:none;margin:12px auto 0}#multiInviteCard.show{display:block}#multiInviteQr{display:block;width:210px;height:210px;max-width:64vw;max-height:64vw;margin:10px auto;padding:8px;border:4px solid #fff;background:#fff;image-rendering:auto}#multiInviteCode{font-size:13px;word-break:break-all}#multiHostEnterButton{margin-top:10px;min-width:150px;padding:11px;border:3px solid #6b3924;border-radius:12px;background:#ffe0a8;color:#432516;font-size:16px;font-weight:1000}
 #controllerConnectionStatus{display:none}body.pc-phone-host #qrButton{order:1}body.pc-phone-host #nfcButton{order:2}body.phone-qr-controller{background:#000}body.phone-qr-controller #game>*{display:none!important}body.phone-qr-controller #game #qrPanel{display:block!important;position:fixed!important;z-index:9999!important;left:50%!important;right:auto!important;top:50%!important;bottom:auto!important;width:min(88vw,680px)!important;height:min(88vw,680px)!important;transform:translate(-50%,-50%)!important;background:#000!important;border:0!important;box-shadow:none!important;overflow:hidden!important}body.phone-qr-controller #reader{display:block!important;position:absolute!important;inset:0!important;width:100%!important;height:100%!important;opacity:0!important;pointer-events:none!important}body.phone-qr-controller #qrFocusVideo{display:block!important;left:0!important;top:0!important;width:100%!important;height:100%!important;transform:scaleX(-1)!important;object-fit:cover!important;border:0!important;border-radius:0!important;opacity:1!important}body.phone-qr-controller #qrFrame{display:block!important;left:0!important;top:0!important;inset:0!important;width:100%!important;height:100%!important;transform:none!important}body.phone-qr-controller #qrPanel::after,body.phone-qr-controller #qrLabel,body.phone-qr-controller #qrMessage{display:none!important}body.phone-qr-controller #controllerConnectionStatus{display:none!important}
+body.pc-phone-host #qrPanel{display:none!important;visibility:hidden!important;width:0!important;height:0!important}
+body.pc-phone-host #modeSwitch{right:10px!important;bottom:10px!important}
 </style>
 </head>
 
@@ -4797,6 +4799,14 @@ function tavernCroppedTexture(image,crop,solidInterior){
         const touchesClear=!originalAlpha[i-1]||!originalAlpha[i+1]||!originalAlpha[i-w]||!originalAlpha[i+w];
         if(touchesClear && data[p]+data[p+1]+data[p+2]>570){data[p+3]=0;}
     }}
+    /* 남아 있는 흰 외곽선을 확실히 없애기 위해 실루엣 바깥쪽을 3픽셀 깎는다. */
+    for(let pass=0;pass<3;pass++){
+        const alphaSnapshot=new Uint8Array(w*h);for(let i=0;i<w*h;i++){alphaSnapshot[i]=data[i*4+3];}
+        for(let y=1;y<h-1;y++){for(let x=1;x<w-1;x++){
+            const i=y*w+x;if(!alphaSnapshot[i]){continue;}
+            if(!alphaSnapshot[i-1]||!alphaSnapshot[i+1]||!alphaSnapshot[i-w]||!alphaSnapshot[i+w]){data[i*4+3]=0;}
+        }}
+    }
     /* 후드 안쪽처럼 검은 배경과 통로로 이어져 잘못 지워지는 내부는
        행별 실루엣 사이를 어두운 천 색으로 막아 벽이 비치지 않게 한다. */
     if(solidInterior){
@@ -5212,14 +5222,8 @@ function init3D(){
             $("playArea");
 
 
-        if(TAVERN_MODE){
-            const orthoHeight=14;
-            const orthoWidth=orthoHeight*(area.clientWidth/Math.max(1,area.clientHeight));
-            camera=new THREE.OrthographicCamera(-orthoWidth/2,orthoWidth/2,orthoHeight/2,-orthoHeight/2,.1,145);
-            camera.userData.orthoViewHeight=orthoHeight;
-        }else{
-            camera=new THREE.PerspectiveCamera(DUNGEON_MODE ? 84 : 67,area.clientWidth/area.clientHeight,.1,DUNGEON_MODE ? 240 : 145);
-        }
+        /* 선술집도 원래의 입체적인 Perspective를 사용하며 대화 중에는 이 값을 바꾸지 않는다. */
+        camera=new THREE.PerspectiveCamera(DUNGEON_MODE ? 84 : 67,area.clientWidth/area.clientHeight,.1,DUNGEON_MODE ? 240 : 145);
 
 
         camera.position.set(
@@ -5293,7 +5297,6 @@ function init3D(){
             LIGHT
         */
 
-        if(!TAVERN_MODE){
         const hemi=
 
             new THREE.HemisphereLight(
@@ -5337,7 +5340,6 @@ function init3D(){
         scene.add(
             directional
         );
-        }
 
         if(DUNGEON_MODE){
             buildDungeon(loader);
@@ -9089,6 +9091,17 @@ let phoneQrPeer=null;
 let phoneQrHostConnection=null;
 let pcPhoneSensorConnection=null;
 let phoneQrLastAttackAt=0;
+let pcPhoneHeartbeatTimer=null;
+let phoneQrLastHeartbeat=0;
+let phoneQrDisconnectHandled=false;
+
+async function closePhoneControllerAfterDisconnect(){
+    if(phoneQrDisconnectHandled){return;}phoneQrDisconnectHandled=true;
+    try{await stopQR();}catch(error){}stopNFC();
+    alert("PC와 연결이 끊겼습니다.");
+    try{window.close();}catch(error){}
+    setTimeout(function(){location.replace("about:blank");},120);
+}
 
 function phoneControllerInviteUrl(hostId){
     const url=new URL(location.href);url.searchParams.delete("join");url.searchParams.set("controller",hostId);return url.href;
@@ -9114,6 +9127,7 @@ function beginPcPhoneControllerHost(){
         });
         connection.on("open",function(){
             setMultiplayerLobbyStatus("휴대폰 QR 센서가 연결되었습니다.");
+            clearInterval(pcPhoneHeartbeatTimer);pcPhoneHeartbeatTimer=setInterval(function(){if(connection.open){connection.send({type:"hostHeartbeat",at:Date.now()});}},1000);
             if(!started){startGame();}
             $("multiLobby").classList.remove("show");
         });
@@ -9148,10 +9162,12 @@ function startPhoneQrController(){
                 if(connection.open){connection.send({type:"controllerStatus",text:"휴대폰 QR 카메라 사용 중"});}
             }
         });
-        connection.on("close",function(){status.textContent="PC 연결이 끊겼습니다";});
+        connection.on("close",closePhoneControllerAfterDisconnect);
         connection.on("error",function(){status.textContent="PC 연결 실패";});
+        connection.on("data",function(data){if(data?.type==="hostHeartbeat"){phoneQrLastHeartbeat=performance.now();}});
     });
     peer.on("error",function(){status.textContent="PC 방을 찾지 못했습니다";});
+    phoneQrLastHeartbeat=performance.now();setInterval(function(){if(phoneQrControllerMode && phoneQrHostConnection?.open && performance.now()-phoneQrLastHeartbeat>4500){closePhoneControllerAfterDisconnect();}},1200);
     return true;
 }
 
