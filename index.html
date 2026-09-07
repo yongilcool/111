@@ -8423,13 +8423,27 @@ function runeGeometryScore(imageData){
     const size=RUNE_SAMPLE_SIZE;
     const gray=new Uint8Array(size*size);
     let darkest=255,lightest=0,blackCount=0;
+    let saturationSum=0,colorfulCount=0;
     for(let i=0,j=0;i<data.length;i+=4,j++){
         const value=(data[i]*3+data[i+1]*6+data[i+2])/10;
+        const maximum=Math.max(data[i],data[i+1],data[i+2]);
+        const minimum=Math.min(data[i],data[i+1],data[i+2]);
+        const saturation=maximum-minimum;
+        saturationSum+=saturation;
+        if(saturation>58){colorfulCount++;}
         gray[j]=value;
         if(value<darkest){darkest=value;}
         if(value>lightest){lightest=value;}
     }
     if(lightest-darkest<95){return 0;}
+    /* 룬 원본은 흑백이다. 얼굴의 피부색·머리카락·갈색 가구처럼
+       색차가 큰 후보는 모양을 비교하기 전에 제거한다. */
+    if(
+        saturationSum/gray.length>48 ||
+        colorfulCount/gray.length>.16
+    ){
+        return -1;
+    }
     const threshold=darkest+(lightest-darkest)*.52;
     for(let i=0;i<gray.length;i++){if(gray[i]<threshold){blackCount++;}}
     const occupancy=blackCount/gray.length;
@@ -8473,10 +8487,6 @@ function runeGeometryScore(imageData){
     const outerRatio=outerBlack/ringSamples;
     const centerRatio=centerBlack/centerTotal;
     const innerRatio=innerWhite/4;
-    /* 평균 명암만 비슷한 얼굴·머리카락·가구는 통과시키지 않는다. */
-    if(cornerRatio<.72 || outerRatio<.46 || centerRatio<.52 || innerRatio<.50){
-        return 0;
-    }
     return cornerRatio*.22+outerRatio*.43+centerRatio*.23+innerRatio*.12;
 }
 
@@ -8510,15 +8520,17 @@ function detectRuneMarker(video){
         ctx.restore();
         const sample=ctx.getImageData(0,0,RUNE_SAMPLE_SIZE,RUNE_SAMPLE_SIZE);
         const geometry=runeGeometryScore(sample);
+        if(geometry<0){return false;}
         const bits=makeRuneBits(sample);
         const similarity=Math.max(
             runeSimilarity(bits,false),
             runeSimilarity(bits,true)
         );
         best=Math.max(best,similarity);
-        /* 구조와 Wix 원본의 내부 조각 배열이 모두 맞아야 공격한다. */
-        return geometry>=(loose ? .66 : .71) &&
-            similarity>=(loose ? .765 : .79);
+        /* 흑백 구조가 충분히 맞거나 원본 조각 배열이 강하게 맞으면 인식한다.
+           색상 거부 검사가 먼저 적용되므로 얼굴은 이 단계에 들어오지 않는다. */
+        return geometry>=(loose ? .64 : .70) ||
+            similarity>=(loose ? .745 : .775);
     }
 
     /* 1차: 여러 크기와 중앙 주변 위치를 빠르게 탐색한다. */
