@@ -8174,6 +8174,16 @@ let qrSmallAssistCanvas=null;
 
 let qrSmallAssistBusy=false;
 
+/* QR과 함께 사용할 실험용 판타지 룬 마커.
+   정면으로 카메라 중앙에 보여 주면 저해상도 흑백 특징을 비교한다. */
+const RUNE_MARKER_URL="https://static.wixstatic.com/media/172435_be9cf0db221b4a9f82e051225112908c~mv2.png";
+const RUNE_SAMPLE_SIZE=48;
+let runeReferenceBits=null;
+let runeSampleCanvas=null;
+let runeMarkerLocked=false;
+let lastRuneSeenAt=0;
+let lastRuneAttackAt=0;
+
 let qrContinuousAttackTimer=null;
 let qrAutofocusWatchTimer=null;
 let lastQRFocusRecoveryAt=0;
@@ -8308,6 +8318,114 @@ function processDecodedQR(decodedText){
     tryQRAttack();
 }
 
+function makeRuneBits(imageData){
+    const data=imageData.data;
+    let darkest=255;
+    let lightest=0;
+    let sum=0;
+    const gray=new Uint8Array(data.length/4);
+    for(let i=0,j=0;i<data.length;i+=4,j++){
+        const value=(data[i]*3+data[i+1]*6+data[i+2])/10;
+        gray[j]=value;
+        sum+=value;
+        if(value<darkest){darkest=value;}
+        if(value>lightest){lightest=value;}
+    }
+    if(lightest-darkest<75){return null;}
+    const threshold=sum/gray.length*.92;
+    const bits=new Uint8Array(gray.length);
+    for(let i=0;i<gray.length;i++){
+        bits[i]=gray[i]<threshold ? 1 : 0;
+    }
+    return bits;
+}
+
+function prepareRuneMarker(){
+    if(runeReferenceBits){return Promise.resolve(true);}
+    return new Promise(function(resolve){
+        const image=new Image();
+        /* 외부 Wix 이미지를 canvas에서 비교할 수 있게 익명 CORS로 읽는다. */
+        image.crossOrigin="anonymous";
+        image.onload=function(){
+            const canvas=document.createElement("canvas");
+            canvas.width=RUNE_SAMPLE_SIZE;
+            canvas.height=RUNE_SAMPLE_SIZE;
+            const ctx=canvas.getContext("2d",{willReadFrequently:true});
+            ctx.fillStyle="#fff";
+            ctx.fillRect(0,0,RUNE_SAMPLE_SIZE,RUNE_SAMPLE_SIZE);
+            ctx.drawImage(image,0,0,RUNE_SAMPLE_SIZE,RUNE_SAMPLE_SIZE);
+            runeReferenceBits=makeRuneBits(ctx.getImageData(0,0,RUNE_SAMPLE_SIZE,RUNE_SAMPLE_SIZE));
+            resolve(!!runeReferenceBits);
+        };
+        image.onerror=function(){resolve(false);};
+        image.src=RUNE_MARKER_URL;
+    });
+}
+
+function runeSimilarity(bits,mirrored){
+    if(!bits || !runeReferenceBits){return 0;}
+    let same=0;
+    let checked=0;
+    const size=RUNE_SAMPLE_SIZE;
+    /* 흰 여백만 맞아서 생기는 오인식을 줄이기 위해 중앙 90%를 비교한다. */
+    for(let y=2;y<size-2;y++){
+        for(let x=2;x<size-2;x++){
+            const sourceX=mirrored ? size-1-x : x;
+            const a=bits[y*size+sourceX];
+            const b=runeReferenceBits[y*size+x];
+            if(a===b){same++;}
+            checked++;
+        }
+    }
+    return same/checked;
+}
+
+function detectRuneMarker(video){
+    if(!runeReferenceBits || !video || video.readyState<2){return false;}
+    if(!runeSampleCanvas){
+        runeSampleCanvas=document.createElement("canvas");
+        runeSampleCanvas.width=RUNE_SAMPLE_SIZE;
+        runeSampleCanvas.height=RUNE_SAMPLE_SIZE;
+    }
+    const ctx=runeSampleCanvas.getContext("2d",{willReadFrequently:true});
+    const minimum=Math.min(video.videoWidth,video.videoHeight);
+    const ratios=[.34,.43,.52,.61,.70,.79];
+    let best=0;
+    for(let i=0;i<ratios.length;i++){
+        const sourceSize=minimum*ratios[i];
+        const sourceX=(video.videoWidth-sourceSize)/2;
+        const sourceY=(video.videoHeight-sourceSize)/2;
+        ctx.fillStyle="#fff";
+        ctx.fillRect(0,0,RUNE_SAMPLE_SIZE,RUNE_SAMPLE_SIZE);
+        ctx.drawImage(video,sourceX,sourceY,sourceSize,sourceSize,0,0,RUNE_SAMPLE_SIZE,RUNE_SAMPLE_SIZE);
+        const bits=makeRuneBits(ctx.getImageData(0,0,RUNE_SAMPLE_SIZE,RUNE_SAMPLE_SIZE));
+        best=Math.max(best,runeSimilarity(bits,false),runeSimilarity(bits,true));
+    }
+    return best>=.815;
+}
+
+function processRuneMarker(video){
+    const now=performance.now();
+    const detected=detectRuneMarker(video);
+    if(!detected){
+        if(now-lastRuneSeenAt>700){runeMarkerLocked=false;}
+        return;
+    }
+    lastRuneSeenAt=now;
+    if(runeMarkerLocked || now-lastRuneAttackAt<700){return;}
+    runeMarkerLocked=true;
+    lastRuneAttackAt=now;
+    if(phoneQrControllerMode){
+        if(phoneQrHostConnection?.open){
+            phoneQrHostConnection.send({type:"remoteAttack",source:"rune",at:Date.now()});
+        }
+        showQRFeedback("success","룬 인식 · PC 칼 공격!");
+    }
+    else if(attack()){
+        showQRFeedback("success","룬 인식 성공!");
+    }
+}
+
 function stopQRSmallAssist(){
     if(qrSmallAssistTimer){
         clearInterval(qrSmallAssistTimer);
@@ -8437,6 +8555,9 @@ function startQRSmallAssist(){
             if(result && result.data){
                 processDecodedQR(result.data);
             }
+
+            /* QR 판독과 별개로 같은 카메라 프레임에서 룬 마커도 확인한다. */
+            processRuneMarker(video);
         }
         catch(e){}
         finally{
@@ -8678,6 +8799,7 @@ async function startQR(){
                 startQRSmallAssist();
             }
         });
+        prepareRuneMarker();
 
         $("statusDot").style.background=
             "#55eaff";
@@ -8761,6 +8883,8 @@ async function stopQR(){
     qrRunning=false;
     qrStarting=false;
     lastQRHit=0;
+    runeMarkerLocked=false;
+    lastRuneSeenAt=0;
 }
 
 
@@ -10088,12 +10212,13 @@ window.addEventListener("keydown",function(event){
     }
 },true);
 
-/* 플레이 중에도 전투가 아닐 때 오래된 WebGL 렌더 목록과 임시 캐시를 정리한다. */
+/* 장시간 플레이 시 불필요한 임시 렌더 목록과 Cache Storage가 쌓이지
+   않도록 2분마다 정리한다. 전투·일시정지 중에는 건너뛴다. */
 setInterval(function(){
     if(!started || battle || gamePaused){return;}
     if(renderer && renderer.renderLists){renderer.renderLists.dispose();}
     clearUnusedGameCaches();
-},60000);
+},120000);
 
 function renderFullDungeonMap(){
     const content=$("fullMapContent");
