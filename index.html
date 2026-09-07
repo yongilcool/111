@@ -8183,6 +8183,7 @@ let runeSampleCanvas=null;
 let runeMarkerLocked=false;
 let lastRuneSeenAt=0;
 let lastRuneAttackAt=0;
+let lastRuneScanAt=0;
 
 let qrContinuousAttackTimer=null;
 let qrAutofocusWatchTimer=null;
@@ -8332,7 +8333,9 @@ function makeRuneBits(imageData){
         if(value>lightest){lightest=value;}
     }
     if(lightest-darkest<75){return null;}
-    const threshold=sum/gray.length*.92;
+    /* 주변이 어두운 선술집이어도 흰 종이와 검은 문양을 나눌 수 있도록
+       평균 밝기 대신 실제 명암 범위의 중간값을 쓴다. */
+    const threshold=darkest+(lightest-darkest)*.52;
     const bits=new Uint8Array(gray.length);
     for(let i=0;i<gray.length;i++){
         bits[i]=gray[i]<threshold ? 1 : 0;
@@ -8347,15 +8350,49 @@ function prepareRuneMarker(){
         /* 외부 Wix 이미지를 canvas에서 비교할 수 있게 익명 CORS로 읽는다. */
         image.crossOrigin="anonymous";
         image.onload=function(){
+          try{
+            /* Wix 원본에 포함된 흰 여백의 양과 상관없이 실제 검은 문양만
+               찾아 같은 크기로 정규화한다. */
+            const source=document.createElement("canvas");
+            const sourceSize=192;
+            source.width=sourceSize;
+            source.height=sourceSize;
+            const sourceCtx=source.getContext("2d",{willReadFrequently:true});
+            sourceCtx.fillStyle="#fff";
+            sourceCtx.fillRect(0,0,sourceSize,sourceSize);
+            sourceCtx.drawImage(image,0,0,sourceSize,sourceSize);
+            const sourceData=sourceCtx.getImageData(0,0,sourceSize,sourceSize).data;
+            let minX=sourceSize,minY=sourceSize,maxX=0,maxY=0;
+            for(let y=0;y<sourceSize;y++){
+                for(let x=0;x<sourceSize;x++){
+                    const i=(y*sourceSize+x)*4;
+                    const value=(sourceData[i]*3+sourceData[i+1]*6+sourceData[i+2])/10;
+                    if(value<150){
+                        if(x<minX){minX=x;} if(x>maxX){maxX=x;}
+                        if(y<minY){minY=y;} if(y>maxY){maxY=y;}
+                    }
+                }
+            }
+            if(maxX<=minX || maxY<=minY){resolve(false);return;}
+            const detectedSize=Math.max(maxX-minX+1,maxY-minY+1);
+            const padding=detectedSize*.08;
+            const sx=Math.max(0,(minX+maxX-detectedSize)/2-padding);
+            const sy=Math.max(0,(minY+maxY-detectedSize)/2-padding);
+            const sw=Math.min(sourceSize-sx,sourceSize-sy,detectedSize+padding*2);
             const canvas=document.createElement("canvas");
             canvas.width=RUNE_SAMPLE_SIZE;
             canvas.height=RUNE_SAMPLE_SIZE;
             const ctx=canvas.getContext("2d",{willReadFrequently:true});
             ctx.fillStyle="#fff";
             ctx.fillRect(0,0,RUNE_SAMPLE_SIZE,RUNE_SAMPLE_SIZE);
-            ctx.drawImage(image,0,0,RUNE_SAMPLE_SIZE,RUNE_SAMPLE_SIZE);
+            ctx.drawImage(source,sx,sy,sw,sw,0,0,RUNE_SAMPLE_SIZE,RUNE_SAMPLE_SIZE);
             runeReferenceBits=makeRuneBits(ctx.getImageData(0,0,RUNE_SAMPLE_SIZE,RUNE_SAMPLE_SIZE));
             resolve(!!runeReferenceBits);
+          }
+          catch(error){
+            console.warn("RUNE MARKER LOAD:",error);
+            resolve(false);
+          }
         };
         image.onerror=function(){resolve(false);};
         image.src=RUNE_MARKER_URL;
@@ -8380,6 +8417,63 @@ function runeSimilarity(bits,mirrored){
     return same/checked;
 }
 
+function runeGeometryScore(imageData){
+    const data=imageData.data;
+    const size=RUNE_SAMPLE_SIZE;
+    const gray=new Uint8Array(size*size);
+    let darkest=255,lightest=0,blackCount=0;
+    for(let i=0,j=0;i<data.length;i+=4,j++){
+        const value=(data[i]*3+data[i+1]*6+data[i+2])/10;
+        gray[j]=value;
+        if(value<darkest){darkest=value;}
+        if(value>lightest){lightest=value;}
+    }
+    if(lightest-darkest<95){return 0;}
+    const threshold=darkest+(lightest-darkest)*.52;
+    for(let i=0;i<gray.length;i++){if(gray[i]<threshold){blackCount++;}}
+    const occupancy=blackCount/gray.length;
+    if(occupancy<.17 || occupancy>.58){return 0;}
+    function isBlack(x,y){
+        x=Math.max(0,Math.min(size-1,Math.round(x)));
+        y=Math.max(0,Math.min(size-1,Math.round(y)));
+        return gray[y*size+x]<threshold;
+    }
+    let cornerWhite=0,cornerTotal=0;
+    const cornerStarts=[[2,2],[size-10,2],[2,size-10],[size-10,size-10]];
+    cornerStarts.forEach(function(start){
+        for(let y=start[1];y<start[1]+8;y+=2){
+            for(let x=start[0];x<start[0]+8;x+=2){
+                if(!isBlack(x,y)){cornerWhite++;}
+                cornerTotal++;
+            }
+        }
+    });
+    const center=(size-1)/2;
+    let outerBlack=0;
+    const ringSamples=72;
+    for(let i=0;i<ringSamples;i++){
+        const angle=Math.PI*2*i/ringSamples;
+        if(isBlack(center+Math.cos(angle)*size*.38,center+Math.sin(angle)*size*.38)){
+            outerBlack++;
+        }
+    }
+    let centerBlack=0,centerTotal=0;
+    for(let y=-2;y<=2;y++){
+        for(let x=-2;x<=2;x++){
+            if(isBlack(center+x,center+y)){centerBlack++;}
+            centerTotal++;
+        }
+    }
+    let innerWhite=0;
+    [[.12,0],[-.12,0],[0,.12],[0,-.12]].forEach(function(point){
+        if(!isBlack(center+point[0]*size,center+point[1]*size)){innerWhite++;}
+    });
+    return (cornerWhite/cornerTotal)*.22+
+        (outerBlack/ringSamples)*.43+
+        (centerBlack/centerTotal)*.23+
+        (innerWhite/4)*.12;
+}
+
 function detectRuneMarker(video){
     if(!runeReferenceBits || !video || video.readyState<2){return false;}
     if(!runeSampleCanvas){
@@ -8389,23 +8483,36 @@ function detectRuneMarker(video){
     }
     const ctx=runeSampleCanvas.getContext("2d",{willReadFrequently:true});
     const minimum=Math.min(video.videoWidth,video.videoHeight);
-    const ratios=[.34,.43,.52,.61,.70,.79];
+    const ratios=[.22,.28,.34,.40,.47,.54,.62,.70,.79,.88];
+    const centers=[.42,.50,.58];
     let best=0;
     for(let i=0;i<ratios.length;i++){
         const sourceSize=minimum*ratios[i];
-        const sourceX=(video.videoWidth-sourceSize)/2;
-        const sourceY=(video.videoHeight-sourceSize)/2;
-        ctx.fillStyle="#fff";
-        ctx.fillRect(0,0,RUNE_SAMPLE_SIZE,RUNE_SAMPLE_SIZE);
-        ctx.drawImage(video,sourceX,sourceY,sourceSize,sourceSize,0,0,RUNE_SAMPLE_SIZE,RUNE_SAMPLE_SIZE);
-        const bits=makeRuneBits(ctx.getImageData(0,0,RUNE_SAMPLE_SIZE,RUNE_SAMPLE_SIZE));
-        best=Math.max(best,runeSimilarity(bits,false),runeSimilarity(bits,true));
+        for(let cx=0;cx<centers.length;cx++){
+            for(let cy=0;cy<centers.length;cy++){
+                const sourceX=Math.max(0,Math.min(video.videoWidth-sourceSize,video.videoWidth*centers[cx]-sourceSize/2));
+                const sourceY=Math.max(0,Math.min(video.videoHeight-sourceSize,video.videoHeight*centers[cy]-sourceSize/2));
+                ctx.fillStyle="#fff";
+                ctx.fillRect(0,0,RUNE_SAMPLE_SIZE,RUNE_SAMPLE_SIZE);
+                ctx.drawImage(video,sourceX,sourceY,sourceSize,sourceSize,0,0,RUNE_SAMPLE_SIZE,RUNE_SAMPLE_SIZE);
+                const sample=ctx.getImageData(0,0,RUNE_SAMPLE_SIZE,RUNE_SAMPLE_SIZE);
+                /* 사진 전체 일치뿐 아니라 원형 검은 테두리·흰 모서리·중앙
+                   다이아몬드 구조도 판별해 실제 카메라 노출 변화에 견딘다. */
+                if(runeGeometryScore(sample)>=.71){return true;}
+                const bits=makeRuneBits(sample);
+                best=Math.max(best,runeSimilarity(bits,false),runeSimilarity(bits,true));
+                if(best>=.775){return true;}
+            }
+        }
     }
-    return best>=.815;
+    return false;
 }
 
 function processRuneMarker(video){
     const now=performance.now();
+    /* QR 프레임 속도와 별도로 룬 비교는 초당 약 2회만 실행한다. */
+    if(now-lastRuneScanAt<460){return;}
+    lastRuneScanAt=now;
     const detected=detectRuneMarker(video);
     if(!detected){
         if(now-lastRuneSeenAt>700){runeMarkerLocked=false;}
@@ -8794,6 +8901,8 @@ async function startQR(){
         }
 
         /* html5-qrcode를 주 판독기로 두고 가벼운 jsQR만 보조한다. */
+        /* 룬 원본 다운로드가 느리거나 실패해도 QR 및 구조 기반 룬 판독은
+           즉시 시작한다. 원본 비교 자료는 뒤에서 별도로 준비한다. */
         loadJsQR().then(function(){
             if(qrRunning && inputMode==="qr"){
                 startQRSmallAssist();
@@ -8885,6 +8994,7 @@ async function stopQR(){
     lastQRHit=0;
     runeMarkerLocked=false;
     lastRuneSeenAt=0;
+    lastRuneScanAt=0;
 }
 
 
