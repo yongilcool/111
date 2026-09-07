@@ -10173,6 +10173,8 @@ $("retryButton")
    GAME LOOP
 ===================================================== */
 
+let standaloneMobileQrLastFrameAt=0;
+
 function loop(now){
 
     requestAnimationFrame(
@@ -10183,6 +10185,19 @@ function loop(now){
     if(!renderer){
 
         return;
+    }
+
+    /* PC 연결용 폰은 QR만 처리하므로 인식이 빠르다. 모바일 단독판도
+       QR 사용 중에는 3D 갱신을 30fps로 제한해 카메라 판독에 처리 시간을
+       우선 배정한다. QR 엔진·초점·크롭 수치는 안정화된 값을 그대로 쓴다. */
+    if(
+        isMobileGameDevice() &&
+        !phoneQrControllerMode &&
+        qrRunning &&
+        inputMode==="qr"
+    ){
+        if(now-standaloneMobileQrLastFrameAt<33){return;}
+        standaloneMobileQrLastFrameAt=now;
     }
 
     const dt=
