@@ -8184,6 +8184,7 @@ let runeMarkerLocked=false;
 let lastRuneSeenAt=0;
 let lastRuneAttackAt=0;
 let lastRuneScanAt=0;
+let runeTransformPhase=0;
 
 let qrContinuousAttackTimer=null;
 let qrAutofocusWatchTimer=null;
@@ -8483,26 +8484,64 @@ function detectRuneMarker(video){
     }
     const ctx=runeSampleCanvas.getContext("2d",{willReadFrequently:true});
     const minimum=Math.min(video.videoWidth,video.videoHeight);
-    const ratios=[.22,.28,.34,.40,.47,.54,.62,.70,.79,.88];
-    const centers=[.42,.50,.58];
+    /* 작은 표식부터 화면을 거의 채운 표식까지 단계적으로 찾는다. */
+    const ratios=[.08,.11,.15,.19,.24,.30,.37,.45,.54,.64,.75,.86,.96];
+    const centers=[.40,.50,.60];
     let best=0;
+    function checkCandidate(sourceX,sourceY,sourceSize,angle,stretchX,loose){
+        ctx.save();
+        ctx.setTransform(1,0,0,1,0,0);
+        ctx.fillStyle="#fff";
+        ctx.fillRect(0,0,RUNE_SAMPLE_SIZE,RUNE_SAMPLE_SIZE);
+        ctx.translate(RUNE_SAMPLE_SIZE/2,RUNE_SAMPLE_SIZE/2);
+        ctx.rotate(angle || 0);
+        ctx.scale(stretchX || 1,1);
+        ctx.drawImage(
+            video,
+            sourceX,sourceY,sourceSize,sourceSize,
+            -RUNE_SAMPLE_SIZE/2,-RUNE_SAMPLE_SIZE/2,
+            RUNE_SAMPLE_SIZE,RUNE_SAMPLE_SIZE
+        );
+        ctx.restore();
+        const sample=ctx.getImageData(0,0,RUNE_SAMPLE_SIZE,RUNE_SAMPLE_SIZE);
+        if(runeGeometryScore(sample)>=(loose ? .64 : .71)){return true;}
+        const bits=makeRuneBits(sample);
+        best=Math.max(best,runeSimilarity(bits,false),runeSimilarity(bits,true));
+        return best>=(loose ? .70 : .775);
+    }
+
+    /* 1차: 여러 크기와 중앙 주변 위치를 빠르게 탐색한다. */
     for(let i=0;i<ratios.length;i++){
         const sourceSize=minimum*ratios[i];
         for(let cx=0;cx<centers.length;cx++){
             for(let cy=0;cy<centers.length;cy++){
                 const sourceX=Math.max(0,Math.min(video.videoWidth-sourceSize,video.videoWidth*centers[cx]-sourceSize/2));
                 const sourceY=Math.max(0,Math.min(video.videoHeight-sourceSize,video.videoHeight*centers[cy]-sourceSize/2));
-                ctx.fillStyle="#fff";
-                ctx.fillRect(0,0,RUNE_SAMPLE_SIZE,RUNE_SAMPLE_SIZE);
-                ctx.drawImage(video,sourceX,sourceY,sourceSize,sourceSize,0,0,RUNE_SAMPLE_SIZE,RUNE_SAMPLE_SIZE);
-                const sample=ctx.getImageData(0,0,RUNE_SAMPLE_SIZE,RUNE_SAMPLE_SIZE);
-                /* 사진 전체 일치뿐 아니라 원형 검은 테두리·흰 모서리·중앙
-                   다이아몬드 구조도 판별해 실제 카메라 노출 변화에 견딘다. */
-                if(runeGeometryScore(sample)>=.71){return true;}
-                const bits=makeRuneBits(sample);
-                best=Math.max(best,runeSimilarity(bits,false),runeSimilarity(bits,true));
-                if(best>=.775){return true;}
+                if(checkCandidate(sourceX,sourceY,sourceSize,0,1,false)){return true;}
             }
+        }
+    }
+
+    /* 2차: 카메라를 비스듬히 들었을 때 생기는 회전과 가로 원근
+       압축을 역보정한다. 이 단계는 1차가 실패했을 때만 실행한다. */
+    const angles=[-32,-20,-10,10,20,32].map(function(degree){
+        return degree*Math.PI/180;
+    });
+    const stretchValues=[.70,.84,1.20,1.42];
+    const transforms=[];
+    angles.forEach(function(angle){transforms.push([angle,1]);});
+    stretchValues.forEach(function(stretch){transforms.push([0,stretch]);});
+    transforms.push([angles[1],.82],[angles[1],1.24],[angles[4],.82],[angles[4],1.24]);
+    /* 모든 보정 조합을 한 프레임에 몰아서 계산하지 않고 네 개씩
+       순환시켜 QR 속도와 모바일 프레임을 보존한다. */
+    const transformStart=(runeTransformPhase++*4)%transforms.length;
+    for(let i=0;i<ratios.length;i++){
+        const sourceSize=minimum*ratios[i];
+        const sourceX=(video.videoWidth-sourceSize)/2;
+        const sourceY=(video.videoHeight-sourceSize)/2;
+        for(let t=0;t<4;t++){
+            const transform=transforms[(transformStart+t)%transforms.length];
+            if(checkCandidate(sourceX,sourceY,sourceSize,transform[0],transform[1],true)){return true;}
         }
     }
     return false;
@@ -8997,6 +9036,7 @@ async function stopQR(){
     runeMarkerLocked=false;
     lastRuneSeenAt=0;
     lastRuneScanAt=0;
+    runeTransformPhase=0;
 }
 
 
