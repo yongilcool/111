@@ -8469,10 +8469,15 @@ function runeGeometryScore(imageData){
     [[.12,0],[-.12,0],[0,.12],[0,-.12]].forEach(function(point){
         if(!isBlack(center+point[0]*size,center+point[1]*size)){innerWhite++;}
     });
-    return (cornerWhite/cornerTotal)*.22+
-        (outerBlack/ringSamples)*.43+
-        (centerBlack/centerTotal)*.23+
-        (innerWhite/4)*.12;
+    const cornerRatio=cornerWhite/cornerTotal;
+    const outerRatio=outerBlack/ringSamples;
+    const centerRatio=centerBlack/centerTotal;
+    const innerRatio=innerWhite/4;
+    /* 평균 명암만 비슷한 얼굴·머리카락·가구는 통과시키지 않는다. */
+    if(cornerRatio<.72 || outerRatio<.46 || centerRatio<.52 || innerRatio<.50){
+        return 0;
+    }
+    return cornerRatio*.22+outerRatio*.43+centerRatio*.23+innerRatio*.12;
 }
 
 function detectRuneMarker(video){
@@ -8504,10 +8509,16 @@ function detectRuneMarker(video){
         );
         ctx.restore();
         const sample=ctx.getImageData(0,0,RUNE_SAMPLE_SIZE,RUNE_SAMPLE_SIZE);
-        if(runeGeometryScore(sample)>=(loose ? .64 : .71)){return true;}
+        const geometry=runeGeometryScore(sample);
         const bits=makeRuneBits(sample);
-        best=Math.max(best,runeSimilarity(bits,false),runeSimilarity(bits,true));
-        return best>=(loose ? .70 : .775);
+        const similarity=Math.max(
+            runeSimilarity(bits,false),
+            runeSimilarity(bits,true)
+        );
+        best=Math.max(best,similarity);
+        /* 구조와 Wix 원본의 내부 조각 배열이 모두 맞아야 공격한다. */
+        return geometry>=(loose ? .66 : .71) &&
+            similarity>=(loose ? .765 : .79);
     }
 
     /* 1차: 여러 크기와 중앙 주변 위치를 빠르게 탐색한다. */
