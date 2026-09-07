@@ -8510,17 +8510,19 @@ function detectRuneMarker(video){
 
 function processRuneMarker(video){
     const now=performance.now();
-    /* QR 프레임 속도와 별도로 룬 비교는 초당 약 2회만 실행한다. */
-    if(now-lastRuneScanAt<460){return;}
+    /* 문양이 계속 보일 때 QR처럼 칼 잠금이 풀리는 즉시 다음 공격을
+       이어갈 수 있도록 약 0.3초마다 존재 여부를 갱신한다. */
+    if(now-lastRuneScanAt<300){return;}
     lastRuneScanAt=now;
     const detected=detectRuneMarker(video);
     if(!detected){
-        if(now-lastRuneSeenAt>700){runeMarkerLocked=false;}
         return;
     }
     lastRuneSeenAt=now;
-    if(runeMarkerLocked || now-lastRuneAttackAt<700){return;}
-    runeMarkerLocked=true;
+    const runeAttackCooldown=isIOS()
+        ? IOS_QR_ATTACK_COOLDOWN
+        : QR_ATTACK_COOLDOWN;
+    if(now-lastRuneAttackAt<runeAttackCooldown){return;}
     lastRuneAttackAt=now;
     if(phoneQrControllerMode){
         if(phoneQrHostConnection?.open){
