@@ -9084,6 +9084,8 @@ function startMultiplayerGameSession(){
 function becomeMultiplayerHost(peer){
     multiplayerPeer=peer;multiplayerIsHost=true;
     updateRoomCopyButton();
+    /* 2번 모바일 멀티 방장은 초대 QR을 띄운 뒤 자신도 바로 입장할 수 있다. */
+    $("multiHostEnterButton").style.display="inline-block";
     peer.on("connection",function(connection){
         if(multiplayerConnections.size>=3){connection.on("open",function(){connection.send({type:"full"});setTimeout(function(){connection.close();},300);});return;}
         wireMultiplayerConnection(connection);
@@ -9414,7 +9416,16 @@ function installGameBackLock(){
     if($("gameExitYes")){$("gameExitYes").addEventListener("click",function(event){
         event.stopPropagation();gameExitAllowed=true;gameExitConfirmOpen=false;started=false;
         if($("gameExitConfirm")){$("gameExitConfirm").classList.remove("show");}
-        try{history.go(-3);}catch(error){history.back();}
+        releaseGameMemory();
+        /* 스크립트가 연 창은 즉시 닫고, 일반 Android Chrome 탭은
+           브라우저 보안상 window.close가 거부될 수 있어 이전 페이지로 빠져나간다. */
+        try{window.open("","_self");window.close();}catch(error){}
+        setTimeout(function(){
+            try{history.go(-2);}catch(error){try{history.back();}catch(ignore){}}
+        },80);
+        setTimeout(function(){
+            if(!document.hidden){location.replace("about:blank");}
+        },420);
     });}
 }
 
@@ -10173,8 +10184,6 @@ $("retryButton")
    GAME LOOP
 ===================================================== */
 
-let standaloneMobileQrLastFrameAt=0;
-
 function loop(now){
 
     requestAnimationFrame(
@@ -10185,19 +10194,6 @@ function loop(now){
     if(!renderer){
 
         return;
-    }
-
-    /* PC 연결용 폰은 QR만 처리하므로 인식이 빠르다. 모바일 단독판도
-       QR 사용 중에는 3D 갱신을 30fps로 제한해 카메라 판독에 처리 시간을
-       우선 배정한다. QR 엔진·초점·크롭 수치는 안정화된 값을 그대로 쓴다. */
-    if(
-        isMobileGameDevice() &&
-        !phoneQrControllerMode &&
-        qrRunning &&
-        inputMode==="qr"
-    ){
-        if(now-standaloneMobileQrLastFrameAt<33){return;}
-        standaloneMobileQrLastFrameAt=now;
     }
 
     const dt=
