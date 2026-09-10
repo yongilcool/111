@@ -4854,6 +4854,100 @@ function tavernLabel(text){
     sprite.scale.set(4.2,1.05,1);sprite.renderOrder=30;return sprite;
 }
 
+function tavernStoneWallTexture(){
+    const c=document.createElement("canvas");c.width=256;c.height=128;
+    const g=c.getContext("2d");g.fillStyle="#211e24";g.fillRect(0,0,256,128);
+    const colors=["#514749","#625451","#49434a","#594e50","#655653"];
+    for(let row=0;row<8;row++){
+        for(let col=-1;col<9;col++){
+            const x=col*32+(row%2)*16,y=row*16;
+            g.fillStyle=colors[((col+9)*7+row*3)%colors.length];g.fillRect(x+1,y+1,30,14);
+            g.fillStyle="#79665a";g.fillRect(x+3,y+2,26,1);
+            g.fillStyle="#322d32";g.fillRect(x+2,y+13,28,2);
+            g.fillStyle="#413b40";g.fillRect(x+7,y+7,4,1);
+        }
+    }
+    const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
+    t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(4,1);
+    t.magFilter=THREE.NearestFilter;t.minFilter=THREE.LinearMipmapLinearFilter;return t;
+}
+
+function dressTavernReferenceInterior(wood,darkWood,barrelMat){
+    // 반복 목재와 금속 장식은 재질별 인스턴스로 묶는다.
+    const groups=new Map();
+    const metal=new THREE.MeshBasicMaterial({color:0x352c29});
+    const gold=new THREE.MeshBasicMaterial({color:0xb98242});
+    const glow=new THREE.MeshBasicMaterial({color:0xffd486});
+    function box(w,h,d,x,y,z,mat){
+        if(!groups.has(mat)){groups.set(mat,[]);}groups.get(mat).push([w,h,d,x,y,z]);
+    }
+    [-15,-5,5,15].forEach(function(z){
+        box(43,.65,.65,0,9.65,z,wood);
+        [-21.05,21.05].forEach(function(x){box(.75,9.2,.75,x,4.85,z,wood);});
+    });
+    [-21.1,21.1].forEach(function(x){box(.5,.45,43,x,7.9,0,wood);});
+    // 바 앞쪽 패널과 돌출 상판.
+    box(23.6,.24,4,0,2.62,-17.2,wood);
+    [-10,-6,-2,2,6,10].forEach(function(x){box(.16,2.2,.16,x,1.3,-15.38,gold);});
+    box(23,.12,.14,0,.45,-15.35,gold);
+    // 바 뒤 상부의 선반과 병 목, 병 라벨.
+    box(18,.3,1.4,0,7.8,-20.5,wood);
+    for(let row=0;row<3;row++){
+        for(let x=-8;x<=8;x+=2){
+            box(.14,.27,.14,x,2.38+row*1.8,-20.15,gold);
+            box(.27,.23,.035,x,1.87+row*1.8,-19.87,gold);
+        }
+    }
+    // 등불: 광원 계산 없이 발광색 유리와 금속 프레임으로 표현.
+    [[-19,-15],[19,-15],[-19,6],[19,6],[0,-15]].forEach(function(p){
+        const x=p[0],z=p[1];box(.08,1.05,.08,x,9,z,metal);
+        box(.8,1,.8,x,7.95,z,glow);
+        [7.36,8.52].forEach(function(y){box(1,.16,1,x,y,z,metal);});
+        [-.43,.43].forEach(function(dx){[-.43,.43].forEach(function(dz){box(.09,1.1,.09,x+dx,7.95,z+dz,metal);});});
+    });
+    // 벽걸이 문장: 인물과 문을 가리지 않는 높은 위치.
+    const c=document.createElement("canvas");c.width=128;c.height=160;const g=c.getContext("2d");
+    g.fillStyle="#b58546";g.beginPath();g.moveTo(10,8);g.lineTo(118,8);g.lineTo(110,112);g.lineTo(64,152);g.lineTo(18,112);g.closePath();g.fill();
+    g.fillStyle="#712d30";g.beginPath();g.moveTo(17,15);g.lineTo(111,15);g.lineTo(103,108);g.lineTo(64,141);g.lineTo(25,108);g.closePath();g.fill();
+    g.fillStyle="#d3ac68";g.fillRect(58,33,12,67);g.fillRect(37,50,54,9);g.beginPath();g.moveTo(58,100);g.lineTo(64,119);g.lineTo(70,100);g.fill();
+    const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;tex.magFilter=THREE.NearestFilter;
+    const heraldry=new THREE.MeshBasicMaterial({map:tex,transparent:true,alphaTest:.5,side:THREE.DoubleSide});
+    [-6,0,6].forEach(function(x){const m=new THREE.Mesh(new THREE.PlaneGeometry(1.65,2),heraldry);m.position.set(x,8.8,-20.4);scene.add(m);});
+    // 식탁의 접시·빵·촛대. 기존 테이블과 손님 좌표는 그대로 둔다.
+    [[-11,-7],[11,-6],[-11,7],[10,8]].forEach(function(p){
+        box(.4,.12,.4,p[0],3.35,p[1],gold);box(.14,.65,.14,p[0],3.72,p[1],glow);
+        const plate=new THREE.Mesh(new THREE.CylinderGeometry(.65,.65,.08,12),new THREE.MeshBasicMaterial({color:0xcbbb93}));
+        plate.position.set(p[0]+1.3,3.33,p[1]+1.1);scene.add(plate);
+        box(.72,.2,.4,p[0]+1.3,3.48,p[1]+1.1,gold);
+    });
+    // 중앙 러그는 바닥에 붙이고 보행을 막지 않는다.
+    const hearthStone=new THREE.MeshBasicMaterial({color:0x69574c});
+    box(1.9,.4,5,-20.15,.42,0,hearthStone);
+    [-2,2].forEach(function(z){box(1.4,3.6,.8,-20.35,2,z,hearthStone);});
+    box(1.5,4.9,4.8,-20.55,6.4,hearthStone);
+    box(2,.35,5.2,-20.1,4.05,0,wood);
+    box(.25,3.2,3.4,-20.55,2,0,metal);
+    const fireCanvas=document.createElement("canvas");fireCanvas.width=64;fireCanvas.height=64;
+    const fg=fireCanvas.getContext("2d");
+    ["#ac3a17","#ee7823","#ffc55a","#fff0ab"].forEach(function(color,k){
+        fg.fillStyle=color;
+        for(let x=8+k*5;x<56-k*5;x+=4){const h=12+((x*13+k*9)%23)-k*2;fg.fillRect(x,56-h,4,h);}
+    });
+    const ft=new THREE.CanvasTexture(fireCanvas);ft.colorSpace=THREE.SRGBColorSpace;ft.magFilter=THREE.NearestFilter;
+    const fire=new THREE.Mesh(new THREE.PlaneGeometry(3.1,2.9),new THREE.MeshBasicMaterial({map:ft,transparent:true,alphaTest:.1,side:THREE.DoubleSide}));
+    fire.rotation.y=Math.PI/2;fire.position.set(-19.95,1.9,0);scene.add(fire);
+    [-1.2,-.6,0,.6,1.2].forEach(function(z){box(.09,1.25,.09,-19.65,.95,z,metal);});
+    box(.1,.1,3.1,-19.65,1.35,0,metal);
+    addTavernObstacle(-20.2,0,1.15,2.65,0,8);
+    const rugCanvas=document.createElement("canvas");rugCanvas.width=128;rugCanvas.height=256;
+    const rg=rugCanvas.getContext("2d");rg.fillStyle="#64432f";rg.fillRect(0,0,128,256);
+    rg.strokeStyle="#ac8148";rg.lineWidth=4;rg.strokeRect(5,5,118,246);rg.strokeRect(13,13,102,230);
+    for(let y=40;y<230;y+=48){rg.fillStyle="#967044";rg.beginPath();rg.moveTo(64,y-15);rg.lineTo(90,y);rg.lineTo(64,y+15);rg.lineTo(38,y);rg.fill();}
+    const rt=new THREE.CanvasTexture(rugCanvas);rt.colorSpace=THREE.SRGBColorSpace;rt.magFilter=THREE.NearestFilter;
+    const rug=new THREE.Mesh(new THREE.PlaneGeometry(6,19),new THREE.MeshBasicMaterial({map:rt}));rug.rotation.x=-Math.PI/2;rug.position.set(0,.226,1);scene.add(rug);
+    groups.forEach(function(items,mat){const mesh=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),mat,items.length);const matrix=new THREE.Matrix4();const q=new THREE.Quaternion();items.forEach(function(a,i){matrix.compose(new THREE.Vector3(a[3],a[4],a[5]),q,new THREE.Vector3(a[0],a[1],a[2]));mesh.setMatrixAt(i,matrix);});mesh.instanceMatrix.needsUpdate=true;scene.add(mesh);});
+}
+
 function buildTavernInterior(loader){
     if(tavernBuilt){return;}tavernBuilt=true;tavernObstacles=[];tavernShadowCount=0;tavernRectShadowCount=0;tavernDoors=[];
     scene.background=new THREE.Color(0x17100d);scene.fog=new THREE.Fog(0x17100d,38,72);
@@ -4862,7 +4956,7 @@ function buildTavernInterior(loader){
     });
     dungeonTorchLights.forEach(function(light){light.visible=false;});
 
-    const wallTexture=tavernLoadTexture(loader,TAVERN_WALL_URL,7,1);
+    const wallTexture=tavernStoneWallTexture();
     const floorTexture=tavernLoadTexture(loader,TAVERN_FLOOR_URL,10,10);
     const brickTexture=tavernLoadTexture(loader,TAVERN_BRICK_URL,4,3);
     const barrelTexture=tavernLoadTexture(loader,TAVERN_BARREL_URL,1,1);
@@ -4955,6 +5049,7 @@ function buildTavernInterior(loader){
     });
 
     /* 방향과 거리에 따라 밝기가 변하지 않는 평면형 균일 조명만 사용한다. */
+    dressTavernReferenceInterior(tableMat,beamMat,barrelMat);
     scene.add(new THREE.AmbientLight(0xffffff,1));
 
     const atlas=loader.load(TAVERN_PEOPLE_URL,function(texture){
