@@ -6534,6 +6534,15 @@ function updateSwordIdle(){
 ===================================================== */
 
 function attack(){
+    // 컨트롤러에서는 연결이 끊겨도 로컬 칼/소리를 실행하지 않는다.
+    if(phoneQrControllerMode || new URLSearchParams(location.search).has("controller")){
+        if(phoneQrHostConnection?.open){
+            phoneQrHostConnection.send({type:"remoteAttack",source:inputMode,at:Date.now()});
+            return true;
+        }
+        $("controllerConnectionStatus").textContent="PC 연결이 끊겼습니다 · PC의 연결 QR을 다시 찍어주세요";
+        return false;
+    }
 
     /* Android에서 애니메이션 종료 이벤트가 빠져도
        공격 상태가 영구적으로 잠기지 않게 복구한다. */
@@ -7505,6 +7514,7 @@ let lastNFC=0;
 */
 
 async function startNFC(){
+    if(inputMode!=="nfc" || pcPhoneControllerHost){return;}
 
     if(nfcStarted){
 
@@ -7544,9 +7554,12 @@ async function startNFC(){
             new NDEFReader();
 
 
-        await nfcReader.scan({
-            signal:nfcAbortController.signal
+        const activeReader=nfcReader;
+        const activeAbort=nfcAbortController;
+        await activeReader.scan({
+            signal:activeAbort.signal
         });
+        if(activeAbort.signal.aborted || nfcReader!==activeReader || inputMode!=="nfc"){return;}
 
 
         nfcStarted=
@@ -7597,11 +7610,8 @@ async function startNFC(){
                     now;
 
 
-                if(phoneQrControllerMode && phoneQrHostConnection?.open){
-                    phoneQrHostConnection.send({type:"remoteAttack",source:"nfc",at:Date.now()});
-                }else{
-                    attack();
-                }
+                if(inputMode!=="nfc" || !nfcStarted || nfcReader!==activeReader){return;}
+                attack();
 
             };
 
@@ -8850,6 +8860,8 @@ function waitForQRVideoReady(video){
 
 
 async function startQR(){
+    if(inputMode!=="qr" || pcPhoneControllerHost){return;}
+    stopNFC();
 
     if(qrRunning || qrStarting){
         return;
@@ -9004,6 +9016,7 @@ async function startQR(){
 /* QR 카메라와 NFC 하드웨어가 충돌하지 않도록
    모드를 바꿀 때 Web NFC 세션을 명확하게 종료한다. */
 function stopNFC(){
+    if(nfcReader){nfcReader.onreading=null;nfcReader.onreadingerror=null;}
 
     if(nfcAbortController){
         try{
@@ -9019,6 +9032,8 @@ function stopNFC(){
 
 
 async function stopQR(){
+    // 시작 중인 카메라도 완료를 기다린 뒤 닫는다.
+    while(qrStarting){await new Promise(function(resolve){setTimeout(resolve,40);});}
 
     stopQRSmallAssist();
     stopQRContinuousAttack();
@@ -9470,6 +9485,8 @@ let phoneSensorRevision=0;
 let phoneSensorQueue=Promise.resolve();
 function requestControllerSensor(mode){
     const revision=++phoneSensorRevision;
+    inputMode=mode;
+    stopNFC();
     const status=$("controllerConnectionStatus");
     let button=$("phoneNfcEnable");
     if(!button){
