@@ -8727,8 +8727,8 @@ function startQRSmallAssist(){
                 processDecodedQR(result.data);
             }
 
-            /* QR 판독과 별개로 같은 카메라 프레임에서 룬 마커도 확인한다. */
-            processRuneMarker(video);
+            /* 일반 그림 룬 판독은 얼굴·가구 오인식 위험 때문에 비활성화한다.
+               공격 입력은 검증된 QR 판독 결과만 사용한다. */
         }
         catch(e){}
         finally{
@@ -8972,7 +8972,6 @@ async function startQR(){
                 startQRSmallAssist();
             }
         });
-        prepareRuneMarker();
 
         $("statusDot").style.background=
             "#55eaff";
@@ -9465,6 +9464,48 @@ function phoneDisconnectedButton(){
 function markPhoneSensorDisconnected(){
     pcPhoneSensorConnection=null;phoneDisconnectedButton().classList.add("show");$("statusText").textContent="휴대폰 연결 끊김 · PC 플레이는 계속됩니다";
 }
+
+/* NFC 권한 요청은 PC 메시지가 아니라 휴대폰의 직접 터치에서 시작한다. */
+let phoneSensorRevision=0;
+let phoneSensorQueue=Promise.resolve();
+function requestControllerSensor(mode){
+    const revision=++phoneSensorRevision;
+    const status=$("controllerConnectionStatus");
+    let button=$("phoneNfcEnable");
+    if(!button){
+        button=document.createElement("button");button.id="phoneNfcEnable";
+        button.textContent="NFC 사용 시작";
+        button.style.cssText="position:fixed;z-index:100000;left:50%;top:50%;transform:translate(-50%,-50%);padding:20px 30px;font-size:22px";
+        document.body.appendChild(button);
+        button.onclick=async function(){
+            if(inputMode!=="nfc" || !phoneQrHostConnection?.open){return;}
+            button.disabled=true;
+            await startNFC();
+            button.disabled=false;
+            if(inputMode!=="nfc"){return;}
+            button.hidden=nfcStarted;
+            const text=nfcStarted ? "PC 연결됨 · NFC 태그를 대주세요" : "NFC 시작 실패 · 권한과 브라우저 지원을 확인해주세요";
+            status.textContent=text;
+            if(phoneQrHostConnection?.open){phoneQrHostConnection.send({type:"controllerStatus",text:text});}
+        };
+    }
+    button.hidden=true;
+    phoneSensorQueue=phoneSensorQueue.catch(function(){}).then(async function(){
+        if(revision!==phoneSensorRevision){return;}
+        inputMode=mode;
+        await stopQR();stopNFC();
+        if(revision!==phoneSensorRevision){return;}
+        $("game").classList.toggle("qr-mode",mode==="qr");
+        if(mode==="nfc"){
+            button.hidden=!("NDEFReader" in window);
+            status.textContent=button.hidden ? "이 브라우저는 NFC 미지원 · QR을 선택해주세요" : "휴대폰에서 NFC 사용 시작을 눌러주세요";
+        }else{
+            await startQR();
+            status.textContent=qrRunning ? "PC 연결됨 · QR 무기를 보여주세요" : "QR 카메라 권한을 확인해주세요";
+        }
+        if(phoneQrHostConnection?.open){phoneQrHostConnection.send({type:"controllerStatus",text:status.textContent});}
+    });
+}
 function cancelPhoneReconnectPause(){
     if(!phoneReconnectPausedGame){return false;}
     $("multiLobby").classList.remove("show");
@@ -9520,10 +9561,10 @@ function beginPcPhoneControllerHost(){
             setMultiplayerLobbyStatus("휴대폰 QR 센서가 연결되었습니다.");
             clearInterval(pcPhoneHeartbeatTimer);pcPhoneHeartbeatTimer=setInterval(function(){if(connection.open){connection.send({type:"hostHeartbeat",at:Date.now()});}},1000);
             if(!started){startGame();}
-            if(phoneReconnectRequestedMode==="nfc"){connection.send({type:"sensorMode",mode:"nfc"});}
+            connection.send({type:"sensorMode",mode:phoneReconnectRequestedMode});
             finishPhoneSensorReconnect();
         });
-        connection.on("close",markPhoneSensorDisconnected);
+        connection.on("close",function(){if(pcPhoneSensorConnection===connection){markPhoneSensorDisconnected();}});
     });
     peer.on("error",function(){setMultiplayerLobbyStatus("방 생성에 실패했습니다. 새로고침 후 다시 시도해주세요.");});
 }
@@ -9539,21 +9580,11 @@ function startPhoneQrController(){
         const connection=peer.connect(hostId,{reliable:true,metadata:{role:"phone-controller"}});phoneQrHostConnection=connection;
         connection.on("open",function(){
             status.textContent="PC 연결됨 · QR 무기를 카메라에 보여주세요";
-            started=true;inputMode="qr";$("game").classList.add("qr-mode");startQR();
+            started=true;phoneQrLastHeartbeat=performance.now();phoneQrDisconnectHandled=false;
         });
         connection.on("data",async function(data){
             if(data?.type!=="sensorMode"){return;}
-            if(data.mode==="nfc"){
-                inputMode="nfc";await stopQR();stopNFC();
-                if(!("NDEFReader" in window)){
-                    if(connection.open){connection.send({type:"controllerStatus",text:"이 휴대폰은 Web NFC를 지원하지 않습니다"});}
-                    return;
-                }
-                await startNFC();if(connection.open){connection.send({type:"controllerStatus",text:"휴대폰 NFC 대기 중"});}
-            }else{
-                inputMode="qr";stopNFC();await startQR();
-                if(connection.open){connection.send({type:"controllerStatus",text:"휴대폰 QR 카메라 사용 중"});}
-            }
+            requestControllerSensor(data.mode==="nfc" ? "nfc" : "qr");
         });
         connection.on("close",closePhoneControllerAfterDisconnect);
         connection.on("error",function(){status.textContent="PC 연결 실패";});
@@ -9618,9 +9649,9 @@ function wirePartyPhoneController(connection){
     connection.on("data",function(data){if(data?.type==="remoteAttack"){attack();}else if(data?.type==="controllerStatus"){$("statusText").textContent=String(data.text||"");}else if(data?.type==="sensorStopped"){markPhoneSensorDisconnected();}});
     connection.on("open",function(){
         clearInterval(pcPhoneHeartbeatTimer);pcPhoneHeartbeatTimer=setInterval(function(){if(connection.open){connection.send({type:"hostHeartbeat",at:Date.now()});}},1000);
-        startPcPartyGame();if(phoneReconnectRequestedMode==="nfc"){connection.send({type:"sensorMode",mode:"nfc"});}finishPhoneSensorReconnect();
+        startPcPartyGame();connection.send({type:"sensorMode",mode:phoneReconnectRequestedMode});finishPhoneSensorReconnect();
     });
-    connection.on("close",markPhoneSensorDisconnected);
+    connection.on("close",function(){if(pcPhoneSensorConnection===connection){markPhoneSensorDisconnected();}});
 }
 function showOwnPhoneControllerQr(peer){
     const invite=phoneControllerInviteUrl(peer.id);$("multiInviteQr").src="https://api.qrserver.com/v1/create-qr-code/?size=420x420&margin=10&data="+encodeURIComponent(invite);
