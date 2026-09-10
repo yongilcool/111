@@ -2245,7 +2245,7 @@ function applyGyroView(){
 
 function isInsidePlayableRoad(x,z){
     if(TAVERN_MODE){
-        return x>=-20.7 && x<=20.7 && z>=-20.7 && z<=20.7;
+        return x>=-20.7 && x<=20.7 && z>=-25.7 && z<=20.7;
     }
     if(DUNGEON_MODE && dungeonGrid.length){
         const half=(DUNGEON_SIZE-1)/2;
@@ -4616,7 +4616,7 @@ function updateTavernInteraction(){
         const horizontalDistance=Math.hypot(camera.position.x-npc.position.x,camera.position.z-npc.position.z);
         const verticalDistance=Math.abs(tavernPlayerFloorHeight-(npc.userData.floorY || 0));
         const distance=verticalDistance<=3 ? horizontalDistance : Infinity;
-        if(tavernTalkSuppressedNPC===npc && distance>TAVERN_TALK_DISTANCE+1){tavernTalkSuppressedNPC=null;}
+        if(tavernTalkSuppressedNPC===npc && distance>(npc.userData.talkDistance||TAVERN_TALK_DISTANCE)+1){tavernTalkSuppressedNPC=null;}
         if(distance<nearestDistance){nearestDistance=distance;nearestTavernNPC=npc;}
         if(npc.userData.label){npc.userData.label.visible=false;}
     });
@@ -4630,7 +4630,7 @@ function updateTavernInteraction(){
         const dz=nearestTavernNPC.position.z-camera.position.z;
         facingDot=(dx*(-Math.sin(gyroViewHeading))+dz*(-Math.cos(gyroViewHeading)))/nearestDistance;
     }
-    const canTalk=!tavernConversationLocked && nearestTavernNPC && nearestTavernNPC!==tavernTalkSuppressedNPC && nearestDistance<=TAVERN_TALK_DISTANCE && facingDot>.48;
+    const canTalk=!tavernConversationLocked && nearestTavernNPC && nearestTavernNPC!==tavernTalkSuppressedNPC && nearestDistance<=(nearestTavernNPC.userData.talkDistance||TAVERN_TALK_DISTANCE) && facingDot>.48;
     button.classList.toggle("show",!!canTalk);
     button.textContent="대화한다";
     if(namePlate){
@@ -4662,7 +4662,7 @@ function talkToNearestTavernNPC(){
     if(!nearestTavernNPC || tavernConversationLocked){return;}
     const distance=Math.hypot(camera.position.x-nearestTavernNPC.position.x,camera.position.z-nearestTavernNPC.position.z);
     const verticalDistance=Math.abs(tavernPlayerFloorHeight-(nearestTavernNPC.userData.floorY || 0));
-    if(distance>TAVERN_TALK_DISTANCE || verticalDistance>3){return;}
+    if(distance>(nearestTavernNPC.userData.talkDistance||TAVERN_TALK_DISTANCE) || verticalDistance>3){return;}
     let awayX=camera.position.x-nearestTavernNPC.position.x;
     let awayZ=camera.position.z-nearestTavernNPC.position.z;
     let awayLength=Math.hypot(awayX,awayZ);
@@ -5006,6 +5006,112 @@ function dressTavernReferenceInterior(wood,darkWood,barrelMat,stoneMat){
     groups.forEach(function(items,mat){const mesh=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),mat,items.length);const matrix=new THREE.Matrix4();const q=new THREE.Quaternion();items.forEach(function(a,i){matrix.compose(new THREE.Vector3(a[3],a[4],a[5]),q,new THREE.Vector3(a[0],a[1],a[2]));mesh.setMatrixAt(i,matrix);});mesh.instanceMatrix.needsUpdate=true;scene.add(mesh);});
 }
 
+function expandTavernRearCabinet(objects){
+    const matrix=new THREE.Matrix4();
+    objects.forEach(mesh=>{
+        if(mesh.isInstancedMesh){
+            for(let i=0;i<mesh.count;i++){
+                mesh.getMatrixAt(i,matrix);
+                if(matrix.elements[14]<-19.5){matrix.elements[14]-=5;}
+                // Lift the high beam/lantern assembly along with the ceiling.
+                if(matrix.elements[13]>7.3){matrix.elements[13]+=3;}
+                mesh.setMatrixAt(i,matrix);
+            }
+            mesh.instanceMatrix.needsUpdate=true;
+        }else if(mesh.position.z<-19.5){mesh.position.z-=5;}
+    });
+    tavernObstacles.forEach(o=>{if(o.z<-19.5){o.z-=5;}});
+    addTavernObstacle(0,-25.8,9.4,.9,0,9);
+}
+
+function buildTavernReferenceArchitecture(wood,stone,door){
+    const iron=new THREE.MeshBasicMaterial({color:0x241b19});
+    const brass=new THREE.MeshBasicMaterial({color:0xb78240});
+    const warm=new THREE.MeshBasicMaterial({color:0xffce77});
+    const groups=new Map(),matrix=new THREE.Matrix4(),q=new THREE.Quaternion();
+    function beam(w,h,d,x,y,z,mat,angle=0){
+        if(!groups.has(mat)){groups.set(mat,[]);}
+        groups.get(mat).push([w,h,d,x,y,z,angle]);
+    }
+    // Structural rhythm from the reference: heavy posts, cross beams and knee braces.
+    [-24,-13,0,13].forEach(z=>{
+        beam(43,1,.85,0,12.7,z,wood);
+        [-20.8,20.8].forEach(x=>{
+            beam(.95,12.6,.95,x,6.55,z,wood);
+            beam(.5,4.6,.65,x+(x<0?1.55:-1.55),10.55,z,wood,x<0?-.72:.72);
+            [9.4,12.5].forEach(y=>beam(1.02,.18,1.02,x,y,z,iron));
+        });
+    });
+    // Timber upper frieze: closes the gap under the raised ceiling, not a second floor.
+    [-21.05,21.05].forEach(x=>{
+        beam(.4,2.25,48,x,11.85,-2,wood);
+        beam(.7,.25,48,x,10.68,-2,brass);
+    });
+    beam(43,2.25,.45,0,11.85,-26.25,wood);
+    beam(43,2.25,.45,0,11.85,21.25,wood);
+    // Blue leaded glass, with deliberately pixel-sized diamonds.
+    const canvas=document.createElement('canvas');canvas.width=128;canvas.height=192;
+    const ctx=canvas.getContext('2d');ctx.fillStyle='#263c58';ctx.fillRect(0,0,128,192);
+    for(let y=0;y<192;y+=16){for(let x=0;x<128;x+=16){ctx.fillStyle=(x+y)%32?'#344d68':'#405c75';ctx.fillRect(x+1,y+1,14,14);}}
+    ctx.strokeStyle='#111b29';ctx.lineWidth=3;
+    for(let x=-192;x<320;x+=24){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+192,192);ctx.stroke();ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x-192,192);ctx.stroke();}
+    const texture=new THREE.CanvasTexture(canvas);texture.magFilter=THREE.NearestFilter;texture.colorSpace=THREE.SRGBColorSpace;
+    const glass=new THREE.MeshBasicMaterial({map:texture});
+    scene.children.forEach(mesh=>{
+        const p=mesh.geometry?.parameters;
+        if(mesh.isMesh&&p&&p.height===4.2&&(p.width===2.42||p.depth===2.42)){mesh.material=glass;}
+    });
+    // Hanging pennants and carved shield silhouettes, facing into the room.
+    const bannerCanvas=document.createElement('canvas');bannerCanvas.width=128;bannerCanvas.height=256;
+    const bc=bannerCanvas.getContext('2d');bc.fillStyle='#331818';bc.fillRect(0,0,128,256);
+    bc.fillStyle='#793632';bc.fillRect(8,5,112,246);bc.strokeStyle='#c49a55';bc.lineWidth=5;bc.strokeRect(14,10,100,236);
+    bc.fillStyle='#cfab62';bc.beginPath();bc.moveTo(64,40);bc.lineTo(94,100);bc.lineTo(72,117);bc.lineTo(98,174);bc.lineTo(49,159);bc.lineTo(32,205);bc.lineTo(35,125);bc.lineTo(62,103);bc.lineTo(40,76);bc.closePath();bc.fill();
+    const bt=new THREE.CanvasTexture(bannerCanvas);bt.magFilter=THREE.NearestFilter;bt.colorSpace=THREE.SRGBColorSpace;
+    const bannerMat=new THREE.MeshBasicMaterial({map:bt,side:THREE.DoubleSide});
+    function wallBanner(x,z,rotation){
+        const m=new THREE.Mesh(new THREE.PlaneGeometry(1.9,4.7),bannerMat);m.position.set(x,7.9,z);m.rotation.y=rotation;scene.add(m);
+    }
+    wallBanner(-21.0,-14,Math.PI/2);wallBanner(-21.0,14,Math.PI/2);
+    wallBanner(21.0,-11,-Math.PI/2);wallBanner(21.0,11,-Math.PI/2);
+    [-8,8].forEach(x=>wallBanner(x,-26.15,0));
+    // Large stone hearth is recessed toward the wall; stepped stonework and mantel.
+    beam(2.2,1.1,6.2,-20.25,.8,0,stone);
+    beam(1.6,6.2,5.1,-20.55,7.15,0,stone);
+    beam(2.3,.4,6,-20.05,4.3,0,wood);
+    for(let y=1.1;y<4;y+=.65){[-2.1,2.1].forEach(z=>beam(1.65,.6,.95,-20.05,y,z,stone));}
+    // Mantel clock, tall candles and framed crest above the fire.
+    beam(.6,1.05,.95,-19.85,5.05,0,wood);
+    [-2,-1.3,1.3,2].forEach(z=>{beam(.28,.12,.28,-19.8,4.6,z,brass);beam(.13,.7,.13,-19.8,5,z,warm);});
+    const shieldShape=new THREE.Shape();shieldShape.moveTo(-.9,1.1);shieldShape.lineTo(.9,1.1);shieldShape.lineTo(.75,-.6);shieldShape.lineTo(0,-1.3);shieldShape.lineTo(-.75,-.6);shieldShape.closePath();
+    const shieldGeometry=new THREE.ExtrudeGeometry(shieldShape,{depth:.14,bevelEnabled:false});
+    [-6,0,6].forEach((x,i)=>{
+        const shield=new THREE.Mesh(shieldGeometry,i%2?brass:iron);shield.position.set(x,10,-25.9);scene.add(shield);
+        beam(.18,1.45,.2,x,10,-25.65,brass);beam(.95,.16,.2,x,10.2,-25.65,brass);
+    });
+    const crest=new THREE.Mesh(shieldGeometry,brass);crest.position.set(-19.65,7.4,0);crest.rotation.y=Math.PI/2;scene.add(crest);
+    // Real low-poly cups, tap barrels and cabinet dividers instead of an empty black slab.
+    [-9,-4.5,0,4.5,9].forEach(x=>beam(.2,6.8,1,x,3.6,-25.5,wood));
+    beam(18.4,.3,1.2,0,.45,-25.5,wood);
+    const kegGeo=new THREE.CylinderGeometry(.95,.95,1.25,12);
+    [-6,-2,2,6].forEach(x=>{
+        const keg=new THREE.Mesh(kegGeo,door);keg.rotation.x=Math.PI/2;keg.position.set(x,7.9,-25.55);scene.add(keg);
+        beam(.18,.6,.4,x,7.3,-24.7,brass);
+        const ring=new THREE.Mesh(new THREE.TorusGeometry(.88,.055,4,12),iron);ring.position.set(x,7.9,-24.87);scene.add(ring);
+    });
+    beam(18.4,.35,1.5,0,6.85,-25.6,wood);
+    // Extra wall lamps, not extra dynamic lights or shadow maps.
+    [[-20,-11],[20,-8],[-20,11],[20,11],[-9,-24],[9,-24]].forEach(([x,z])=>{
+        beam(.1,1.5,.1,x,10.5,z,iron);beam(.7,1.05,.7,x,9.25,z,warm);
+        [8.67,9.83].forEach(y=>beam(.95,.16,.95,x,y,z,iron));
+        [-.38,.38].forEach(dx=>[-.38,.38].forEach(dz=>beam(.1,1.1,.1,x+dx,9.25,z+dz,iron)));
+    });
+    groups.forEach((items,mat)=>{
+        const mesh=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),mat,items.length);
+        items.forEach((a,i)=>{q.setFromAxisAngle(new THREE.Vector3(0,0,1),a[6]);matrix.compose(new THREE.Vector3(a[3],a[4],a[5]),q,new THREE.Vector3(a[0],a[1],a[2]));mesh.setMatrixAt(i,matrix);});
+        mesh.instanceMatrix.needsUpdate=true;scene.add(mesh);
+    });
+}
+
 function addTavernStaticOutlines(objects){
     // One static edge batch, no full-screen postprocessing or extra render targets.
     const vertices=[],point=new THREE.Vector3(),local=new THREE.Matrix4(),world=new THREE.Matrix4();
@@ -5059,13 +5165,13 @@ function buildTavernInterior(loader){
     const floor=new THREE.Mesh(new THREE.PlaneGeometry(span,span),floorMat);floor.rotation.x=-Math.PI/2;floor.position.y=.22;floor.renderOrder=3;scene.add(floor);
     const ceilingTexture=floorTexture.clone();ceilingTexture.needsUpdate=true;
     const ceilingMat=new THREE.MeshLambertMaterial({map:ceilingTexture,color:0xb38a67,side:THREE.DoubleSide});
-    const ceiling=new THREE.Mesh(new THREE.PlaneGeometry(44,44),ceilingMat);ceiling.rotation.x=Math.PI/2;ceiling.position.y=10.5;scene.add(ceiling);
+    const ceiling=new THREE.Mesh(new THREE.PlaneGeometry(44,49),ceilingMat);ceiling.rotation.x=Math.PI/2;ceiling.position.set(0,13.5,-2.5);scene.add(ceiling);
     /* 단층 선술집: 공간을 줄이고 천장을 낮춘다. */
-    tavernBox(44,10.5,1.2,0,5.25,-22,wallMat);tavernBox(44,10.5,1.2,0,5.25,22,wallMat);
-    tavernBox(1.2,10.5,44,-22,5.25,0,wallMat);tavernBox(1.2,10.5,44,22,5.25,0,wallMat);
+    tavernBox(44,13.5,1.2,0,6.75,-22,wallMat);tavernBox(44,13.5,1.2,0,6.75,22,wallMat);
+    tavernBox(1.2,13.5,49,-22,6.75,-2.5,wallMat);tavernBox(1.2,13.5,49,22,6.75,-2.5,wallMat);
     /* 바닥·벽·천장이 맞닿는 선을 나무 몰딩으로 둘러 틈을 감춘다. */
-    [-21.45,21.45].forEach(function(z){tavernBox(44,.55,.55,0,.48,z,tableMat);tavernBox(44,.55,.55,0,10.18,z,tableMat);});
-    [-21.45,21.45].forEach(function(x){tavernBox(.55,.55,44,x,.48,0,tableMat);tavernBox(.55,.55,44,x,10.18,0,tableMat);});
+    [-21.45,21.45].forEach(function(z){tavernBox(44,.55,.55,0,.48,z,tableMat);tavernBox(44,.55,.55,0,13.18,z,tableMat);});
+    [-21.45,21.45].forEach(function(x){tavernBox(.55,.55,49,x,.48,-2.5,tableMat);tavernBox(.55,.55,49,x,13.18,-2.5,tableMat);});
     [[-21.45,-21.45],[-21.45,21.45],[21.45,-21.45],[21.45,21.45]].forEach(function(v){tavernBox(.55,10.25,.55,v[0],5.25,v[1],tableMat);});
     [-18,-6,6,18].forEach(function(x){tavernBox(.5,7,.5,x,3.5,-21.7,beamMat);tavernBox(.5,7,.5,x,3.5,21.7,beamMat);});
 
@@ -5129,6 +5235,8 @@ function buildTavernInterior(loader){
 
     /* 방향과 거리에 따라 밝기가 변하지 않는 평면형 균일 조명만 사용한다. */
     dressTavernReferenceInterior(tableMat,beamMat,barrelMat,stoneMat);
+    expandTavernRearCabinet(scene.children.filter(child=>!decorStart.has(child)));
+    buildTavernReferenceArchitecture(tableMat,stoneMat,doorMat);
     addTavernStaticOutlines(scene.children.filter(child=>!decorStart.has(child)));
     scene.add(new THREE.AmbientLight(0xffffff,1));
 
@@ -5149,6 +5257,7 @@ function buildTavernInterior(loader){
             sprite.renderOrder=10;
             const floorY=item.floorY || 0;
             const originalAspect=item.crop[2]/item.crop[3];
+            if(item.name==="주인 로웬"){item.z=-20.7;sprite.userData.talkDistance=7.4;}
             sprite.position.set(item.x,floorY+item.scale[1]*.48+(item.floorOffset||0),item.z);
             sprite.scale.set(item.scale[1]*originalAspect,item.scale[1],1);
             sprite.userData.baseScale={x:item.scale[1]*originalAspect,y:item.scale[1]};
@@ -5178,7 +5287,7 @@ function buildTavernInterior(loader){
         const hit=raycaster.intersectObjects(tavernNPCs,false)[0];
         if(!hit){return;}
         const distance=Math.hypot(hit.object.position.x-camera.position.x,hit.object.position.z-camera.position.z);
-        if(distance>TAVERN_TALK_DISTANCE){return;}
+        if(distance>(hit.object.userData.talkDistance||TAVERN_TALK_DISTANCE)){return;}
         nearestTavernNPC=hit.object;talkToNearestTavernNPC();
     },{passive:true});
     if($("tavernTalkButton")){$("tavernTalkButton").addEventListener("click",talkToNearestTavernNPC);}
@@ -9624,7 +9733,10 @@ function sendMultiplayerChat(){
 
 $("multiStartButton").addEventListener("click",beginNearbyMultiplayer);
 $("multiJoinButton").addEventListener("click",joinNearbyMultiplayerRoom);
-$("multiHostEnterButton").addEventListener("click",startMultiplayerGameSession);
+$("multiHostEnterButton").addEventListener("click",function(){
+    if(pcPartyMode && pcPhoneControllerHost){startPcPartyGame();return;}
+    startMultiplayerGameSession();
+});
 $("multiLobbyCancel").addEventListener("click",function(){$("multiLobby").classList.remove("show");if(multiplayerPeer && !multiplayerMode){try{multiplayerPeer.destroy();}catch(error){}}});
 $("multiChatButton").addEventListener("click",function(){$("multiChatComposer").classList.add("show");$("multiChatInput").focus();});
 $("multiChatSend").addEventListener("click",sendMultiplayerChat);
@@ -9872,8 +9984,9 @@ function wirePartyPhoneController(connection){
 }
 function showOwnPhoneControllerQr(peer){
     const invite=phoneControllerInviteUrl(peer.id);$("multiInviteQr").src="https://api.qrserver.com/v1/create-qr-code/?size=420x420&margin=10&data="+encodeURIComponent(invite);
-    $("multiInviteCode").textContent="이 PC의 공격용 휴대폰 연결";$("multiInviteCard").classList.add("show");$("multiHostEnterButton").style.display="none";
-    setMultiplayerLobbyStatus("자신의 휴대폰으로 QR을 찍어 공격 센서를 연결하세요.");
+    $("multiInviteCode").textContent="이 PC의 공격용 휴대폰 연결";$("multiInviteCard").classList.add("show");
+    $("multiHostEnterButton").textContent="먼저 방 들어가기";$("multiHostEnterButton").style.display="inline-block";
+    setMultiplayerLobbyStatus("QR로 휴대폰을 연결하거나 먼저 입장하세요. 입장 후에도 오른쪽 휴대폰 버튼으로 연결할 수 있습니다.");
 }
 function beginPcPartyHost(){
     if(typeof Peer==="undefined"){alert("연결 도구를 불러오지 못했습니다.");return;}
