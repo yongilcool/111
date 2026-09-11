@@ -2245,6 +2245,7 @@ function applyGyroView(){
 
 function isInsidePlayableRoad(x,z){
     if(TAVERN_MODE){
+        if(tavernOutside){return tavernOutsideWalkable(x,z);}
         return x>=-20.7 && x<=20.7 && z>=-25.7 && z<=20.7;
     }
     if(DUNGEON_MODE && dungeonGrid.length){
@@ -2341,7 +2342,7 @@ function moveGyroPlayer(dt){
     }
 
     /* 선술집 NPC는 통과할 수 없는 원형 장애물이다. */
-    if(TAVERN_MODE && tavernNPCs.length){
+    if(TAVERN_MODE && !tavernOutside && tavernNPCs.length){
         tavernNPCs.forEach(function(npc){
             if(Math.abs(tavernPlayerFloorHeight-(npc.userData.floorY || 0))>3){return;}
             let dx=nextX-npc.position.x;
@@ -2373,7 +2374,7 @@ function moveGyroPlayer(dt){
         });
     }
 
-    if(TAVERN_MODE && tavernObstacles.length){
+    if(TAVERN_MODE && !tavernOutside && tavernObstacles.length){
         const playerRadius=.68;
         tavernObstacles.forEach(function(obstacle){
             if(tavernPlayerFloorHeight<obstacle.minY || tavernPlayerFloorHeight>obstacle.maxY){return;}
@@ -4584,6 +4585,21 @@ let tavernDialogueReadyAt=0;
 let tavernTalkSuppressedNPC=null;
 const TAVERN_TALK_DISTANCE=5.5; /* 게임 이동 감각 기준 약 3걸음 */
 const TAVERN_PEOPLE_URL="https://static.wixstatic.com/media/172435_e5d3897a87884494b392ac860028863a~mv2.png";
+const TAVERN_PEOPLE_BACK_URL="https://static.wixstatic.com/media/172435_e9cbdf3d43534f5f92d12592aad91156~mv2.png";
+
+function updateTavernGuestFacing(npc,viewer){
+    const data=npc.userData;
+    if(!data.backMap){return;}
+    // Fixed facing toward the bartender, not toward the moving camera.
+    const fx=-npc.position.x,fz=-20.7-npc.position.z;
+    const dx=viewer.x-npc.position.x,dz=viewer.z-npc.position.z;
+    const dot=(fx*dx+fz*dz)/Math.max(.001,Math.hypot(fx,fz)*Math.hypot(dx,dz));
+    let back=!!data.showingBack;
+    if(dot<-.08){back=true;}else if(dot>.08){back=false;}
+    if(data.showingBack!==back){
+        data.showingBack=back;npc.material.map=back?data.backMap:data.frontMap;
+    }
+}
 const TAVERN_BARREL_URL="https://static.wixstatic.com/media/172435_69e63975ce2a4ba5a79c408a70026adb~mv2.png";
 const TAVERN_WALL_URL="https://static.wixstatic.com/media/172435_8709398e87a04730a7107b7e6c92da03~mv2.png";
 const TAVERN_FLOOR_URL="https://static.wixstatic.com/media/172435_eae616072537425d97789dc17ca1f547~mv2.png";
@@ -4606,6 +4622,8 @@ function tavernFloorHeightAt(x,z){
 }
 
 function updateTavernInteraction(){
+    updateTavernWorld();
+    if(tavernOutside){updateTavernOutsideDoor();return;}
     if(!TAVERN_MODE || !camera){return;}
     const interactionNow=performance.now();
     if(interactionNow-tavernInteractionAt<80){return;}
@@ -4613,6 +4631,7 @@ function updateTavernInteraction(){
     nearestTavernNPC=null;
     let nearestDistance=Infinity;
     tavernNPCs.forEach(function(npc){
+        updateTavernGuestFacing(npc,camera.position);
         const horizontalDistance=Math.hypot(camera.position.x-npc.position.x,camera.position.z-npc.position.z);
         const verticalDistance=Math.abs(tavernPlayerFloorHeight-(npc.userData.floorY || 0));
         const distance=verticalDistance<=3 ? horizontalDistance : Infinity;
@@ -4645,16 +4664,17 @@ function updateTavernInteraction(){
         }
     }
     nearestTavernDoor=null;let nearestDoorDistance=Infinity;
-    tavernDoors.forEach(function(door){if(!door.userData.opened){const distance=Math.hypot(camera.position.x-door.position.x,camera.position.z-door.position.z);if(distance<nearestDoorDistance){nearestDoorDistance=distance;nearestTavernDoor=door;}}});
+    tavernDoors.forEach(function(door){if(!door.userData.opened){const p=door.userData.closedCenter||door.position;const distance=Math.hypot(camera.position.x-p.x,camera.position.z-p.z);if(distance<nearestDoorDistance){nearestDoorDistance=distance;nearestTavernDoor=door;}}});
     let doorFacing=-1;
-    if(nearestTavernDoor && nearestDoorDistance>0){const dx=nearestTavernDoor.position.x-camera.position.x,dz=nearestTavernDoor.position.z-camera.position.z;doorFacing=(dx*(-Math.sin(gyroViewHeading))+dz*(-Math.cos(gyroViewHeading)))/nearestDoorDistance;}
+    if(nearestTavernDoor && nearestDoorDistance>0){const p=nearestTavernDoor.userData.closedCenter||nearestTavernDoor.position;const dx=p.x-camera.position.x,dz=p.z-camera.position.z;doorFacing=(dx*(-Math.sin(gyroViewHeading))+dz*(-Math.cos(gyroViewHeading)))/nearestDoorDistance;}
     const canOpen=!tavernConversationLocked && !canTalk && nearestTavernDoor && nearestDoorDistance<=5 && doorFacing>.42;
     if(doorButton){doorButton.classList.toggle("show",!!canOpen);doorButton.textContent="열기";}
 }
 
 function openNearestTavernDoor(){
     if(!nearestTavernDoor || nearestTavernDoor.userData.opened){return;}
-    nearestTavernDoor.userData.opened=true;nearestTavernDoor.rotation.y+=(nearestTavernDoor.userData.openDirection || 1)*Math.PI*.48;
+    nearestTavernDoor.userData.opened=true;nearestTavernDoor.rotation.y+=Math.PI*.48;
+    tavernDoorClack();
     if($("tavernDoorButton")){$("tavernDoorButton").classList.remove("show");}
 }
 
@@ -4901,7 +4921,7 @@ function dressTavernReferenceInterior(wood,darkWood,barrelMat,stoneMat){
     // 등불: 광원 계산 없이 발광색 유리와 금속 프레임으로 표현.
     [[-19,-15],[19,-15],[-19,6],[19,6],[0,-15]].forEach(function(p){
         const x=p[0],z=p[1];box(.08,1.05,.08,x,9,z,metal);
-        box(.8,1,.8,x,7.95,z,glow);
+        box(.18,.65,.18,x,7.8,z,gold);box(.11,.22,.11,x,8.24,z,glow);
         [7.36,8.52].forEach(function(y){box(1,.16,1,x,y,z,metal);});
         [-.43,.43].forEach(function(dx){[-.43,.43].forEach(function(dz){box(.09,1.1,.09,x+dx,7.95,z+dz,metal);});});
     });
@@ -4916,9 +4936,7 @@ function dressTavernReferenceInterior(wood,darkWood,barrelMat,stoneMat){
     // 식탁의 접시·빵·촛대. 기존 테이블과 손님 좌표는 그대로 둔다.
     [[-11,-7],[11,-6],[-11,7],[10,8]].forEach(function(p){
         box(.4,.12,.4,p[0],3.35,p[1],gold);box(.14,.65,.14,p[0],3.72,p[1],glow);
-        const plate=new THREE.Mesh(new THREE.CylinderGeometry(.65,.65,.08,12),new THREE.MeshBasicMaterial({color:0xcbbb93}));
-        plate.position.set(p[0]+1.3,3.33,p[1]+1.1);scene.add(plate);
-        box(.72,.2,.4,p[0]+1.3,3.48,p[1]+1.1,gold);
+        box(.3,.65,.3,p[0]+1.3,3.63,p[1]+1.1,gold);
     });
     // 중앙 러그는 바닥에 붙이고 보행을 막지 않는다.
     const hearthStone=stoneMat;
@@ -4935,7 +4953,7 @@ function dressTavernReferenceInterior(wood,darkWood,barrelMat,stoneMat){
     });
     const ft=new THREE.CanvasTexture(fireCanvas);ft.colorSpace=THREE.SRGBColorSpace;ft.magFilter=THREE.NearestFilter;
     const fire=new THREE.Mesh(new THREE.PlaneGeometry(3.1,2.9),new THREE.MeshBasicMaterial({map:ft,transparent:true,alphaTest:.1,side:THREE.DoubleSide}));
-    fire.rotation.y=Math.PI/2;fire.position.set(-19.95,1.9,0);scene.add(fire);
+    fire.rotation.y=Math.PI/2;fire.position.set(-19.95,1.9,0);scene.add(fire);tavernHearthFire=fire;
     [-1.2,-.6,0,.6,1.2].forEach(function(z){box(.09,1.25,.09,-19.65,.95,z,metal);});
     box(.1,.1,3.1,-19.65,1.35,0,metal);
     addTavernObstacle(-20.2,0,1.15,2.65,0,8);
@@ -4991,9 +5009,6 @@ function dressTavernReferenceInterior(wood,darkWood,barrelMat,stoneMat){
     });
     // Mugs, cutlery, folded cloths and serving boards on the existing tabletops.
     [[-11,-7],[11,-6],[-11,7],[10,8]].forEach((p,i)=>{
-        box(1.3,.04,.85,p[0]-1.4,3.3,p[1]+1.5,bookColors[3]);
-        box(.08,.05,.8,p[0]+2.1,3.35,p[1]+1.1,metal);
-        box(.7,.12,.45,p[0]-.9,3.36,p[1]-1.4,wood);
         box(.4,.55,.4,p[0]+1.6,3.58,p[1]-1.5,gold);
         box(.18,.28,.12,p[0]+1.9,3.6,p[1]-1.5,metal);
     });
@@ -5004,6 +5019,79 @@ function dressTavernReferenceInterior(wood,darkWood,barrelMat,stoneMat){
         box(.13,.3,.35,x,8.25,-20.02,gold);
     });
     groups.forEach(function(items,mat){const mesh=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),mat,items.length);const matrix=new THREE.Matrix4();const q=new THREE.Quaternion();items.forEach(function(a,i){matrix.compose(new THREE.Vector3(a[3],a[4],a[5]),q,new THREE.Vector3(a[0],a[1],a[2]));mesh.setMatrixAt(i,matrix);});mesh.instanceMatrix.needsUpdate=true;scene.add(mesh);});
+}
+
+let tavernOutside=false,tavernExteriorGroup=null,tavernInteriorObjects=[],tavernExteriorDoors=[],tavernHearthFire=null,tavernTransitionAt=0;
+const tavernTreePositions=[];
+function prepareTavernDoorHinge(door){
+    door.userData.closedCenter=door.position.clone();
+    const width=door.geometry.parameters.width;
+    const side=(door.position.z>0?1:-1)*(door.position.x>80?-1:1);
+    door.geometry.translate(-side*width/2,0,0);door.position.x+=side*width/2;
+    door.userData.closedRotation=door.rotation.y;
+}
+function tavernDoorClack(){
+    try{
+        const ac=tavernDoorClack.audio||(tavernDoorClack.audio=new(window.AudioContext||window.webkitAudioContext)());ac.resume();
+        [0,.09].forEach((delay,i)=>{const osc=ac.createOscillator(),gain=ac.createGain();osc.type='triangle';osc.frequency.setValueAtTime(i?145:520,ac.currentTime+delay);osc.frequency.exponentialRampToValueAtTime(65,ac.currentTime+delay+.1);gain.gain.setValueAtTime(.1,ac.currentTime+delay);gain.gain.exponentialRampToValueAtTime(.001,ac.currentTime+delay+.13);osc.connect(gain);gain.connect(ac.destination);osc.start(ac.currentTime+delay);osc.stop(ac.currentTime+delay+.15);});
+    }catch(error){}
+}
+function tavernOutsideWalkable(x,z){
+    if(x<80||x>200||z<-80||z>100){return false;}
+    if(x>117&&x<163&&z>-28&&z<23){return false;}
+    return !tavernTreePositions.some(p=>Math.hypot(x-p[0],z-p[1])<1.3);
+}
+function enterTavernWorld(outside,door){
+    const center=door.userData.closedCenter;
+    tavernOutside=outside;tavernTransitionAt=performance.now();
+    tavernInteriorObjects.forEach(o=>{if(!o.isLight){o.visible=!outside;}});
+    tavernNPCs.forEach(n=>{n.visible=!outside;});tavernExteriorGroup.visible=outside;
+    const rear=center.z<0;
+    camera.position.set(outside?center.x+140:center.x-140,5.2,outside?(rear?-32:27):(rear?-22.8:18));
+    gyroViewHeading=outside?(rear?Math.PI:0):(rear?Math.PI:0);camera.rotation.set(0,gyroViewHeading,0);
+    scene.background=new THREE.Color(outside?0x070f22:0x17100d);scene.fog=new THREE.Fog(outside?0x070f22:0x17100d,outside?55:38,outside?125:72);
+    [...tavernDoors,...tavernExteriorDoors].forEach(d=>{d.rotation.y=d.userData.closedRotation;d.userData.opened=false;});
+    nearestTavernDoor=null;nearestTavernNPC=null;releaseVirtualJoystick();tavernDoorClack();
+    ['tavernTalkButton','tavernNamePlate','tavernDoorButton'].forEach(id=>{if($(id)){$(id).classList.remove('show');}});
+}
+function updateTavernWorld(){
+    const time=performance.now()/1000;
+    if(tavernHearthFire&&!tavernOutside){tavernHearthFire.scale.y=1+Math.sin(time*6)*.025+Math.sin(time*11)*.012;tavernHearthFire.scale.x=1+Math.sin(time*4)*.015;}
+    if(performance.now()-tavernTransitionAt<1200){return;}
+    const doors=tavernOutside?tavernExteriorDoors:tavernDoors;
+    for(const door of doors){const p=door.userData.closedCenter;if(p&&door.userData.opened&&Math.hypot(camera.position.x-p.x,camera.position.z-p.z)<3.25){enterTavernWorld(!tavernOutside,door);break;}}
+}
+function updateTavernOutsideDoor(){
+    ['tavernTalkButton','tavernNamePlate'].forEach(id=>{if($(id)){$(id).classList.remove('show');}});
+    nearestTavernDoor=null;let distance=5;
+    tavernExteriorDoors.forEach(d=>{const p=d.userData.closedCenter,dx=p.x-camera.position.x,dz=p.z-camera.position.z,len=Math.hypot(dx,dz);if(!d.userData.opened&&len<distance&&(dx*-Math.sin(gyroViewHeading)+dz*-Math.cos(gyroViewHeading))/Math.max(.01,len)>.4){nearestTavernDoor=d;distance=len;}});
+    if($('tavernDoorButton')){$('tavernDoorButton').classList.toggle('show',!!nearestTavernDoor);}
+}
+function buildTavernOutside(loader,wood,doorMat){
+    const group=new THREE.Group();group.name='tavern-night-exterior';group.visible=false;tavernExteriorGroup=group;scene.add(group);
+    const grass=new THREE.MeshBasicMaterial({color:0x182b26}),path=new THREE.MeshBasicMaterial({color:0x423d33}),roofMat=new THREE.MeshBasicMaterial({map:wood.map,color:0x49424a}),trunk=new THREE.MeshBasicMaterial({map:wood.map,color:0x504033});
+    function box(w,h,d,x,y,z,mat){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);group.add(m);return m;}
+    box(125,.2,185,140,.08,10,grass);box(6,.04,78,130,.21,62,path);box(70,.04,5,147,.21,-33,path);
+    box(44,13.5,49,140,6.75,-2.5,wood);
+    // Gable roof matches the 44 x 49 interior envelope, with overhang and chimney.
+    const shape=new THREE.Shape();shape.moveTo(-23,0);shape.lineTo(0,9);shape.lineTo(23,0);shape.closePath();
+    const roof=new THREE.Mesh(new THREE.ExtrudeGeometry(shape,{depth:51,bevelEnabled:false}),roofMat);roof.position.set(140,13.5,-28);group.add(roof);
+    box(4,20,4,120,10,0,trunk);
+    [-22,22].forEach(dx=>[-27,22].forEach(z=>box(.8,13.8,.8,140+dx,6.9,z,trunk)));
+    [3,9,13.5].forEach(y=>{box(44.5,.4,.5,140,y,22.3,trunk);box(44.5,.4,.5,140,y,-27.3,trunk);});
+    [[130,22.7,5.2,9.3],[153.8,-27.7,4.8,9]].forEach(([x,z,w,h])=>{
+        const d=box(w,h,.45,x,h/2,z,doorMat);prepareTavernDoorHinge(d);tavernExteriorDoors.push(d);
+        [-1,1].forEach(s=>box(.35,h+.4,.7,x+s*(w/2+.2),h/2,z,trunk));box(w+.75,.4,.7,x,h+.1,z,trunk);
+    });
+    const glass=new THREE.MeshBasicMaterial({color:0xae8851});
+    [143,155].forEach(x=>{box(4,4,.2,x,6,22.65,glass);box(.18,4,.35,x,6,22.8,trunk);box(4,.18,.35,x,6,22.8,trunk);});
+    const positions=[];
+    for(let i=0;i<76;i++){const angle=i*2.399963,rad=38+(i%7)*4,x=140+Math.cos(angle)*rad,z=8+Math.sin(angle)*rad*1.3;if(Math.abs(x-130)<6&&z>22){continue;}if(x>115&&x<165&&z>-31&&z<25){continue;}positions.push([x,z]);tavernTreePositions.push([x,z]);}
+    const stems=new THREE.InstancedMesh(new THREE.CylinderGeometry(.55,.8,8,6),trunk,positions.length),crowns=new THREE.InstancedMesh(new THREE.ConeGeometry(4,11,7),new THREE.MeshBasicMaterial({color:0x132c2b}),positions.length);
+    const matrix=new THREE.Matrix4();positions.forEach((p,i)=>{matrix.makeTranslation(p[0],4,p[1]);stems.setMatrixAt(i,matrix);matrix.makeTranslation(p[0],11,p[1]);crowns.setMatrixAt(i,matrix);});group.add(stems,crowns);
+    const starPositions=[];for(let i=0;i<160;i++){starPositions.push(80+(i*37%120),45+(i*13%35),-80+(i*47%180));}
+    const starsGeo=new THREE.BufferGeometry();starsGeo.setAttribute('position',new THREE.Float32BufferAttribute(starPositions,3));group.add(new THREE.Points(starsGeo,new THREE.PointsMaterial({color:0xcad9ee,size:.22})));
+    const moon=new THREE.Mesh(new THREE.SphereGeometry(3,12,8),new THREE.MeshBasicMaterial({color:0xc9daf4}));moon.position.set(170,55,-55);group.add(moon);
 }
 
 function expandTavernRearCabinet(objects){
@@ -5089,6 +5177,7 @@ function buildTavernReferenceArchitecture(wood,stone,door){
         beam(.18,1.45,.2,x,10,-25.65,brass);beam(.95,.16,.2,x,10.2,-25.65,brass);
     });
     const crest=new THREE.Mesh(shieldGeometry,brass);crest.position.set(-19.65,7.4,0);crest.rotation.y=Math.PI/2;scene.add(crest);
+    beam(.12,1.5,.16,-19.45,7.4,0,iron);beam(.12,.16,.95,-19.45,7.7,0,iron);
     // Real low-poly cups, tap barrels and cabinet dividers instead of an empty black slab.
     [-9,-4.5,0,4.5,9].forEach(x=>beam(.2,6.8,1,x,3.6,-25.5,wood));
     beam(18.4,.3,1.2,0,.45,-25.5,wood);
@@ -5101,7 +5190,7 @@ function buildTavernReferenceArchitecture(wood,stone,door){
     beam(18.4,.35,1.5,0,6.85,-25.6,wood);
     // Extra wall lamps, not extra dynamic lights or shadow maps.
     [[-20,-11],[20,-8],[-20,11],[20,11],[-9,-24],[9,-24]].forEach(([x,z])=>{
-        beam(.1,1.5,.1,x,10.5,z,iron);beam(.7,1.05,.7,x,9.25,z,warm);
+        beam(.1,1.5,.1,x,10.5,z,iron);beam(.18,.65,.18,x,9.05,z,brass);beam(.1,.24,.1,x,9.5,z,warm);
         [8.67,9.83].forEach(y=>beam(.95,.16,.95,x,y,z,iron));
         [-.38,.38].forEach(dx=>[-.38,.38].forEach(dz=>beam(.1,1.1,.1,x+dx,9.25,z+dz,iron)));
     });
@@ -5141,7 +5230,7 @@ function buildTavernInterior(loader){
     dungeonTorchLights.forEach(function(light){light.visible=false;});
 
     const decorStart=new Set(scene.children);
-    const wallTexture=tavernLoadTexture(loader,TAVERN_BRICK_URL,8,2);
+    const wallTexture=tavernLoadTexture(loader,TAVERN_BRICK_URL,1,1);
     const floorTexture=tavernLoadTexture(loader,TAVERN_FLOOR_URL,10,10);
     const brickTexture=tavernLoadTexture(loader,TAVERN_BRICK_URL,4,3);
     const barrelTexture=tavernLoadTexture(loader,TAVERN_BARREL_URL,1,1);
@@ -5210,10 +5299,8 @@ function buildTavernInterior(loader){
         positions.forEach(function(position,index){bottleMatrix.makeTranslation(position[0],position[1],position[2]);bottles.setMatrixAt(index,bottleMatrix);});
         bottles.instanceMatrix.needsUpdate=true;scene.add(bottles);
     });
-    [-9,-6,-3,0,3,6,9].forEach(function(x,index){
-        const foodColor=[0xb84d27,0xe9c06e,0x7a9b42][index%3];
-        const plate=new THREE.Mesh(new THREE.CylinderGeometry(.72,.72,.10,12),new THREE.MeshLambertMaterial({color:0xe7d2ad}));plate.position.set(x,2.80,-16.35);scene.add(plate);
-        const food=new THREE.Mesh(new THREE.SphereGeometry(.32,7,5),new THREE.MeshLambertMaterial({color:foodColor}));food.scale.set(1.25,.55,.85);food.position.set(x,2.99,-16.35);scene.add(food);
+    [-9,-6,-3,0,3,6,9].forEach(function(x){
+        const mug=new THREE.Mesh(new THREE.CylinderGeometry(.26,.24,.5,10),new THREE.MeshBasicMaterial({color:0xb1814b}));mug.position.set(x,3,-15.45);scene.add(mug);
     });
 
     /* 테이블, 의자, 벤치 */
@@ -5237,9 +5324,30 @@ function buildTavernInterior(loader){
     dressTavernReferenceInterior(tableMat,beamMat,barrelMat,stoneMat);
     expandTavernRearCabinet(scene.children.filter(child=>!decorStart.has(child)));
     buildTavernReferenceArchitecture(tableMat,stoneMat,doorMat);
+    tavernDoors.forEach(function(door){
+        const p=door.position,params=door.geometry.parameters;
+        const portal=new THREE.Mesh(new THREE.PlaneGeometry(params.width,params.height),new THREE.MeshBasicMaterial({color:0x030710,side:THREE.DoubleSide}));
+        portal.position.set(p.x,p.y,p.z+(p.z>0?-.05:.05));scene.add(portal);
+        prepareTavernDoorHinge(door);
+    });
     addTavernStaticOutlines(scene.children.filter(child=>!decorStart.has(child)));
     scene.add(new THREE.AmbientLight(0xffffff,1));
 
+    let tavernBackImage=null;
+    function attachGuestBack(npc){
+        if(!tavernBackImage||!npc.userData.backCrop||npc.userData.backMap){return;}
+        // Same atlas cells; normalize to the supplied PNG's actual dimensions.
+        const sx=(tavernBackImage.naturalWidth||tavernBackImage.width)/1497;
+        const sy=(tavernBackImage.naturalHeight||tavernBackImage.height)/1057;
+        const r=npc.userData.backCrop;
+        const x=Math.round(r[0]*sx),y=Math.round(r[1]*sy);
+        const crop=[x,y,Math.round((r[0]+r[2])*sx)-x,Math.round((r[1]+r[3])*sy)-y];
+        npc.userData.backMap=tavernCroppedTexture(tavernBackImage,crop,false);
+        updateTavernGuestFacing(npc,camera.position);
+    }
+    loader.load(TAVERN_PEOPLE_BACK_URL,function(texture){
+        tavernBackImage=texture.image;tavernNPCs.forEach(attachGuestBack);texture.dispose();
+    },undefined,function(error){console.warn('Guest back atlas unavailable; keeping front sprites.',error);});
     const atlas=loader.load(TAVERN_PEOPLE_URL,function(texture){
         texture.colorSpace=THREE.SRGBColorSpace;texture.magFilter=THREE.LinearFilter;texture.minFilter=THREE.LinearMipmapLinearFilter;texture.generateMipmaps=true;
         /* people2 원본의 흰 구분선을 기준으로 실제 8개 영역을 개별 크롭한다. */
@@ -5254,23 +5362,29 @@ function buildTavernInterior(loader){
         data.forEach(function(item){
             const crop=tavernCroppedTexture(texture.image,item.crop,item.name==="후드 쓴 여행자");
             const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:crop,transparent:true,opacity:1,alphaTest:.08,depthTest:true,depthWrite:true,fog:false}));
+            sprite.userData.frontMap=crop;
+            if(item.name!=="주인 로웬"&&item.name!=="서빙하는 엘라"){sprite.userData.backCrop=item.crop.slice();}
             sprite.renderOrder=10;
             const floorY=item.floorY || 0;
             const originalAspect=item.crop[2]/item.crop[3];
             if(item.name==="주인 로웬"){item.z=-20.7;sprite.userData.talkDistance=7.4;}
-            sprite.position.set(item.x,floorY+item.scale[1]*.48+(item.floorOffset||0),item.z);
+            sprite.position.set(item.x,.24+item.scale[1]/2,item.z);
             sprite.scale.set(item.scale[1]*originalAspect,item.scale[1],1);
             sprite.userData.baseScale={x:item.scale[1]*originalAspect,y:item.scale[1]};
-            sprite.userData.floorOffset=item.floorOffset||0;
+            sprite.userData.floorOffset=.24;
             sprite.userData.blockRadius=Math.max(3.15,item.block || 2.25);
             sprite.userData.floorY=floorY;
             sprite.userData.dialogue=item.dialogue;sprite.userData.npcName=item.name;scene.add(sprite);tavernNPCs.push(sprite);
+            tavernInteriorObjects.push(sprite);sprite.visible=!tavernOutside;
+            attachGuestBack(sprite);
             const characterShadowSize=Math.max(.82,sprite.scale.x*.28);
             tavernFakeShadow(item.x,item.z,characterShadowSize,characterShadowSize,floorY);
             const label=tavernLabel(item.name);label.position.set(item.x,item.scale[1]+.4,item.z);label.visible=false;label.userData.owner=sprite;scene.add(label);sprite.userData.label=label;
         });
     });
 
+    tavernInteriorObjects=scene.children.filter(child=>!decorStart.has(child));
+    buildTavernOutside(loader,tableMat,doorMat);
     camera.position.set(0,5.2,18);camera.rotation.set(0,0,0);gyroViewHeading=0;mapHeading=0;mapTargetHeading=0;
     /* lockTarget은 이동 처리 함수 안의 지역 변수라 여기서 대입하면
        선술집 초기화 전체가 중단된다. 전투 상태만 안전하게 해제한다. */
@@ -9737,7 +9851,7 @@ $("multiHostEnterButton").addEventListener("click",function(){
     if(pcPartyMode && pcPhoneControllerHost){startPcPartyGame();return;}
     startMultiplayerGameSession();
 });
-$("multiLobbyCancel").addEventListener("click",function(){$("multiLobby").classList.remove("show");if(multiplayerPeer && !multiplayerMode){try{multiplayerPeer.destroy();}catch(error){}}});
+$("multiLobbyCancel").addEventListener("click",function(){if(cancelPhoneReconnectPause()){return;}$("multiLobby").classList.remove("show");if(multiplayerPeer && !multiplayerMode){try{multiplayerPeer.destroy();}catch(error){}}});
 $("multiChatButton").addEventListener("click",function(){$("multiChatComposer").classList.add("show");$("multiChatInput").focus();});
 $("multiChatSend").addEventListener("click",sendMultiplayerChat);
 $("multiChatInput").addEventListener("keydown",function(event){if(event.key==="Enter"){event.preventDefault();sendMultiplayerChat();}});
@@ -9845,7 +9959,7 @@ function cancelPhoneReconnectPause(){
 }
 function openPhoneReconnectQr(){
     const peer=pcPartyPeer || phoneQrPeer;if(!peer?.id){return;}
-    if(!gamePaused){toggleGamePause();phoneReconnectPausedGame=true;}
+    if(!gamePaused){toggleGamePause();}phoneReconnectPausedGame=true;
     $("multiLobby").classList.add("show");$("multiRoomCard").classList.remove("show");showOwnPhoneControllerQr(peer);
     setMultiplayerLobbyStatus("게임을 일시정지했습니다.\n휴대폰으로 QR을 찍으면 자동으로 다시 시작됩니다.");
 }
