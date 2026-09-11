@@ -5031,6 +5031,7 @@ function dressTavernReferenceInterior(wood,darkWood,barrelMat,stoneMat){
 
 let tavernOutside=false,tavernExteriorGroup=null,tavernInteriorObjects=[],tavernExteriorDoors=[],tavernHearthFire=null,tavernTransitionAt=0,tavernForestSky=null;
 const tavernTreePositions=[];
+let tavernSkyDome=null,tavernBoundaryNoticeAt=-Infinity;
 function prepareTavernDoorHinge(door){
     door.userData.closedCenter=door.position.clone();
     const width=door.geometry.parameters.width;
@@ -5045,7 +5046,12 @@ function tavernDoorClack(){
     }catch(error){}
 }
 function tavernOutsideWalkable(x,z){
-    if(x<80||x>200||z<-80||z>100){return false;}
+    if(x<80||x>200||z<-80||z>100){
+        const now=performance.now();
+        if(tavernOutside&&now-tavernBoundaryNoticeAt>3500){tavernBoundaryNoticeAt=now;showDialogueMessages(['현재 더이상 갈필요가 없어.'],2200);}
+        return false;
+    }
+    if(x>112.1&&x<116.7&&z>-2.7&&z<2.7){return false;}
     if(x>117&&x<163&&z>-28&&z<23){return false;}
     return !tavernTreePositions.some(p=>Math.hypot(x-p[0],z-p[1])<1.3);
 }
@@ -5058,13 +5064,13 @@ function enterTavernWorld(outside,door){
     camera.position.set(outside?center.x+140:center.x-140,5.2,outside?(rear?-32:27):(rear?-22.8:18));
     gyroViewHeading=outside?(rear?Math.PI:0):(rear?Math.PI:0);camera.rotation.set(0,gyroViewHeading,0);
     scene.background=new THREE.Color(outside?0x070f22:0x17100d);scene.fog=new THREE.Fog(outside?0x070f22:0x17100d,outside?55:38,outside?125:72);
-    if(outside&&tavernForestSky){scene.background=tavernForestSky;}
     [...tavernDoors,...tavernExteriorDoors].forEach(d=>{d.rotation.y=d.userData.closedRotation;d.userData.opened=false;});
     nearestTavernDoor=null;nearestTavernNPC=null;releaseVirtualJoystick();tavernDoorClack();
     ['tavernTalkButton','tavernNamePlate','tavernDoorButton'].forEach(id=>{if($(id)){$(id).classList.remove('show');}});
 }
 function updateTavernWorld(){
     const time=performance.now()/1000;
+    if(tavernOutside&&tavernSkyDome){tavernSkyDome.position.set(camera.position.x,0,camera.position.z);}
     if(tavernHearthFire&&!tavernOutside){tavernHearthFire.scale.y=1+Math.sin(time*6)*.025+Math.sin(time*11)*.012;tavernHearthFire.scale.x=1+Math.sin(time*4)*.015;}
     if(performance.now()-tavernTransitionAt<1200){return;}
     const doors=tavernOutside?tavernExteriorDoors:tavernDoors;
@@ -5080,22 +5086,27 @@ function buildTavernOutside(loader,wood,doorMat){
     const group=new THREE.Group();group.name='tavern-night-exterior';group.visible=false;tavernExteriorGroup=group;scene.add(group);
     const grass=new THREE.MeshBasicMaterial({color:0x182b26}),path=new THREE.MeshBasicMaterial({color:0x423d33}),roofMat=new THREE.MeshBasicMaterial({map:wood.map,color:0x49424a}),trunk=new THREE.MeshBasicMaterial({map:wood.map,color:0x504033});
     function box(w,h,d,x,y,z,mat){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);group.add(m);return m;}
-    box(125,.2,185,140,.08,10,grass);box(6,.04,78,130,.21,62,path);box(70,.04,5,147,.21,-33,path);
+    box(600,.2,600,140,.08,10,grass);box(6,.04,280,130,.21,162,path);box(500,.04,5,147,.21,-33,path);
     // Reuse the completed wolf-map assets and its intersecting dirt-road layout.
     const roadMap=tavernPixelTexture(['#8a704a','#977c52','#745f40','#a08759','#68563c']);roadMap.repeat.set(2,24);path.map=roadMap;
-    [100,180].forEach(x=>box(7,.04,175,x,.21,8,path));
-    [35,-45].forEach(z=>box(115,.04,7,140,.22,z,path));
+    [100,180].forEach(x=>box(7,.04,500,x,.21,8,path));
+    [35,-45].forEach(z=>box(500,.04,7,140,.22,z,path));
     loader.load('https://static.wixstatic.com/media/172435_94ba8560969d4426b4485bed37acfea6~mv2.png',texture=>{
-        texture.wrapS=texture.wrapT=THREE.RepeatWrapping;texture.repeat.set(26,38);texture.colorSpace=THREE.SRGBColorSpace;texture.magFilter=THREE.NearestFilter;grass.map=texture;grass.color.setHex(0x77708f);grass.needsUpdate=true;
+        texture.wrapS=texture.wrapT=THREE.RepeatWrapping;texture.repeat.set(125,125);texture.colorSpace=THREE.SRGBColorSpace;texture.magFilter=THREE.NearestFilter;grass.map=texture;grass.color.setHex(0x77708f);grass.needsUpdate=true;
     });
-    loader.load('https://static.wixstatic.com/media/172435_b14315929f164d139461b465a6d488b8~mv2.jpg',texture=>{
-        texture.colorSpace=THREE.SRGBColorSpace;tavernForestSky=texture;if(tavernOutside){scene.background=texture;}
+    loader.load('https://static.wixstatic.com/media/172435_ffa9115496e34069a3857105b7b0335e~mv2.png',texture=>{
+        texture.colorSpace=THREE.SRGBColorSpace;tavernForestSky=texture;
+        // Upper half of a spherical/equirectangular panorama, not a flat screen backdrop.
+        const geometry=new THREE.SphereGeometry(135,48,24,0,Math.PI*2,0,Math.PI/2);
+        const uv=geometry.attributes.uv;for(let i=0;i<uv.count;i++){uv.setY(i,.5+uv.getY(i)*.5);}uv.needsUpdate=true;
+        tavernSkyDome=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({map:texture,side:THREE.BackSide,depthWrite:false,fog:false}));
+        tavernSkyDome.position.set(140,0,10);tavernSkyDome.renderOrder=-10;tavernSkyDome.frustumCulled=false;group.add(tavernSkyDome);
     });
     box(44,13.5,49,140,6.75,-2.5,wood);
     // Gable roof matches the 44 x 49 interior envelope, with overhang and chimney.
     const shape=new THREE.Shape();shape.moveTo(-23,0);shape.lineTo(0,9);shape.lineTo(23,0);shape.closePath();
     const roof=new THREE.Mesh(new THREE.ExtrudeGeometry(shape,{depth:51,bevelEnabled:false}),roofMat);roof.position.set(140,13.5,-28);group.add(roof);
-    box(4,20,4,120,10,0,trunk);
+    box(4,20,4,114.4,10,0,trunk);
     [-22,22].forEach(dx=>[-27,22].forEach(z=>box(.8,13.8,.8,140+dx,6.9,z,trunk)));
     [3,9,13.5].forEach(y=>{box(44.5,.4,.5,140,y,22.3,trunk);box(44.5,.4,.5,140,y,-27.3,trunk);});
     [[130,22.7,5.2,9.3],[153.8,-27.7,4.8,9]].forEach(([x,z,w,h])=>{
@@ -5133,12 +5144,21 @@ function buildTavernOutside(loader,wood,doorMat){
             const map=new THREE.CanvasTexture(crop);map.colorSpace=THREE.SRGBColorSpace;map.magFilter=THREE.NearestFilter;
             const mat=new THREE.SpriteMaterial({map,color:0x77708f,transparent:true,alphaTest:.08,depthWrite:true});
             positions.forEach((p,i)=>{const tree=new THREE.Sprite(mat),height=18.4*(.72+(i%7)*.075);tree.scale.set(height*crop.width/crop.height,height,1);tree.position.set(p[0],.2+height/2,p[1]);group.add(tree);});
+            // Dense distant treeline in a single draw call; no extra collision work.
+            const farMat=new THREE.MeshBasicMaterial({map,color:0x444f66,transparent:true,alphaTest:.3,side:THREE.DoubleSide});
+            const farTrees=new THREE.InstancedMesh(new THREE.PlaneGeometry(1,1),farMat,360),transform=new THREE.Matrix4(),rotation=new THREE.Quaternion();
+            for(let i=0;i<360;i++){
+                const angle=i*2.399963,radius=115+(i%9)*13,height=19+(i%5)*2;
+                const x=140+Math.cos(angle)*radius,z=10+Math.sin(angle)*radius;
+                rotation.setFromAxisAngle(new THREE.Vector3(0,1,0),Math.PI/2-angle);
+                transform.compose(new THREE.Vector3(x,height/2,z),rotation,new THREE.Vector3(height*crop.width/crop.height,height,1));farTrees.setMatrixAt(i,transform);
+            }
+            group.add(farTrees);
             group.remove(stems,crowns);stems.geometry.dispose();crowns.geometry.dispose();texture.dispose();
         }catch(error){console.warn('Forest tree texture unavailable; retaining fallback.',error);}
     });
-    const starPositions=[];for(let i=0;i<160;i++){starPositions.push(80+(i*37%120),45+(i*13%35),-80+(i*47%180));}
-    const starsGeo=new THREE.BufferGeometry();starsGeo.setAttribute('position',new THREE.Float32BufferAttribute(starPositions,3));group.add(new THREE.Points(starsGeo,new THREE.PointsMaterial({color:0xcad9ee,size:.22})));
-    const moon=new THREE.Mesh(new THREE.SphereGeometry(3,12,8),new THREE.MeshBasicMaterial({color:0xc9daf4}));moon.position.set(170,55,-55);group.add(moon);
+    const mountains=new THREE.InstancedMesh(new THREE.ConeGeometry(1,1,6),new THREE.MeshBasicMaterial({color:0x263447}),28);
+    for(let i=0;i<28;i++){const angle=i*Math.PI*2/28,height=30+(i%5)*9,radius=170+(i%3)*12;const m=new THREE.Matrix4();m.compose(new THREE.Vector3(140+Math.cos(angle)*radius,height/2-3,10+Math.sin(angle)*radius),new THREE.Quaternion(),new THREE.Vector3(24+(i%4)*5,height,24+(i%4)*5));mountains.setMatrixAt(i,m);}group.add(mountains);
 }
 
 function expandTavernRearCabinet(objects){
@@ -10623,6 +10643,8 @@ window.addEventListener("blur",function(){releaseVirtualJoystick();});
 
 let externalReaderBuffer="";
 let externalReaderLastKeyAt=0;
+let externalReaderTimer=null;
+const externalReaderConsumedKeys=new Set();
 
 function externalReaderCharacter(code){
     if(/^Digit[0-9]$/.test(code)){return code.slice(-1);}
@@ -10631,44 +10653,45 @@ function externalReaderCharacter(code){
     return "";
 }
 
+function finishExternalReader(){
+    clearTimeout(externalReaderTimer);externalReaderTimer=null;
+    const uid=externalReaderBuffer;externalReaderBuffer="";
+    if(/^[0-9A-F]{8,32}$/.test(uid)&&started&&!gamePaused&&!gameOver){attack();}
+}
 window.addEventListener("keydown",function(event){
-    /* PC+휴대폰 모드에서는 A/D를 NFC UID 문자가 아닌 이동키로 사용한다. */
-    if(pcPhoneControllerHost && ["KeyW","KeyA","KeyS","KeyD"].includes(event.code)){return;}
+    // HID readers send physical keys: KeyA stays A even under Korean IME.
+    if(!started||gameOver||gamePaused||event.ctrlKey||event.altKey||event.metaKey||
+       /INPUT|TEXTAREA|SELECT/.test(event.target?.tagName||'')||event.target?.isContentEditable){
+        externalReaderBuffer="";clearTimeout(externalReaderTimer);return;
+    }
     const now=performance.now();
     const character=externalReaderCharacter(event.code || "");
-
+    if(now-externalReaderLastKeyAt>160){externalReaderBuffer="";}
     if(character){
-        if(now-externalReaderLastKeyAt>140){
-            externalReaderBuffer="";
-        }
+        // A/D/E remain movement/interaction keys unless a numeric UID has begun.
+        if(!externalReaderBuffer && !/^[0-9]$/.test(character)){return;}
+        if(event.repeat){return;}
         externalReaderLastKeyAt=now;
         externalReaderBuffer+=character;
-
-        /* UID 중간의 A/D가 이동키로 전달되지 않게 막는다. */
+        if(externalReaderBuffer.length>32){externalReaderBuffer="";}
+        clearTimeout(externalReaderTimer);externalReaderTimer=setTimeout(finishExternalReader,160);
+        externalReaderConsumedKeys.add(event.code);
         event.preventDefault();
         event.stopImmediatePropagation();
         return;
     }
-
     if(event.code==="Enter" || event.code==="NumpadEnter"){
-        const uid=externalReaderBuffer.toUpperCase();
-        externalReaderBuffer="";
-
-        if(/^[0-9A-F]{8,32}$/.test(uid)){
+        if(externalReaderBuffer){
             event.preventDefault();
             event.stopImmediatePropagation();
-
-            if(started && !gameOver && !gamePaused){
-                attack();
-            }
+            externalReaderConsumedKeys.add(event.code);finishExternalReader();
         }
         return;
     }
-
-    if(now-externalReaderLastKeyAt>140){
-        externalReaderBuffer="";
-    }
+    externalReaderBuffer="";clearTimeout(externalReaderTimer);
 },true);
+window.addEventListener('keyup',function(event){if(externalReaderConsumedKeys.delete(event.code)){event.preventDefault();event.stopImmediatePropagation();}},true);
+window.addEventListener('blur',function(){externalReaderBuffer="";clearTimeout(externalReaderTimer);externalReaderConsumedKeys.clear();});
 
 window.addEventListener("keydown",function(event){
     if(event.key==="ArrowUp"){
