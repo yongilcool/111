@@ -4585,7 +4585,12 @@ let tavernDialogueReadyAt=0;
 let tavernTalkSuppressedNPC=null;
 const TAVERN_TALK_DISTANCE=5.5; /* 게임 이동 감각 기준 약 3걸음 */
 const TAVERN_PEOPLE_URL="https://static.wixstatic.com/media/172435_e5d3897a87884494b392ac860028863a~mv2.png";
-const TAVERN_PEOPLE_BACK_URL="https://static.wixstatic.com/media/172435_e9cbdf3d43534f5f92d12592aad91156~mv2.png";
+const TAVERN_PEOPLE_BACK_URL="https://static.wixstatic.com/media/172435_214d63e5b55a4e948188a8d22dc900b0~mv2.png";
+
+function groundTavernSprite(npc){
+    const margin=npc.material.map?.userData?.footMargin||0;
+    npc.position.y=.24+npc.scale.y*(.5-margin);
+}
 
 function updateTavernGuestFacing(npc,viewer){
     const data=npc.userData;
@@ -4598,6 +4603,7 @@ function updateTavernGuestFacing(npc,viewer){
     if(dot<-.08){back=true;}else if(dot>.08){back=false;}
     if(data.showingBack!==back){
         data.showingBack=back;npc.material.map=back?data.backMap:data.frontMap;
+        groundTavernSprite(npc);
     }
 }
 const TAVERN_BARREL_URL="https://static.wixstatic.com/media/172435_69e63975ce2a4ba5a79c408a70026adb~mv2.png";
@@ -4860,7 +4866,9 @@ function tavernCroppedTexture(image,crop,solidInterior){
     /* 외곽 배경으로 판정되어 지운 픽셀만 투명하게 두고, 캐릭터에
        속한 모든 픽셀은 원본의 반투명값과 관계없이 완전 불투명으로 만든다. */
     for(let i=0;i<w*h;i++){const alpha=i*4+3;if(data[alpha]>0){data[alpha]=255;}}
-    context.putImageData(pixels,0,0);const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.magFilter=THREE.NearestFilter;texture.minFilter=THREE.LinearMipmapLinearFilter;texture.generateMipmaps=true;return texture;
+    let foot=h-1;
+    for(;foot>=0;foot--){let count=0;for(let x=0;x<w;x++){if(data[(foot*w+x)*4+3]>127){count++;}}if(count>=3){break;}}
+    context.putImageData(pixels,0,0);const texture=new THREE.CanvasTexture(canvas);texture.userData={footMargin:Math.max(0,h-1-foot)/h};texture.colorSpace=THREE.SRGBColorSpace;texture.magFilter=THREE.NearestFilter;texture.minFilter=THREE.LinearMipmapLinearFilter;texture.generateMipmaps=true;return texture;
 }
 
 function tavernLabel(text){
@@ -5021,7 +5029,7 @@ function dressTavernReferenceInterior(wood,darkWood,barrelMat,stoneMat){
     groups.forEach(function(items,mat){const mesh=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),mat,items.length);const matrix=new THREE.Matrix4();const q=new THREE.Quaternion();items.forEach(function(a,i){matrix.compose(new THREE.Vector3(a[3],a[4],a[5]),q,new THREE.Vector3(a[0],a[1],a[2]));mesh.setMatrixAt(i,matrix);});mesh.instanceMatrix.needsUpdate=true;scene.add(mesh);});
 }
 
-let tavernOutside=false,tavernExteriorGroup=null,tavernInteriorObjects=[],tavernExteriorDoors=[],tavernHearthFire=null,tavernTransitionAt=0;
+let tavernOutside=false,tavernExteriorGroup=null,tavernInteriorObjects=[],tavernExteriorDoors=[],tavernHearthFire=null,tavernTransitionAt=0,tavernForestSky=null;
 const tavernTreePositions=[];
 function prepareTavernDoorHinge(door){
     door.userData.closedCenter=door.position.clone();
@@ -5050,6 +5058,7 @@ function enterTavernWorld(outside,door){
     camera.position.set(outside?center.x+140:center.x-140,5.2,outside?(rear?-32:27):(rear?-22.8:18));
     gyroViewHeading=outside?(rear?Math.PI:0):(rear?Math.PI:0);camera.rotation.set(0,gyroViewHeading,0);
     scene.background=new THREE.Color(outside?0x070f22:0x17100d);scene.fog=new THREE.Fog(outside?0x070f22:0x17100d,outside?55:38,outside?125:72);
+    if(outside&&tavernForestSky){scene.background=tavernForestSky;}
     [...tavernDoors,...tavernExteriorDoors].forEach(d=>{d.rotation.y=d.userData.closedRotation;d.userData.opened=false;});
     nearestTavernDoor=null;nearestTavernNPC=null;releaseVirtualJoystick();tavernDoorClack();
     ['tavernTalkButton','tavernNamePlate','tavernDoorButton'].forEach(id=>{if($(id)){$(id).classList.remove('show');}});
@@ -5072,6 +5081,16 @@ function buildTavernOutside(loader,wood,doorMat){
     const grass=new THREE.MeshBasicMaterial({color:0x182b26}),path=new THREE.MeshBasicMaterial({color:0x423d33}),roofMat=new THREE.MeshBasicMaterial({map:wood.map,color:0x49424a}),trunk=new THREE.MeshBasicMaterial({map:wood.map,color:0x504033});
     function box(w,h,d,x,y,z,mat){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);group.add(m);return m;}
     box(125,.2,185,140,.08,10,grass);box(6,.04,78,130,.21,62,path);box(70,.04,5,147,.21,-33,path);
+    // Reuse the completed wolf-map assets and its intersecting dirt-road layout.
+    const roadMap=tavernPixelTexture(['#8a704a','#977c52','#745f40','#a08759','#68563c']);roadMap.repeat.set(2,24);path.map=roadMap;
+    [100,180].forEach(x=>box(7,.04,175,x,.21,8,path));
+    [35,-45].forEach(z=>box(115,.04,7,140,.22,z,path));
+    loader.load('https://static.wixstatic.com/media/172435_94ba8560969d4426b4485bed37acfea6~mv2.png',texture=>{
+        texture.wrapS=texture.wrapT=THREE.RepeatWrapping;texture.repeat.set(26,38);texture.colorSpace=THREE.SRGBColorSpace;texture.magFilter=THREE.NearestFilter;grass.map=texture;grass.color.setHex(0x77708f);grass.needsUpdate=true;
+    });
+    loader.load('https://static.wixstatic.com/media/172435_b14315929f164d139461b465a6d488b8~mv2.jpg',texture=>{
+        texture.colorSpace=THREE.SRGBColorSpace;tavernForestSky=texture;if(tavernOutside){scene.background=texture;}
+    });
     box(44,13.5,49,140,6.75,-2.5,wood);
     // Gable roof matches the 44 x 49 interior envelope, with overhang and chimney.
     const shape=new THREE.Shape();shape.moveTo(-23,0);shape.lineTo(0,9);shape.lineTo(23,0);shape.closePath();
@@ -5085,10 +5104,38 @@ function buildTavernOutside(loader,wood,doorMat){
     });
     const glass=new THREE.MeshBasicMaterial({color:0xae8851});
     [143,155].forEach(x=>{box(4,4,.2,x,6,22.65,glass);box(.18,4,.35,x,6,22.8,trunk);box(4,.18,.35,x,6,22.8,trunk);});
+    // Side windows mirror the interior: west z=-8,+8; east z=0.
+    [[117.7,-8],[117.7,8],[162.3,0]].forEach(([x,z])=>{
+        box(.2,4.2,5.2,x,5,z,glass);
+        [2.75,7.25].forEach(y=>box(.45,.32,5.75,x,y,z,trunk));
+        [-2.72,2.72].forEach(dz=>box(.45,4.82,.32,x,5,z+dz,trunk));
+        box(.4,4.2,.16,x,5,z,trunk);
+    });
+    box(5.2,4.2,.2,126.2,5,-27.65,glass);
     const positions=[];
-    for(let i=0;i<76;i++){const angle=i*2.399963,rad=38+(i%7)*4,x=140+Math.cos(angle)*rad,z=8+Math.sin(angle)*rad*1.3;if(Math.abs(x-130)<6&&z>22){continue;}if(x>115&&x<165&&z>-31&&z<25){continue;}positions.push([x,z]);tavernTreePositions.push([x,z]);}
+    for(let z=-73;z<94;z+=9){for(let x=86;x<197;x+=9){
+        const px=x+Math.sin(x*7+z)*1.8,pz=z+Math.cos(z*3+x)*1.8;
+        if(px>112&&px<168&&pz>-32&&pz<27){continue;}
+        if(Math.min(Math.abs(px-100),Math.abs(px-180),pz>22?Math.abs(px-130):999)<6.8){continue;}
+        if(Math.min(Math.abs(pz-35),Math.abs(pz+45),Math.abs(pz+33))<6.8){continue;}
+        positions.push([px,pz]);tavernTreePositions.push([px,pz]);
+    }}
     const stems=new THREE.InstancedMesh(new THREE.CylinderGeometry(.55,.8,8,6),trunk,positions.length),crowns=new THREE.InstancedMesh(new THREE.ConeGeometry(4,11,7),new THREE.MeshBasicMaterial({color:0x132c2b}),positions.length);
     const matrix=new THREE.Matrix4();positions.forEach((p,i)=>{matrix.makeTranslation(p[0],4,p[1]);stems.setMatrixAt(i,matrix);matrix.makeTranslation(p[0],11,p[1]);crowns.setMatrixAt(i,matrix);});group.add(stems,crowns);
+    loader.load('https://static.wixstatic.com/media/172435_8f5a8cf2556f44fea7f953c1da2432ff~mv2.png',texture=>{
+        const image=texture.image,canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;
+        const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(image,0,0);
+        try{
+            const pixels=ctx.getImageData(0,0,canvas.width,canvas.height);let minX=canvas.width,minY=canvas.height,maxX=0,maxY=0;
+            for(let i=0;i<pixels.data.length;i+=4){const d=pixels.data;if(d[i]>242&&d[i+1]>242&&d[i+2]>242){d[i+3]=0;}if(d[i+3]>127){const x=(i/4)%canvas.width,y=Math.floor(i/4/canvas.width);minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);}}
+            ctx.putImageData(pixels,0,0);if(minX>maxX){return;}
+            const crop=document.createElement('canvas');crop.width=maxX-minX+1;crop.height=maxY-minY+1;crop.getContext('2d').drawImage(canvas,minX,minY,crop.width,crop.height,0,0,crop.width,crop.height);
+            const map=new THREE.CanvasTexture(crop);map.colorSpace=THREE.SRGBColorSpace;map.magFilter=THREE.NearestFilter;
+            const mat=new THREE.SpriteMaterial({map,color:0x77708f,transparent:true,alphaTest:.08,depthWrite:true});
+            positions.forEach((p,i)=>{const tree=new THREE.Sprite(mat),height=18.4*(.72+(i%7)*.075);tree.scale.set(height*crop.width/crop.height,height,1);tree.position.set(p[0],.2+height/2,p[1]);group.add(tree);});
+            group.remove(stems,crowns);stems.geometry.dispose();crowns.geometry.dispose();texture.dispose();
+        }catch(error){console.warn('Forest tree texture unavailable; retaining fallback.',error);}
+    });
     const starPositions=[];for(let i=0;i<160;i++){starPositions.push(80+(i*37%120),45+(i*13%35),-80+(i*47%180));}
     const starsGeo=new THREE.BufferGeometry();starsGeo.setAttribute('position',new THREE.Float32BufferAttribute(starPositions,3));group.add(new THREE.Points(starsGeo,new THREE.PointsMaterial({color:0xcad9ee,size:.22})));
     const moon=new THREE.Mesh(new THREE.SphereGeometry(3,12,8),new THREE.MeshBasicMaterial({color:0xc9daf4}));moon.position.set(170,55,-55);group.add(moon);
@@ -5370,6 +5417,7 @@ function buildTavernInterior(loader){
             if(item.name==="주인 로웬"){item.z=-20.7;sprite.userData.talkDistance=7.4;}
             sprite.position.set(item.x,.24+item.scale[1]/2,item.z);
             sprite.scale.set(item.scale[1]*originalAspect,item.scale[1],1);
+            groundTavernSprite(sprite);
             sprite.userData.baseScale={x:item.scale[1]*originalAspect,y:item.scale[1]};
             sprite.userData.floorOffset=.24;
             sprite.userData.blockRadius=Math.max(3.15,item.block || 2.25);
@@ -11340,7 +11388,7 @@ function loop(now){
 
         /* 선술집에서는 정지·이동 호흡 흔들림을 모두 끈다. */
         if(playerJumpHeight>0){
-            playerJumpVelocity-=18*dt;
+            playerJumpVelocity-=(playerJumpVelocity>0?18:32)*dt;
             playerJumpHeight=Math.max(0,playerJumpHeight+playerJumpVelocity*dt);
             if(playerJumpHeight===0){playerJumpVelocity=0;}
         }
