@@ -155,6 +155,7 @@ function mount(hooks){
   const box=document.createElement('section');box.id='motionControls';
   box.innerHTML=`<button id="motionConnect" type="button">🎮 연결</button>
   <button id="motionPhoneConnect" type="button">📱 폰 연결</button>
+  <button id="motionJoyConnect" type="button">🕹️ 조이콘 연결</button>
   <div id="motionStatus" role="status">v12 · 감도 9 · 연결 후 2초 가만히 잡아주세요.</div>`;
   const gate=document.createElement('section');gate.id='motionCalibrationGate';
   gate.innerHTML=`<div id="motionCalibrationCard">
@@ -163,6 +164,7 @@ function mount(hooks){
     <progress id="motionCalibrationProgress" max="1" value="0"></progress>
     <button id="motionGateConnect" type="button">🎮 컨트롤러 연결</button>
     <button id="motionGatePhone" type="button">📱 폰 연결</button>
+    <button id="motionGateJoy" type="button">🕹️ 조이콘 연결</button>
     <small>보정이 끝나야 게임을 시작할 수 있습니다.</small>
   </div>`;
   const css=document.createElement('style');css.textContent=`
@@ -185,14 +187,18 @@ function mount(hooks){
   `;
   document.head.append(css);document.body.append(box);document.body.append(gate);
   const el=id=>document.getElementById(id),panel={hidden:true},enabled={checked:false};
-  const detector=new SwordTracker();let device=null,info=null,busy=false,sequence=0,lastReport=0,lastUI=0,transport='',total=0,renderQueued=false,queuedActive=false,calibrationNoticeUntil=0,phoneActive=false,phoneRoll=0,phoneLastAttack=-Infinity,phoneFastSamples=0,crossDown=false;
+  const detector=new SwordTracker();let device=null,info=null,busy=false,sequence=0,lastReport=0,lastUI=0,transport='',total=0,renderQueued=false,queuedActive=false,calibrationNoticeUntil=0,phoneActive=false,phoneRoll=0,phoneLastAttack=-Infinity,phoneFastSamples=0,joyActive=false,joyRoll=0,crossDown=false;
   function renderPose(active){
     const sword=el('sword');if(!sword?.style||!sword.classList)return;
     sword.classList.toggle('motion-linked',active);
-    sword.classList.toggle('motion-resting',active&&(phoneActive || detector.poseSpeed<6)&&!hooks.isAttacking?.());
+    sword.classList.toggle('motion-resting',active&&(phoneActive || joyActive || detector.poseSpeed<6)&&!hooks.isAttacking?.());
     if(!active)return;
     if(phoneActive){
       sword.style.setProperty('--motion-roll',`${Math.max(-20,Math.min(25,-4+phoneRoll))}deg`);
+      return;
+    }
+    if(joyActive){
+      sword.style.setProperty('--motion-roll',`${Math.max(-20,Math.min(25,-4+joyRoll))}deg`);
       return;
     }
     const q=detector.displayAngles;
@@ -221,22 +227,35 @@ function mount(hooks){
   function unlockGate(){gate.hidden=true;box.hidden=false;close();}
   function usePhonePose(roll,speed,direction){
     if(!Number.isFinite(roll)||!Number.isFinite(speed))return;
-    if(!phoneActive){phoneActive=true;enabled.checked=true;unlockGate();status('📱 폰 자이로 연결됨');}
+    if(!phoneActive){phoneActive=true;joyActive=false;enabled.checked=true;unlockGate();status('📱 폰은 칼 컨트롤러 · 게임은 PC에서 실행 중');}
     phoneRoll=Math.max(-30,Math.min(30,roll));
     queuePose(allowed());
     const now=performance.now();
-    if(speed<100){phoneFastSamples=0;return;}
-    if(speed<240){phoneFastSamples=0;return;}
+    if(direction!=='left'&&direction!=='right'){phoneFastSamples=0;return;}
+    if(speed<70){phoneFastSamples=0;return;}
     phoneFastSamples++;
-    if(phoneFastSamples>=2&&now-phoneLastAttack>=180&&allowed()){
-      phoneFastSamples=0;phoneLastAttack=now;hooks.attack(direction==='down'?'down':direction==='left'?'left':'right');
+    if(phoneFastSamples>=2&&now-phoneLastAttack>=260&&allowed()){
+      phoneFastSamples=0;phoneLastAttack=now;hooks.attack(direction);
     }
   }
   function stopPhone(){
-    phoneActive=false;phoneFastSamples=0;phoneRoll=0;renderPose(false);
+    phoneActive=false;phoneFastSamples=0;phoneRoll=0;renderPose(joyActive&&allowed());
+    if(joyActive)return;
     if(!hooks.gameStarted?.()){lockGate('폰 연결이 끊겼습니다. 다시 QR로 연결하거나 컨트롤러를 연결하세요.');}
     else status('폰 연결 끊김 · 📱 폰 연결 버튼으로 다시 연결하세요.');
   }
+  function useJoyPose(roll){
+    if(!Number.isFinite(roll))return;
+    if(!joyActive){joyActive=true;phoneActive=false;enabled.checked=true;unlockGate();status('🕹️ 조이콘 보정 완료 · 왼쪽 이동 / 오른쪽 내려치기');}
+    joyRoll=roll;queuePose(allowed());
+  }
+  function stopJoy(){
+    joyActive=false;joyRoll=0;renderPose(phoneActive&&allowed());
+    if(phoneActive)return;
+    if(!hooks.gameStarted?.())lockGate('조이콘 연결이 끊겼습니다. 좌우 조이콘을 다시 연결하고 보정하세요.');
+    else status('조이콘 연결 끊김 · 키보드 조작은 계속 사용할 수 있습니다.');
+  }
+  function attackExternal(direction){return allowed() ? hooks.attack(direction) : false;}
   function allowed(){return enabled.checked&&panel.hidden&&!document.hidden&&document.hasFocus()&&
     !document.activeElement?.matches('input,textarea,select,[contenteditable="true"]')&&hooks.canAttack();}
   function input(e){
@@ -318,6 +337,8 @@ function mount(hooks){
   el('motionGateConnect').onclick=connect;
   el('motionPhoneConnect').onclick=()=>hooks.connectPhone?.();
   el('motionGatePhone').onclick=()=>hooks.connectPhone?.();
+  el('motionJoyConnect').onclick=()=>hooks.connectJoy?.();
+  el('motionGateJoy').onclick=()=>hooks.connectJoy?.();
   window.addEventListener('keydown',e=>{if(gate.hidden&&!panel.hidden&&e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();close();}},true);
   window.addEventListener('blur',()=>{if(!detector.ready)detector.restartCalibration('moved');else detector.reset();renderPose(false);});
   document.addEventListener('visibilitychange',()=>{if(!detector.ready)detector.restartCalibration('moved');else detector.reset();renderPose(false);});
@@ -325,7 +346,7 @@ function mount(hooks){
   window.addEventListener('pagehide',()=>{void disconnect();});
   setInterval(()=>{if(device&&performance.now()-lastReport>2000){enabled.checked=false;detector.calibrate();renderPose(false);lockGate('센서 응답이 멈췄습니다. 다시 연결한 뒤 새로 보정해야 합니다.');status('센서 응답 없음 · USB/블루투스를 확인하고 재연결해주세요.');}},1000);
   lockGate('컨트롤러를 연결한 뒤 정면으로 들고 2초간 움직이지 마세요.');
-  return {panel,detector,enabled,usePhonePose,stopPhone,lockGate};
+  return {panel,detector,enabled,usePhonePose,stopPhone,useJoyPose,stopJoy,attackExternal,lockGate,disconnectController:disconnect};
 }
 // Fixed tracking sensitivity 9: five times v3 gain; attack speed threshold
 // remains separate so slow tracking never becomes a hit merely from gain.
@@ -357,7 +378,9 @@ function overlay(){
     #wolfPhoneQr{display:block;width:min(320px,68vw);height:auto;margin:12px auto;background:white}
     #wolfPhoneUrl{overflow-wrap:anywhere;font-size:12px}.wolfPhoneCard button,#wolfPhoneStart{font:inherit;padding:12px 16px;border-radius:10px;background:#765032;color:#fff2d5;border:2px solid #d7a772}
     #wolfPhoneController{position:fixed;inset:0;z-index:100002;display:grid;place-items:center;background:#111b31;color:#fbe8c8;font:18px sans-serif;text-align:center;padding:20px}
-    #wolfPhoneController[hidden]{display:none}`;
+    #wolfPhoneController[hidden]{display:none}
+    body.wolf-phone-only > :not(#wolfPhoneController):not(script){display:none!important}
+    body.wolf-phone-only{background:#111b31!important}`;
   document.head.append(style);document.body.append(node);
   node.querySelector('#wolfPhoneClose').onclick=()=>{node.hidden=true;};
   return node;
@@ -420,11 +443,18 @@ function attachHost(ui){hostUi=ui;}
 function startPhone(){
   const hostId=new URLSearchParams(location.search).get('wolfphone');
   if(!/^yc-wolf-motion-[a-z0-9]{16}$/.test(hostId||''))return false;
+  document.body.classList.add('wolf-phone-only');
+  const style=document.createElement('style');style.textContent=`
+    body.wolf-phone-only > :not(#wolfPhoneController):not(script){display:none!important}
+    body.wolf-phone-only{background:#111b31!important}
+    #wolfPhoneController{position:fixed;inset:0;z-index:100002;display:grid;place-items:center;background:#111b31;color:#fbe8c8;font:18px sans-serif;text-align:center;padding:20px}
+    #wolfPhoneController button{font:inherit;padding:12px 16px;border-radius:10px;background:#765032;color:#fff2d5;border:2px solid #d7a772}`;
+  document.head.append(style);
   const node=document.createElement('section');node.id='wolfPhoneController';
-  node.innerHTML=`<div><h2>늑대 게임 · 폰 자이로 칼</h2>
+  node.innerHTML=`<div><h2>폰 칼 컨트롤러</h2>
     <p id="wolfPhoneStatus">PC와 연결 중…</p>
     <button id="wolfPhoneStart">자이로 시작</button>
-    <p>폰을 정면으로 잡고 2초간 가만히 둔 뒤, 기울여 칼을 움직이거나 빠르게 휘두르세요.</p></div>`;
+    <p>게임은 PC에서만 실행됩니다. 폰을 2초간 가만히 잡아 보정한 뒤 좌우로 기울여 PC의 칼을 휘두르세요.</p></div>`;
   document.body.append(node);
   const status=node.querySelector('#wolfPhoneStatus'),button=node.querySelector('#wolfPhoneStart');
   if(typeof Peer==='undefined'){status.textContent='연결 도구를 불러오지 못했습니다.';return true;}
@@ -444,15 +474,16 @@ function startPhone(){
     if(!last){last={gamma,beta,t:now};steadyStart=now;return;}
     const dt=Math.max(.004,(now-last.t)/1000);
     const dGamma=gamma-last.gamma,dBeta=beta-last.beta;
-    const speed=Math.max(Math.abs(dGamma),Math.abs(dBeta))/dt;
+    const speed=Math.hypot(dGamma,dBeta)/dt;
     if(!base){
       if(speed>35){steadyStart=now;steadyCount=0;status.textContent='폰이 움직였습니다. 가만히 잡고 다시 2초 보정합니다.';}
       else steadyCount++;
       if(now-steadyStart>=2000 && steadyCount>=60){base={gamma,beta};status.textContent='보정 완료 · 폰으로 칼을 움직이세요.';}
     }else if(now-lastSent>=16){
       const roll=Math.max(-30,Math.min(30,(gamma-base.gamma)*1.3));
-      const direction=Math.abs(dBeta)>Math.abs(dGamma)?'down':dGamma<0?'left':'right';
-      conn.send({type:'pose',roll,speed:Math.min(600,speed),direction});lastSent=now;
+      const lateralSpeed=Math.abs(dGamma)/dt;
+      const direction=Math.abs(dGamma)>=Math.abs(dBeta)*1.2?(dGamma<0?'left':'right'):null;
+      conn.send({type:'pose',roll,speed:Math.min(600,lateralSpeed),direction});lastSent=now;
     }
     last={gamma,beta,t:now};
   }
@@ -474,6 +505,164 @@ function startPhone(){
 }
 const api={showInvite,attachHost,startPhone};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.WolfPhone=api;
+})(globalThis);
+
+</script>
+<script>
+/* Paired original Switch Joy-Con controller: L stick + R IMU. The two
+   WebHID pickers are separate clicks because each needs user activation. */
+(function(root){
+'use strict';
+const LEFT=0x2006,RIGHT=0x2007,VENDOR=0x057e;
+const {Detector,SwordTracker}=root.WolfMotion;
+let host=null,left=null,right=null,ready=false,leftReady=false,rightReady=false;
+let stickCenter={x:2048,y:2048},stickValue={x:0,y:0,t:0};
+let leftSamples=[],leftStarted=0,downPattern=null,lastRight=0;
+let rightDetector=new Detector(),poseTracker=new SwordTracker();
+// A Joy-Con downward strike needs a more decisive acceleration pulse than
+// the legacy test controller's general-purpose gesture.
+rightDetector.sensitivity=.5;
+function parseStick(id,data){
+  if(id!==0x30||data.byteLength<12)return null;
+  return {
+    x:data.getUint8(5)|((data.getUint8(6)&15)<<8),
+    y:(data.getUint8(6)>>4)|(data.getUint8(7)<<4)
+  };
+}
+function popup(){
+  let node=document.getElementById('joyPairOverlay');if(node)return node;
+  node=document.createElement('section');node.id='joyPairOverlay';
+  node.innerHTML=`<div class="joyPairCard"><h2>좌·우 조이콘 연결</h2>
+    <p id="joyPairStatus">먼저 오른쪽 조이콘을 연결하세요.</p>
+    <button id="joyPairRight" type="button">1. 오른쪽 조이콘 연결</button>
+    <button id="joyPairLeft" type="button">2. 왼쪽 조이콘 연결</button>
+    <p>두 조이콘을 2초간 움직이지 말고 스틱도 놓으세요. 그다음 오른쪽 조이콘으로 위에서 아래로 연습 내려치기를 한 번 해 주세요.</p>
+    <button id="joyPairClose" type="button">닫기</button></div>`;
+  const css=document.createElement('style');css.textContent=`
+    #joyPairOverlay{position:fixed;inset:0;z-index:100003;display:grid;place-items:center;background:#09121eea;color:#fce9ce;font:16px sans-serif}
+    #joyPairOverlay[hidden]{display:none}.joyPairCard{width:min(480px,88vw);padding:24px;background:#2a1e17;border:3px solid #c79a68;border-radius:16px;text-align:center;line-height:1.5}
+    .joyPairCard button{display:block;margin:10px auto;padding:11px 14px;background:#715036;border:2px solid #e0b984;border-radius:10px;color:#fff2d6;font:inherit;font-weight:700}`;
+  document.head.append(css);document.body.append(node);
+  node.querySelector('#joyPairRight').onclick=()=>void selectSide('right');
+  node.querySelector('#joyPairLeft').onclick=()=>void selectSide('left');
+  node.querySelector('#joyPairClose').onclick=()=>{node.hidden=true;};
+  return node;
+}
+function message(value){const el=document.getElementById('joyPairStatus');if(el)el.textContent=value;}
+function resetPair(){
+  ready=false;leftReady=false;rightReady=false;leftSamples=[];leftStarted=0;
+  stickValue={x:0,y:0,t:0};downPattern=null;lastRight=0;
+  rightDetector.calibrate();poseTracker.calibrate();
+}
+async function closePair(){
+  const oldL=left,oldR=right;left=null;right=null;resetPair();
+  for(const [device,handler] of [[oldL,onLeft],[oldR,onRight]])if(device){
+    device.removeEventListener('inputreport',handler);
+    try{await device.close();}catch(_){}
+  }
+  host?.ui.stopJoy();
+}
+async function subcommand(device,id,value){
+  const data=new Uint8Array(48);data.set([0,1,0x40,0x40,0,1,0x40,0x40],1);
+  data[9]=id;data[10]=value;
+  await new Promise((resolve,reject)=>{
+    const timer=setTimeout(()=>finish(new Error('조이콘 센서 설정 응답 없음')),1800);
+    const ack=e=>{if(e.reportId===0x21&&e.data.byteLength>=14&&e.data.getUint8(13)===id)
+      finish((e.data.getUint8(12)&0x80)?null:new Error('조이콘 센서 설정 거부'));};
+    function finish(error){clearTimeout(timer);device.removeEventListener('inputreport',ack);error?reject(error):resolve();}
+    device.addEventListener('inputreport',ack);device.sendReport(1,data).catch(finish);
+  });
+}
+async function selectSide(side){
+  if(!navigator.hid||!window.isSecureContext){message('PC Chrome/Edge의 HTTPS 주소에서 조이콘을 연결해야 합니다.');return;}
+  const button=document.getElementById(side==='left'?'joyPairLeft':'joyPairRight');
+  button.disabled=true;
+  try{
+    // requestDevice must be the first awaited operation in the button click.
+    const selected=await navigator.hid.requestDevice({filters:[{vendorId:VENDOR,productId:side==='left'?LEFT:RIGHT}]});
+    const device=selected.find(d=>d.vendorId===VENDOR&&d.productId===(side==='left'?LEFT:RIGHT));
+    if(!device){message('연결 선택을 취소했습니다. 좌·우 조이콘 버튼으로 다시 선택하세요.');return;}
+    const previous=side==='left'?left:right;
+    if(previous){previous.removeEventListener('inputreport',side==='left'?onLeft:onRight);try{await previous.close();}catch(_){}}
+    resetPair();
+    if(side==='left')left=device;else right=device;
+    await device.open();
+    device.addEventListener('inputreport',side==='left'?onLeft:onRight);
+    await subcommand(device,0x40,1);
+    await subcommand(device,0x03,0x30);
+    message(`${side==='left'?'왼쪽':'오른쪽'} 조이콘 연결됨 · ${left&&right?'두 조이콘을 스틱도 놓고 2초간 가만히 두세요.':'남은 조이콘도 연결하세요.'}`);
+  }catch(error){
+    message('조이콘 연결 실패: '+String(error.message||error));
+    await closePair();
+  }finally{button.disabled=false;}
+}
+function onLeft(e){
+  if(e.device!==left)return;
+  const raw=parseStick(e.reportId,e.data),now=performance.now();if(!raw)return;
+  if(!leftReady){
+    if(!leftStarted)leftStarted=now;
+    if(leftSamples.length && Math.hypot(raw.x-leftSamples[0].x,raw.y-leftSamples[0].y)>160){
+      leftSamples=[];leftStarted=now;message('왼쪽 스틱이 움직였습니다. 손을 떼고 2초간 다시 보정합니다.');return;
+    }
+    leftSamples.push(raw);
+    if(now-leftStarted>=2000&&leftSamples.length>=90){
+      stickCenter={x:leftSamples.reduce((s,v)=>s+v.x,0)/leftSamples.length,
+        y:leftSamples.reduce((s,v)=>s+v.y,0)/leftSamples.length};
+      leftReady=true;message(rightReady?'스틱 보정 완료 · 오른쪽 조이콘을 위에서 아래로 한 번 연습 내려치세요.':'왼쪽 스틱 보정 완료 · 오른쪽 조이콘을 가만히 두세요.');
+    }
+    return;
+  }
+  const dead=x=>Math.abs(x)<.13?0:Math.max(-1,Math.min(1,x));
+  stickValue={x:dead((raw.x-stickCenter.x)/1900),y:dead((stickCenter.y-raw.y)/1900),t:now};
+  finish();
+}
+function onRight(e){
+  if(e.device!==right)return;
+  const sample=root.WolfMotion.parse('joy',e.reportId,e.data);if(!sample)return;
+  const now=performance.now();lastRight=now;
+  if(!rightReady){
+    rightDetector.sample(sample.gyro,sample.accel,now,false);
+    if(rightDetector.calibrationEvent==='moved')message('오른쪽 조이콘이 움직였습니다. 2초간 다시 가만히 두세요.');
+    if(rightDetector.ready){
+      rightReady=true;poseTracker.bias=rightDetector.bias.slice();poseTracker.ready=true;poseTracker.reset();
+      message(leftReady?'정지 보정 완료 · 오른쪽 조이콘으로 위에서 아래로 한 번 연습 내려치세요.':'오른쪽 보정 완료 · 왼쪽 스틱 보정을 기다립니다.');
+    }
+    return;
+  }
+  poseTracker.sample(sample.gyro,sample.accel,now,true);
+  if(leftReady){
+    const hit=rightDetector.sample(sample.gyro,sample.accel,now,true);
+    if(hit){
+      if(!downPattern){
+        downPattern={axis:hit.axis,sign:hit.sign};rightDetector.reset();
+        message('내려치기 방향도 기록했습니다. 이제 오른쪽 조이콘으로 같은 방향의 빠른 내려치기만 공격합니다.');
+        finish();
+      }else if(ready&&hit.axis===downPattern.axis&&hit.sign===downPattern.sign){host?.ui.attackExternal('down');}
+    }
+  }
+  if(ready)host?.ui.useJoyPose(-poseTracker.displayAngles[0]*3.6);
+}
+function finish(){
+  if(!ready&&leftReady&&rightReady&&downPattern){
+    ready=true;popup().hidden=true;host?.ui.useJoyPose(0);
+  }
+}
+function showPair(){
+  const node=popup();node.hidden=false;
+  if(ready){message('조이콘이 이미 연결되어 있습니다. 왼쪽 스틱으로 이동하고 오른쪽으로 내려치세요.');return;}
+  host?.ui.lockGate('좌·우 조이콘 연결과 정지 보정이 끝나야 시작할 수 있습니다.');
+  message(left&&right?'두 조이콘을 2초간 가만히 두고, 오른쪽으로 연습 내려치기를 해주세요.':'오른쪽, 왼쪽 조이콘을 각각 연결하세요.');
+}
+function attachHost(ui){host={ui};}
+function stick(){
+  const active=ready&&!!left&&!!right&&performance.now()-stickValue.t<350&&performance.now()-lastRight<1500;
+  return active?{active:true,x:stickValue.x,y:stickValue.y}:{active:false,x:0,y:0};
+}
+function disconnected(e){if(e.device===left||e.device===right){void closePair();message('조이콘이 끊겼습니다. 좌·우를 다시 연결하고 보정하세요.');}}
+root.navigator?.hid?.addEventListener('disconnect',disconnected);
+root.addEventListener?.('pagehide',()=>{void closePair();});
+const api={attachHost,showPair,stick,parseStick};
+if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.WolfJoyPair=api;
 })(globalThis);
 
 </script>
@@ -2557,12 +2746,15 @@ function isInsidePlayableRoad(x,z){
 
 function moveGyroPlayer(dt){
     const lockTarget=battle && monster && !monsterDead;
-    const usingJoystick=joystickPointerId!==null;
+    const joyStick=WolfJoyPair.stick();
+    const usingJoystick=joystickPointerId!==null || joyStick.active;
+    const joyAnalogX=joystickPointerId!==null ? joystickX : joyStick.x;
+    const joyAnalogY=joystickPointerId!==null ? joystickY : joyStick.y;
     const joystickStraight=usingJoystick &&
-        Math.abs(joystickY)>.18 &&
-        Math.abs(joystickX)<Math.abs(joystickY)*.268;
-    const joystickTurnX=joystickStraight ? 0 : joystickX;
-    const turnInput=joystickPointerId!==null
+        Math.abs(joyAnalogY)>.18 &&
+        Math.abs(joyAnalogX)<Math.abs(joyAnalogY)*.268;
+    const joystickTurnX=joystickStraight ? 0 : joyAnalogX;
+    const turnInput=usingJoystick
         ? joystickTurnX
         : (controlLeftPressed ? -1 : (controlRightPressed ? 1 : 0));
     if(!lockTarget && turnInput!==0){
@@ -2571,23 +2763,23 @@ function moveGyroPlayer(dt){
         );
     }
 
-    let moveInput=joystickPointerId!==null
-        ? -joystickY
+    let moveInput=usingJoystick
+        ? -joyAnalogY
         : (gyroForwardPressed ? 1 : (gyroBackwardPressed ? -1 : 0));
     let strafeInput=lockTarget ? turnInput : 0;
 
     /* 스틱을 좌우로 밀었을 때 작은 세로 오차 때문에 앞으로
        미끄러지지 않게 하고, 대각선 이동은 직진의 절반 속도로 한다. */
     const pureHorizontal=usingJoystick &&
-        Math.abs(joystickX)>=.28 &&
-        Math.abs(joystickY)<=Math.abs(joystickX)*.42;
+        Math.abs(joyAnalogX)>=.28 &&
+        Math.abs(joyAnalogY)<=Math.abs(joyAnalogX)*.42;
     if(pureHorizontal){moveInput=0;}
     if(Math.abs(moveInput)<.12){moveInput=0;}
     if(Math.abs(strafeInput)<.12){strafeInput=0;}
     const diagonal=usingJoystick &&
         !joystickStraight &&
-        Math.abs(joystickX)>=.18 &&
-        Math.abs(joystickY)>=.18;
+        Math.abs(joyAnalogX)>=.18 &&
+        Math.abs(joyAnalogY)>=.18;
 
     if(lockTarget && Math.abs(strafeInput)>.08){
         // Keep the wolf in front while orbiting, without moving the player
@@ -9164,10 +9356,12 @@ if(!WolfPhone.startPhone()){
     exitBattle:()=>exitBattleAndFlee(),
     isAttacking:()=>swordAttacking,
     connectPhone:()=>WolfPhone.showInvite(),
+    connectJoy:()=>WolfJoyPair.showPair(),
     openPanel:()=>{if(!motionOwnsPause&&started&&!gameOver&&!gamePaused){motionOwnsPause=true;toggleGamePause();}},
     closePanel:()=>{if(motionOwnsPause&&gamePaused)toggleGamePause();motionOwnsPause=false;},
     attack:direction=>attack(direction)});
   WolfPhone.attachHost(motionUi);
+  WolfJoyPair.attachHost(motionUi);
 }
 
 
