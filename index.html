@@ -1397,7 +1397,10 @@ html.ios-device #qrPanel{
 #controllerPanel .controllerCard{max-height:90dvh;box-sizing:border-box}
 </style>
 <style>
-#game.phone-sword #sword{display:block!important}
+#game.phone-sword #sword{display:block!important;height:calc(var(--sword-size) * 2)}
+#controllerPanelClose{width:auto;min-width:62px;font-size:16px;padding:8px 12px;z-index:5}
+#phonePairQR canvas,#phonePairQR img{display:block;margin:0;max-width:100%}
+#pauseOverlay{text-align:center}
 #phoneControllerUI,#phoneControllerUI *{user-select:none!important;-webkit-user-select:none!important;-webkit-touch-callout:none!important;touch-action:none}
 #phoneControllerUI{overflow:hidden!important;background:radial-gradient(ellipse at center,#1c3443,#07121d)!important}
 #phoneControllerUI button{padding:10px;border:3px solid #508cb0;border-radius:50%;background:radial-gradient(circle at 35% 25%,#244b64,#0c1d30);color:#ccefff;box-shadow:0 4px 12px #0008}
@@ -1450,7 +1453,7 @@ html.ios-device #qrPanel{
         <button id="dualReconnectButton" type="button">🎮 컨트롤러 연결</button>
         <div id="controllerPanel" class="controllerPanel" aria-hidden="true">
             <div class="controllerCard">
-                <button id="controllerPanelClose" class="controllerClose" type="button" aria-label="닫기">×</button>
+                <button id="controllerPanelClose" class="controllerClose" type="button" aria-label="취소">취소</button>
                 <h2>⚙ 설정 · 컨트롤러</h2>
                 <p id="controllerPanelStatus" class="controllerStatus">컨트롤러를 연결하세요.</p>
                 <label class="controllerSensitivity">좌우 자이로 감도 <b id="controllerSensitivityValue">5</b>
@@ -1626,7 +1629,7 @@ html.ios-device #qrPanel{
         <div id="questPanel">퀘스트<br><div style="margin-top:8px;text-align:left">마을 늑대<br>소탕하기<br><b id="questProgress">0 / 6</b></div></div>
         <div id="inventoryPanel"><b>인벤토리</b><div class="inventoryRow"><img src="https://static.wixstatic.com/media/172435_76a4ea719647489baf3cf65188c8754c~mv2.png" alt="늑대고기"><span>늑대고기 × <b id="meatCount">0</b></span></div><div class="inventoryRow"><img src="https://static.wixstatic.com/media/172435_18c122b6a5c945718007e1ce6cfc5189~mv2.png" alt="늑대가죽"><span>늑대가죽 × <b id="hideCount">0</b></span></div></div>
         <div id="lootToast"><div class="lootRow"><img src="https://static.wixstatic.com/media/172435_76a4ea719647489baf3cf65188c8754c~mv2.png" alt=""><span>늑대고기 획득 (×1)</span></div><div class="lootRow"><img src="https://static.wixstatic.com/media/172435_18c122b6a5c945718007e1ce6cfc5189~mv2.png" alt=""><span>늑대가죽 획득 (×1)</span></div></div>
-        <div id="pauseOverlay">PAUSED</div>
+        <div id="pauseOverlay"><div>PAUSED<p style="font-size:clamp(14px,2vw,22px);line-height:1.6;padding:0 24px">일시정지 시에 몸을 제자리로 돌리시려면 이 타이밍에 하십시오.</p></div></div>
         <div id="chestBurstText">TREASURE!</div>
 
         <div id="gyroControls" aria-label="자이로 이동 조작">
@@ -2124,6 +2127,7 @@ let phonePeer=null;
 let phoneConnection=null;
 let phoneLastPacket=0;
 let phoneLastMotion=0;
+let phoneTravelHeading=null;
 let controllerFlowEpoch=0;
 const PHONE_CONTROLLER_PAGE=new URLSearchParams(location.hash.slice(1)).has("phone");
 let dualLink="unknown";
@@ -2310,6 +2314,15 @@ function stationaryBias(samples){
         result.push(mean*16);
     }
     return result;
+}
+function resetPhoneView(){
+    gyroViewHeading=normalizeAngle(phoneTravelHeading===null?gyroViewHeading:phoneTravelHeading);
+    gyroViewPitch=0;mapHeading=gyroViewHeading;
+    dualFilteredPitchRate=0;dualFilteredYawRate=0;dualGyroHistory=[[],[],[]];
+    dualAimAssistSuppressedUntil=performance.now()+1200;
+    aimManualYawStep=0;aimManualPitchStep=0;
+    if(camera){camera.rotation.set(0,gyroViewHeading,0,'YXZ');camera.updateMatrixWorld(true);}
+    dualStatus('진행 방향의 수평 중앙으로 초기화했습니다.');
 }
 function recenterDualSense(){
     /* 세모를 누른 순간의 화면 중앙과 컨트롤러 방향을 새 기준으로 삼는다.
@@ -2546,7 +2559,7 @@ function applyPassiveWolfAimAssist(dt){
     /* 조준점이 늑대 근처에 들어오면 화면 정중앙이 늑대 중심에 실제로
        맞도록 상하·좌우를 함께 수렴시킨다. 범위를 벗어나면 즉시 해제된다. */
     const proximity=1-best.screenDistance/assistRadius;
-    const blend=1-Math.exp(-(1.4+2.6*proximity)*dt);
+    const blend=1-Math.exp(-(phoneRemoteActive ? (.55+.85*proximity) : (1.4+2.6*proximity))*dt);
     gyroViewHeading=normalizeAngle(gyroViewHeading+yawDifference*blend);
     gyroViewPitch=Math.max(-1.50,Math.min(1.50,gyroViewPitch+pitchDifference*blend));
     mapHeading=gyroViewHeading;
@@ -2641,7 +2654,8 @@ function updatePhoneAim(dt){
     aimManualYawStep=normalizeAngle(next.yaw-gyroViewHeading);
     gyroViewPitch=next.pitch;gyroViewHeading=next.yaw;
     if(Math.abs(gyroViewPitch)>=1.50&&gyroViewPitch*dualFilteredPitchRate>0)dualFilteredPitchRate=0;
-    if(Math.abs(pitch)>2.8||Math.abs(yaw)>2.8)dualAimAssistSuppressedUntil=now+340;
+    const latestPitch=(dualInput.gyro[0]-dualBias[0])/16,latestYaw=(dualInput.gyro[1]-dualBias[1])/16;
+    if(Math.hypot(latestPitch,latestYaw)>2.8||Math.hypot(pitch,yaw)>2.8)dualAimAssistSuppressedUntil=now+450;
     if(Math.abs(gyroViewPitch)<1.2)applyPassiveWolfAimAssist(dt);
     $('dualReadout').textContent='폰 · 좌우 '+sensitivity+' · 상하 '+(sensitivity*DUAL_PITCH_SENSITIVITY_RATIO).toFixed(1);
 }
@@ -2674,7 +2688,7 @@ function updateDualSenseInput(dt){
         /* 발사를 먼저 처리해야 같은 프레임의 진동 자이로값도 필터링된다. */
         if(cross&&!dualOldCross){if(phoneRemoteActive)startDualJump();else attack();}
         if(circle&&!dualOldCircle){if(phoneRemoteActive)attack(true);else startDualJump();}
-        if(triangle&&!dualOldTriangle){recenterDualSense();}
+        if(triangle&&!dualOldTriangle){if(phoneRemoteActive)resetPhoneView();else recenterDualSense();}
         dualOldCross=cross;
         dualOldCircle=circle;
         dualOldTriangle=triangle;
@@ -2787,6 +2801,7 @@ function moveDualSensePlayer(dt){
     }
     if(!isInsidePlayableRoad(nextX,nextZ)){return false;}
     camera.position.x=nextX;camera.position.z=nextZ;
+    if(phoneRemoteActive)phoneTravelHeading=gyroViewHeading;
     return true;
 }
 
@@ -2956,7 +2971,8 @@ function moveGenericGamepadPlayer(dt){
     const nextX=camera.position.x-Math.sin(gyroViewHeading)*distance;
     const nextZ=camera.position.z-Math.cos(gyroViewHeading)*distance;
     if(!isInsidePlayableRoad(nextX,nextZ)){return false;}
-    camera.position.x=nextX;camera.position.z=nextZ;return true;
+    camera.position.x=nextX;camera.position.z=nextZ;
+    if(phoneRemoteActive)phoneTravelHeading=gyroViewHeading;return true;
 }
 $("dualConnectButton").addEventListener("click",connectCalibrateAndContinue);
 async function loadPhonePeer(){
@@ -2964,16 +2980,19 @@ async function loadPhonePeer(){
     await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js';s.onload=resolve;s.onerror=()=>reject(Error('인터넷 연결 모듈 로딩 실패'));document.head.appendChild(s);});
 }
 function phoneLost(){
-    if(!phoneRemoteActive)return;
-    dualConnected=false;dualCalibrated=false;dualInput.ly=0;dualInput.buttons={};
-    openControllerPanel();dualStatus('휴대폰 수신이 끊겼습니다. 다시 연결·보정하세요.');
+    if(!phoneRemoteActive||!dualConnected)return;
+    controllerFlowEpoch++;controllerFlowBusy=false;dualCalibrating=false;
+    dualConnected=false;dualCalibrated=false;dualMotionReady=false;dualInput.ly=0;dualInput.buttons={};
+    dualGyroHistory=[[],[],[]];dualFilteredPitchRate=0;dualFilteredYawRate=0;
+    ['dualCalibrateButton','controllerConnectCalibrate','dualConnectButton'].forEach(id=>$(id).disabled=false);
+    openControllerPanel();dualStatus('연결이 해제되었습니다. 다시 연결하거나 취소를 눌러 게임을 계속하세요.');
 }
 async function showPhonePairQR(id){
     let box=$('phonePairQR');if(!box){box=document.createElement('div');box.id='phonePairQR';$('controllerPanelStatus').after(box);}box.replaceChildren();
     const address=document.createElement('input');address.placeholder='이 파일을 올린 HTTPS 게임 주소';address.style.cssText='width:100%;padding:10px;box-sizing:border-box';
     address.value=location.protocol==='https:'?location.href.split('#')[0]:(localStorage.getItem('phoneHostedGameURL')||'');
     const button=document.createElement('button');button.textContent='연결 QR 표시';button.className='controllerSecondary';
-    const message=document.createElement('p');const qr=document.createElement('div');qr.style.cssText='background:white;padding:20px;width:240px;margin:12px auto';
+    const message=document.createElement('p');const qr=document.createElement('div');qr.style.cssText='background:white;padding:20px;width:280px;height:280px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;margin:12px auto;flex-shrink:0';
     const advanced=document.createElement('details');const summary=document.createElement('summary');summary.textContent='게임 주소 변경';advanced.append(summary,address,button);
     box.append(message,qr,advanced);
     button.onclick=async()=>{
@@ -3114,6 +3133,11 @@ for(const button of [$('controllerConnectCalibrate'),$('dualConnectButton')]){
     },true);
 }
 $("controllerPanelClose").addEventListener("click",function(){closeControllerPanel(true);});
+const controllerCancel=document.createElement('button');controllerCancel.type='button';controllerCancel.textContent='취소 · 게임으로 돌아가기';controllerCancel.className='controllerSecondary';
+controllerCancel.style.cssText='display:block;position:sticky;bottom:0;margin:14px auto 0;z-index:6';
+$('controllerPanel').querySelector('.controllerCard').appendChild(controllerCancel);
+controllerCancel.onclick=()=>closeControllerPanel(true);
+
 $("genericSettingsToggle").addEventListener("click",function(){$("controllerSettings").classList.toggle("show");});
 $("openControllerSettingsButton").addEventListener("click",function(){openControllerPanel();$("controllerSettings").classList.add("show");});
 $("useGenericGamepadButton").addEventListener("click",finishGenericGamepadSetup);
