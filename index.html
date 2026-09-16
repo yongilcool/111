@@ -1627,7 +1627,7 @@ html.ios-device #qrPanel{
         <div id="turnIndicator" aria-hidden="true"></div>
 
         <button id="pauseButton" aria-label="일시정지">⏸</button>
-        <button id="battleExitButton">전투 나가기</button>
+
         <button id="questButton" aria-label="퀘스트 열기"><img src="https://static.wixstatic.com/media/172435_db0fd22ef0cd4fd48cde2f64dee535bc~mv2.png" alt="퀘스트"></button>
         <button id="inventoryButton" aria-label="인벤토리 열기"><img src="https://static.wixstatic.com/media/172435_513831dd8ed049688a5282ba36bc3b3e~mv2.png" alt="아이템"></button>
         <div id="questPanel">퀘스트<br><div style="margin-top:8px;text-align:left">마을 늑대<br>소탕하기<br><b id="questProgress">0 / 6</b></div></div>
@@ -2133,7 +2133,8 @@ let phoneLastPacket=0;
 let phoneLastMotion=0;
 let phoneTravelHeading=null;
 let phoneTurnDegrees=0,phoneAssistTarget=null;
-function resetPhoneTurnReference(){phoneTurnDegrees=0;const hint=$('phonePostureHint');if(hint)hint.hidden=true;}
+let phoneYawPending=0,phoneYawTotalLast=null;
+function resetPhoneTurnReference(){phoneTurnDegrees=0;phoneYawPending=0;const hint=$('phonePostureHint');if(hint)hint.hidden=true;}
 function showPhonePostureHint(){
     let hint=$('phonePostureHint');
     if(!hint){hint=document.createElement('div');hint.id='phonePostureHint';hint.style.cssText='position:fixed;bottom:45px;left:50%;transform:translateX(-50%);z-index:195;color:white;background:#071522b8;padding:7px 12px;border-radius:8px;font:13px sans-serif;pointer-events:none;text-align:center';hint.textContent='일시정지를 누른후 다시 자세를 잡아도 됩니다.';document.body.appendChild(hint);}
@@ -2673,14 +2674,16 @@ function updatePhoneAim(dt){
     dualFilteredPitchRate+=(pitch-dualFilteredPitchRate)*alpha;
     dualFilteredYawRate+=(yaw-dualFilteredYawRate)*alpha;
     const sensitivity=Number($('dualSensitivity').value);
-    const next=stepPhoneAim(gyroViewPitch,gyroViewHeading,dualFilteredPitchRate,dualFilteredYawRate,dt,sensitivity);
+    const physicalYawDelta=phoneYawPending;phoneYawPending=0;
+    const next=stepPhoneAim(gyroViewPitch,gyroViewHeading,dualFilteredPitchRate,0,dt,sensitivity);
+    next.yaw=normalizeAngle(gyroViewHeading+physicalYawDelta*Math.PI/180*4);
     aimManualPitchStep=next.pitch-gyroViewPitch;
     aimManualYawStep=normalizeAngle(next.yaw-gyroViewHeading);
     gyroViewPitch=next.pitch;gyroViewHeading=next.yaw;
-    phoneTurnDegrees+=dualFilteredYawRate*Math.max(0,Math.min(.05,dt));showPhonePostureHint();
+    phoneTurnDegrees+=physicalYawDelta;showPhonePostureHint();
     if(Math.abs(gyroViewPitch)>=1.50&&gyroViewPitch*dualFilteredPitchRate>0)dualFilteredPitchRate=0;
     const latestPitch=(dualInput.gyro[0]-dualBias[0])/16,latestYaw=(dualInput.gyro[1]-dualBias[1])/16;
-    if(Math.hypot(latestPitch,latestYaw)>2.8||Math.hypot(pitch,yaw)>2.8)dualAimAssistSuppressedUntil=now+450;
+    if(Math.abs(physicalYawDelta)/Math.max(dt,.001)>2.8||Math.hypot(latestPitch,latestYaw)>2.8||Math.hypot(pitch,yaw)>2.8)dualAimAssistSuppressedUntil=now+450;
     if(Math.abs(gyroViewPitch)<1.2)applyPassiveWolfAimAssist(dt);
     $('dualReadout').textContent='폰 · 좌우 4배 (45° → 180°) · 상하 기준 '+sensitivity+' · 상하 '+(sensitivity*DUAL_PITCH_SENSITIVITY_RATIO).toFixed(1);
 }
@@ -2711,14 +2714,14 @@ function updateDualSenseInput(dt){
     }
     else{
         /* 발사를 먼저 처리해야 같은 프레임의 진동 자이로값도 필터링된다. */
-        if(cross&&!dualOldCross){if(phoneRemoteActive)startDualJump();else attack();}
-        if(phoneRemoteActive&&circle){attack(true);}else if(circle&&!dualOldCircle){startDualJump();}
+        if(cross&&!dualOldCross&&!phoneRemoteActive){attack();}
+        if(phoneRemoteActive&&circle){if($('dialogueBox').classList.contains('show')){if(!dualOldCircle)advanceDialogue();}else if($('controllerPanel').classList.contains('show')){if(!dualOldCircle)closeControllerPanel(true);}else{attack(true);}}else if(circle&&!dualOldCircle){startDualJump();}
         if(triangle&&!dualOldTriangle){if(phoneRemoteActive)resetPhoneView();else recenterDualSense();}
         dualOldCross=cross;
         dualOldCircle=circle;
         dualOldTriangle=triangle;
     }
-    if(phoneRemoteActive){updatePhoneAim(dt);updateDualJump(dt);return;}
+    if(phoneRemoteActive){updatePhoneAim(dt);turnTowardBattleTarget(dt);updateDualJump(dt);return;}
     if(dualCalibrated&&!dualCalibrating){
         if(dualStartupStabilizing&&inputNow>=dualStartupUntil){
             finishDualStartupStabilization();
@@ -2797,12 +2800,29 @@ function updateDualSenseInput(dt){
     if(dualCalibrated&&!dualCalibrating){applyPassiveWolfAimAssist(dt);}
     updateDualJump(dt);
 }
+let phoneBattleTurnUntil=0;
+function turnTowardBattleTarget(dt){
+    if(!monster||monsterDead||performance.now()>phoneBattleTurnUntil)return;
+    if(Math.hypot((dualInput.gyro[0]-dualBias[0])/16,(dualInput.gyro[1]-dualBias[1])/16)>12){phoneBattleTurnUntil=0;return;}
+    const dx=monster.position.x-camera.position.x,dz=monster.position.z-camera.position.z,dy=monster.position.y-camera.position.y;
+    const blend=1-Math.exp(-dt*12);
+    gyroViewHeading=normalizeAngle(gyroViewHeading+normalizeAngle(Math.atan2(-dx,-dz)-gyroViewHeading)*blend);
+    gyroViewPitch+=(Math.atan2(dy,Math.hypot(dx,dz))-gyroViewPitch)*blend;
+}
+let phoneOldCancel=false;
+function cancelPhoneUI(){
+    if($('controllerPanel').classList.contains('show')){closeControllerPanel(true);return;}
+    if($('dialogueBox').classList.contains('show')){$('dialogueBox').classList.remove('show');dialogueQueue=[];return;}
+    if(gamePaused){toggleGamePause();return;}
+}
 function updateDualSensePauseButton(){
     if(!dualConnected){return;}
+    const cancel=!!dualInput.buttons.cross;
+    if(phoneRemoteActive&&cancel&&!phoneOldCancel)cancelPhoneUI();phoneOldCancel=cancel;
     const square=!!dualInput.buttons.square;
     const ps=!!dualInput.buttons.ps;
     if(!dualButtonsArmed){dualOldSquare=square;dualOldPS=ps;return;}
-    if(square&&!dualOldSquare){toggleGamePause();}
+    if(square&&!dualOldSquare){if(phoneRemoteActive){if(!gamePaused)startDualJump();}else toggleGamePause();}
     if(ps&&!dualOldPS){openControllerPanel();}
     dualOldSquare=square;
     dualOldPS=ps;
@@ -3054,6 +3074,10 @@ async function hostPhoneController(){
                 if(p?.type==='equipSword'){$('game').classList.add('phone-sword');showQRFeedback('success','칼을 장착하였습니다');dualStatus('칼을 장착하였습니다');let toast=$('phoneEquipToast');if(!toast){toast=document.createElement('div');toast.id='phoneEquipToast';toast.style.cssText='position:fixed;top:20%;left:50%;transform:translateX(-50%);z-index:210000;background:#132c3e;color:white;padding:12px 20px;border-radius:12px;pointer-events:none';document.body.appendChild(toast);}toast.textContent='칼을 장착하였습니다';toast.hidden=false;clearTimeout(toast.hideTimer);toast.hideTimer=setTimeout(()=>toast.hidden=true,1600);return;}
                 if(!phoneRemoteActive||!p||p.type!=='motion'||!Array.isArray(p.r)||p.r.length!==3||!p.r.every(v=>Number.isFinite(v)&&Math.abs(v)<2000)||!Number.isInteger(p.seq)||p.seq<=seq)return;
                 seq=p.seq;phoneLastMotion=phoneLastPacket=performance.now();dualInput.gyro=p.r.map(v=>v*16);
+                if(Number.isFinite(p.yawTotal)){
+                    if(phoneYawTotalLast!==null&&dualCalibrated&&!dualCalibrating&&!gamePaused)phoneYawPending+=p.yawTotal-phoneYawTotalLast;
+                    phoneYawTotalLast=p.yawTotal;
+                }
                 dualInput.ly=Number.isFinite(p.move)?Math.max(-1,Math.min(1,p.move)):0;
                 const b=p.buttons||{};dualInput.buttons={cross:!!b.fire,circle:!!b.jump,triangle:!!b.center,square:!!b.pause,ps:!!b.menu};
                 dualInput.gyro.forEach((v,i)=>{dualGyroHistory[i].push(v);if(dualGyroHistory[i].length>31)dualGyroHistory[i].shift();});
@@ -3063,7 +3087,7 @@ async function hostPhoneController(){
             });
             conn.on('open',async()=>{
                 if(dualDevice)dualDevice.oninputreport=null;
-                phoneRemoteActive=true;dualConnected=true;dualCalibrated=false;dualMotionReady=false;genericControllerActive=false;
+                phoneYawTotalLast=null;phoneYawPending=0;phoneRemoteActive=true;dualConnected=true;dualCalibrated=false;dualMotionReady=false;genericControllerActive=false;
                 dualGyroHistory=[[],[],[]];dualButtonsArmed=false;dualButtonsArmAt=performance.now()+500;phoneLastPacket=performance.now();
                 $('game').classList.add('dualsense-connected');$('dualReconnectButton').textContent='📱 휴대폰 연결됨';
                 dualStatus('휴대폰 연결됨 · 휴대폰에서 센서를 허용하면 보정이 시작됩니다.');
@@ -3084,7 +3108,7 @@ function showPhoneController(){
     if($('phoneControllerUI'))return;
     const panel=document.createElement('div');panel.id='phoneControllerUI';
     panel.style.cssText='position:fixed;inset:0;z-index:100000;background:#102030;color:white;padding:16px;overflow:auto;box-sizing:border-box;font:16px sans-serif;touch-action:none';
-    panel.innerHTML=`<input id="phoneCode" hidden><button id="phoneJoin" aria-label="센서 허용 및 연결" class="phoneTool"><svg viewBox="0 0 48 48"><path d="M24 4v20M13 10a18 18 0 1 0 22 0"/></svg></button><p id="phoneMessage" role="status">센서 연결 아이콘을 눌러주세요</p><div id="phoneStick"><div id="phoneKnob"></div></div><div id="phoneFace"><button data-action="center" aria-label="정면"><svg viewBox="0 0 48 48"><path d="M24 8 42 39H6Z"/></svg></button><button data-action="pause" aria-label="일시정지"><svg viewBox="0 0 48 48"><path d="M10 10h28v28H10Z"/></svg></button><button data-action="jump" aria-label="칼 공격"><svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="16"/></svg></button><button data-action="fire" aria-label="점프"><svg viewBox="0 0 48 48"><path d="m12 12 24 24m0-24L12 36"/></svg></button></div><button id="phoneCamera" class="phoneTool" aria-label="QR 카메라 켜기 또는 끄기"><svg viewBox="0 0 48 48"><path d="M5 14h10l4-6h10l4 6h10v27H5Z"/><circle cx="24" cy="27" r="9"/></svg></button><button data-action="menu" id="phoneMenu" class="phoneTool" aria-label="연결 메뉴"><svg viewBox="0 0 48 48"><path d="M8 12h32M8 24h32M8 36h32"/></svg></button>`;
+    panel.innerHTML=`<input id="phoneCode" hidden><button id="phoneJoin" aria-label="센서 허용 및 연결" class="phoneTool"><svg viewBox="0 0 48 48"><path d="M24 4v20M13 10a18 18 0 1 0 22 0"/></svg></button><p id="phoneMessage" role="status">센서 연결 아이콘을 눌러주세요</p><div id="phoneStick"><div id="phoneKnob"></div></div><div id="phoneFace"><button data-action="center" aria-label="정면"><svg viewBox="0 0 48 48"><path d="M24 8 42 39H6Z"/></svg></button><button data-action="pause" aria-label="점프"><svg viewBox="0 0 48 48"><path d="M10 10h28v28H10Z"/></svg></button><button data-action="jump" aria-label="확인 또는 공격"><svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="16"/></svg></button><button data-action="fire" aria-label="취소 또는 닫기"><svg viewBox="0 0 48 48"><path d="m12 12 24 24m0-24L12 36"/></svg></button></div><button id="phoneCamera" class="phoneTool" aria-label="QR 카메라 켜기 또는 끄기"><svg viewBox="0 0 48 48"><path d="M5 14h10l4-6h10l4 6h10v27H5Z"/><circle cx="24" cy="27" r="9"/></svg></button><button data-action="menu" id="phoneMenu" class="phoneTool" aria-label="연결 메뉴"><svg viewBox="0 0 48 48"><path d="M8 12h32M8 24h32M8 36h32"/></svg></button>`;
     document.body.appendChild(panel);
     ['contextmenu','selectstart','dragstart'].forEach(type=>panel.addEventListener(type,e=>e.preventDefault()));
     window.phoneSendEquipment=()=>{if(connection?.open)connection.send({type:'equipSword'});};
@@ -3122,23 +3146,39 @@ function showPhoneController(){
     const releaseStick=e=>{if(e&&stickPointer!==e.pointerId)return;stickPointer=null;state.move=0;knob.style.transform='translate(-50%,-50%)';};
     stick.onpointerup=releaseStick;stick.onpointercancel=releaseStick;stick.onlostpointercapture=releaseStick;
     let peer,connection,seq=0,last=0,heartbeat=null;
+    let phoneHeadingLast=null,phoneHeadingTime=0,phoneYawTotal=0;
+    window.addEventListener('deviceorientation',e=>{
+        if(!connection?.open||!Number.isFinite(e.alpha))return;
+        if(phoneHeadingLast!==null){
+            const delta=((e.alpha-phoneHeadingLast+540)%360)-180;
+            phoneYawTotal+=delta;
+        }
+        phoneHeadingLast=e.alpha;phoneHeadingTime=performance.now();
+    });
     window.addEventListener('devicemotion',e=>{
         if(!connection?.open)return;const r=e.rotationRate;
         if(!r||![r.alpha,r.beta,r.gamma].every(v=>typeof v==='number'&&Number.isFinite(v)))return;
         const angle=Number(screen.orientation?.angle??window.orientation??0);
-        const now=performance.now();if(now-last<10)return;last=now;
+        const now=performance.now();if(now-last<10)return;
+        const sensorDt=last?Math.min(.1,(now-last)/1000):0;last=now;
+        if(now-phoneHeadingTime>250){
+            phoneHeadingLast=null;
+            const g=e.accelerationIncludingGravity,n=g?Math.hypot(g.x||0,g.y||0,g.z||0):0;
+            const yawRate=n>1?(r.beta*g.x+r.gamma*g.y+r.alpha*g.z)/n:r.alpha;
+            phoneYawTotal+=yawRate*sensorDt;
+        }
         // Rotate the sensor axes with the displayed controller; never close the channel on rotation.
         const displayAngle=angle; // Sensor basis follows browser orientation, not the CSS-rotated controls.
         const rad=displayAngle*Math.PI/180,c=Math.cos(rad),sn=Math.sin(rad);
-        connection.send({type:'motion',seq:seq++,r:[-(c*r.beta+sn*r.gamma),r.alpha,c*r.gamma-sn*r.beta],move:state.move,buttons:state.buttons});
+        connection.send({type:'motion',seq:seq++,yawTotal:phoneYawTotal,r:[-(c*r.beta+sn*r.gamma),r.alpha,c*r.gamma-sn*r.beta],move:state.move,buttons:state.buttons});
     });
     document.addEventListener('visibilitychange',()=>{if(document.hidden){connection?.close();state.move=0;state.buttons={};}});
     $('phoneJoin').onclick=async()=>{
         try{
             if(!isSecureContext)throw Error('HTTPS 게임 주소로 열어주세요.');
             if(typeof DeviceMotionEvent==='undefined')throw Error('동작 센서를 지원하지 않습니다.');
-            if(typeof DeviceMotionEvent.requestPermission==='function'&&await DeviceMotionEvent.requestPermission()!=='granted')throw Error('동작 센서 권한이 필요합니다.');
-            await loadPhonePeer();clearInterval(heartbeat);const oldPeer=peer;connection=null;peer=null;oldPeer?.destroy();seq=0;peer=new Peer();
+            const permissions=[];if(typeof DeviceMotionEvent.requestPermission==='function')permissions.push(DeviceMotionEvent.requestPermission());if(typeof window.DeviceOrientationEvent?.requestPermission==='function')permissions.push(DeviceOrientationEvent.requestPermission());if((await Promise.all(permissions)).some(v=>v!=='granted'))throw Error('동작 센서 권한이 필요합니다.');
+            await loadPhonePeer();clearInterval(heartbeat);const oldPeer=peer;connection=null;peer=null;oldPeer?.destroy();seq=0;phoneHeadingLast=null;phoneHeadingTime=0;phoneYawTotal=0;last=0;peer=new Peer();
             peer.on('error',e=>$('phoneMessage').textContent=e.message);
             peer.on('open',()=>{connection=peer.connect($('phoneCode').value.trim(),{reliable:false});connection.on('data',p=>{if(p?.type==='haptic'&&navigator.vibrate)navigator.vibrate(Math.min(100,Math.max(0,Number(p.duration)||0)));});connection.on('open',()=>{$('phoneMessage').textContent='연결됨 · 센서 수신 후 PC에서 보정합니다. 2초간 고정해주세요.';clearInterval(heartbeat);const active=connection;heartbeat=setInterval(()=>{if(active.open)active.send({type:'heartbeat'});},500);});connection.on('close',()=>{clearInterval(heartbeat);$('phoneMessage').textContent='연결 종료 · 센서 허용·연결을 다시 눌러주세요.';});});
         }catch(e){$('phoneMessage').textContent=e.message;}
@@ -6771,7 +6811,8 @@ function startBattle(){
     battle=
         true;
 
-    /* 전투는 시작하되 카메라는 절대 늑대에게 자동 고정하지 않는다. */
+    if(phoneRemoteActive){phoneBattleTurnUntil=performance.now()+650;resetPhoneTurnReference();}
+    /* Turn toward the opponent once, then allow free aiming. */
     battleLockOn=false;
     $("game").classList.add("in-battle");
 
@@ -8651,10 +8692,7 @@ $("dialogueBox").addEventListener(
     advanceDialogue
 );
 
-$("battleExitButton").addEventListener(
-    "click",
-    exitBattleAndFlee
-);
+
 
 $("gyroPermissionButton").addEventListener(
     "click",
