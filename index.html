@@ -2049,8 +2049,8 @@ const CONTROL_TURN_SPEED=4.7;
 const MONSTER_AGGRO_DISTANCE=30;
 const MONSTER_LOCK_DISTANCE=30;
 /* 추격 정지·몸 충돌·서로의 공격 사거리를 같은 거리로 통일한다. */
-const MONSTER_ATTACK_DISTANCE=8;
-const MONSTER_BLOCK_DISTANCE=8;
+const MONSTER_ATTACK_DISTANCE=4;
+const MONSTER_BLOCK_DISTANCE=4;
 const MONSTER_DISENGAGE_DISTANCE=30;
 const MONSTER_CHASE_SPEED=4.5;
 const WOLF_IDLE_URL="https://static.wixstatic.com/media/172435_91e8afed612c4a6ababa985a8414d211~mv2.png";
@@ -3086,7 +3086,7 @@ function showPhoneController(){
         // Rotate the sensor axes with the displayed controller; never close the channel on rotation.
         const displayAngle=angle; // Sensor basis follows browser orientation, not the CSS-rotated controls.
         const rad=displayAngle*Math.PI/180,c=Math.cos(rad),sn=Math.sin(rad);
-        connection.send({type:'motion',seq:seq++,r:[c*r.beta+sn*r.gamma,r.alpha,c*r.gamma-sn*r.beta],move:state.move,buttons:state.buttons});
+        connection.send({type:'motion',seq:seq++,r:[-(c*r.beta+sn*r.gamma),r.alpha,c*r.gamma-sn*r.beta],move:state.move,buttons:state.buttons});
     });
     document.addEventListener('visibilitychange',()=>{if(document.hidden){connection?.close();state.move=0;state.buttons={};}});
     $('phoneJoin').onclick=async()=>{
