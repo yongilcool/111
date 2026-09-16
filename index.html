@@ -1414,7 +1414,11 @@ html.ios-device #qrPanel{
 #phoneStick{position:absolute;left:4%;top:50%;transform:translateY(-40%);width:min(27vw,57vh,210px);aspect-ratio:1;border:5px solid rgba(45,113,155,.85);border-radius:50%;background:radial-gradient(circle,rgba(35,91,128,.35) 0 30%,rgba(16,50,76,.24) 31% 67%,rgba(61,169,222,.25) 68% 70%,rgba(5,23,38,.18) 71%);box-shadow:inset 0 0 22px rgba(46,195,255,.38),0 7px 18px #0006;touch-action:none}
 #phoneKnob{position:absolute;left:50%;top:50%;width:39%;height:39%;transform:translate(-50%,-50%);border:4px solid #143e5b;border-radius:50%;background:radial-gradient(circle at 38% 30%,#75d9ff,#297db2 56%,#123d60 100%);box-shadow:inset 0 0 0 4px #b8edff4d,0 6px 13px #0008,0 0 13px #34c4ffa6;pointer-events:none}
 #phoneFace{position:absolute;right:3%;top:50%;transform:translateY(-50%);width:29%;height:auto;aspect-ratio:1;max-width:240px}
-#phoneFace button{position:absolute;width:32%;aspect-ratio:1}
+#phoneFace button{position:absolute;width:48%;aspect-ratio:1}
+#phoneFace button:nth-child(1){left:26%;top:-24%}
+#phoneFace button:nth-child(2){left:-24%;top:26%}
+#phoneFace button:nth-child(3){right:-24%;top:26%}
+#phoneFace button:nth-child(4){left:26%;bottom:-24%}
 #phoneFace button:nth-child(1){left:34%;top:0;color:#6ae9b1}
 #phoneFace button:nth-child(2){left:0;top:34%;color:#efa4ed}
 #phoneFace button:nth-child(3){right:0;top:34%;color:#ffa6ac}
@@ -1424,7 +1428,7 @@ html.ios-device #qrPanel{
 #phoneControllerUI #reader video{object-fit:cover!important}
 @media(orientation:portrait){#phoneStick{width:min(27vh,57vw,210px)}}
 </style>
-</head>
+<style>#phoneFace{right:9%;width:29%;max-width:240px}#phoneFace button:nth-child(1){left:26%;top:-24%}#phoneFace button:nth-child(2){left:-24%;top:26%}#phoneFace button:nth-child(3){right:-24%;top:26%}#phoneFace button:nth-child(4){left:26%;bottom:-24%}#phoneControllerUI #qrPanel{width:22%;left:44%}#phoneCamera{left:44%}</style></head>
 
 
 <body>
@@ -2128,6 +2132,23 @@ let phoneConnection=null;
 let phoneLastPacket=0;
 let phoneLastMotion=0;
 let phoneTravelHeading=null;
+let phoneTurnDegrees=0,phoneAssistTarget=null;
+function resetPhoneTurnReference(){phoneTurnDegrees=0;const hint=$('phonePostureHint');if(hint)hint.hidden=true;}
+function showPhonePostureHint(){
+    let hint=$('phonePostureHint');
+    if(!hint){hint=document.createElement('div');hint.id='phonePostureHint';hint.style.cssText='position:fixed;bottom:45px;left:50%;transform:translateX(-50%);z-index:195;color:white;background:#071522b8;padding:7px 12px;border-radius:8px;font:13px sans-serif;pointer-events:none;text-align:center';hint.textContent='일시정지를 누른후 다시 자세를 잡아도 됩니다.';document.body.appendChild(hint);}
+    hint.hidden=Math.abs(phoneTurnDegrees)<=45;
+}
+function headingToNearestRoad(x,z,current){
+    const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+    const points=[[-40,clamp(z,-41.5,31.5)],[0,clamp(z,-41.5,31.5)],[40,clamp(z,-41.5,31.5)],[clamp(x,-43.5,43.5),-45],[clamp(x,-43.5,43.5),35]];
+    points.sort((a,b)=>Math.hypot(a[0]-x,a[1]-z)-Math.hypot(b[0]-x,b[1]-z));
+    const [rx,rz]=points[0];
+    if(Math.hypot(rx-x,rz-z)>3.5)return Math.atan2(-(rx-x),-(rz-z));
+    // Already on a road: face the closer of its two travel directions.
+    const headings=(Math.abs(rz+45)<.01||Math.abs(rz-35)<.01)?[-Math.PI/2,Math.PI/2]:[0,Math.PI];
+    return headings.sort((a,b)=>Math.abs(normalizeAngle(a-current))-Math.abs(normalizeAngle(b-current)))[0];
+}
 let controllerFlowEpoch=0;
 const PHONE_CONTROLLER_PAGE=new URLSearchParams(location.hash.slice(1)).has("phone");
 let dualLink="unknown";
@@ -2287,6 +2308,7 @@ async function calibrateDualSense(){
         return false;
     }
     dualBias=bias;
+    if(phoneRemoteActive){resetPhoneTurnReference();phoneAssistTarget=null;}
     dualGyroHistory=[[],[],[]];
     dualFilteredPitchRate=0;
     dualFilteredYawRate=0;
@@ -2316,13 +2338,14 @@ function stationaryBias(samples){
     return result;
 }
 function resetPhoneView(){
-    gyroViewHeading=normalizeAngle(phoneTravelHeading===null?gyroViewHeading:phoneTravelHeading);
+    gyroViewHeading=headingToNearestRoad(camera.position.x,camera.position.z,gyroViewHeading);
+    resetPhoneTurnReference();phoneAssistTarget=null;
     gyroViewPitch=0;mapHeading=gyroViewHeading;
     dualFilteredPitchRate=0;dualFilteredYawRate=0;dualGyroHistory=[[],[],[]];
     dualAimAssistSuppressedUntil=performance.now()+1200;
     aimManualYawStep=0;aimManualPitchStep=0;
     if(camera){camera.rotation.set(0,gyroViewHeading,0,'YXZ');camera.updateMatrixWorld(true);}
-    dualStatus('진행 방향의 수평 중앙으로 초기화했습니다.');
+    dualStatus('가까운 길 방향으로 정렬했습니다.');
 }
 function recenterDualSense(){
     /* 세모를 누른 순간의 화면 중앙과 컨트롤러 방향을 새 기준으로 삼는다.
@@ -2536,10 +2559,11 @@ function applyPassiveWolfAimAssist(dt){
         const distance=camera.position.distanceTo(targetPosition);
         if(treeBlocksShot(targetPosition,distance)){return;}
         if(!best||screenDistance<best.screenDistance){
-            best={target:targetPosition,screenDistance:screenDistance};
+            best={target:targetPosition,source:target,screenDistance:screenDistance};
         }
     });
-    if(!best){return false;}
+    if(!best){if(phoneRemoteActive)phoneAssistTarget=null;return false;}
+    if(phoneRemoteActive&&phoneAssistTarget!==best.source){phoneAssistTarget=best.source;resetPhoneTurnReference();}
 
     const dx=best.target.x-camera.position.x;
     const dy=best.target.y-camera.position.y;
@@ -2559,7 +2583,7 @@ function applyPassiveWolfAimAssist(dt){
     /* 조준점이 늑대 근처에 들어오면 화면 정중앙이 늑대 중심에 실제로
        맞도록 상하·좌우를 함께 수렴시킨다. 범위를 벗어나면 즉시 해제된다. */
     const proximity=1-best.screenDistance/assistRadius;
-    const blend=1-Math.exp(-(phoneRemoteActive ? (.55+.85*proximity) : (1.4+2.6*proximity))*dt);
+    const blend=1-Math.exp(-(phoneRemoteActive ? (.8+1.2*proximity) : (1.4+2.6*proximity))*dt);
     gyroViewHeading=normalizeAngle(gyroViewHeading+yawDifference*blend);
     gyroViewPitch=Math.max(-1.50,Math.min(1.50,gyroViewPitch+pitchDifference*blend));
     mapHeading=gyroViewHeading;
@@ -2632,7 +2656,7 @@ function dualMedianGyroRate(axis,count){
 // Screen pitch is an output, never a basis for transforming measured phone rates.
 function stepPhoneAim(pitch,yaw,pitchRate,yawRate,dt,sensitivity){
     const step=Math.max(0,Math.min(.05,dt))*Math.PI/180*sensitivity;
-    return {pitch:Math.max(-1.50,Math.min(1.50,pitch+pitchRate*step*DUAL_PITCH_SENSITIVITY_RATIO)),yaw:normalizeAngle(yaw+yawRate*step)};
+    return {pitch:Math.max(-1.50,Math.min(1.50,pitch+pitchRate*step*DUAL_PITCH_SENSITIVITY_RATIO)),yaw:normalizeAngle(yaw+yawRate*Math.max(0,Math.min(.05,dt))*Math.PI/180*4)};
 }
 function updatePhoneAim(dt){
     const now=performance.now();
@@ -2653,11 +2677,12 @@ function updatePhoneAim(dt){
     aimManualPitchStep=next.pitch-gyroViewPitch;
     aimManualYawStep=normalizeAngle(next.yaw-gyroViewHeading);
     gyroViewPitch=next.pitch;gyroViewHeading=next.yaw;
+    phoneTurnDegrees+=dualFilteredYawRate*Math.max(0,Math.min(.05,dt));showPhonePostureHint();
     if(Math.abs(gyroViewPitch)>=1.50&&gyroViewPitch*dualFilteredPitchRate>0)dualFilteredPitchRate=0;
     const latestPitch=(dualInput.gyro[0]-dualBias[0])/16,latestYaw=(dualInput.gyro[1]-dualBias[1])/16;
     if(Math.hypot(latestPitch,latestYaw)>2.8||Math.hypot(pitch,yaw)>2.8)dualAimAssistSuppressedUntil=now+450;
     if(Math.abs(gyroViewPitch)<1.2)applyPassiveWolfAimAssist(dt);
-    $('dualReadout').textContent='폰 · 좌우 '+sensitivity+' · 상하 '+(sensitivity*DUAL_PITCH_SENSITIVITY_RATIO).toFixed(1);
+    $('dualReadout').textContent='폰 · 좌우 4배 (45° → 180°) · 상하 기준 '+sensitivity+' · 상하 '+(sensitivity*DUAL_PITCH_SENSITIVITY_RATIO).toFixed(1);
 }
 function syncPhoneCameraOrientation(){
     if(!PHONE_CONTROLLER_PAGE)return;
@@ -2687,7 +2712,7 @@ function updateDualSenseInput(dt){
     else{
         /* 발사를 먼저 처리해야 같은 프레임의 진동 자이로값도 필터링된다. */
         if(cross&&!dualOldCross){if(phoneRemoteActive)startDualJump();else attack();}
-        if(circle&&!dualOldCircle){if(phoneRemoteActive)attack(true);else startDualJump();}
+        if(phoneRemoteActive&&circle){attack(true);}else if(circle&&!dualOldCircle){startDualJump();}
         if(triangle&&!dualOldTriangle){if(phoneRemoteActive)resetPhoneView();else recenterDualSense();}
         dualOldCross=cross;
         dualOldCircle=circle;
@@ -5020,7 +5045,7 @@ function init3D(){
                 texture.repeat.set(52,52);
                 texture.colorSpace=THREE.SRGBColorSpace;
                 texture.magFilter=THREE.NearestFilter;
-                texture.minFilter=THREE.NearestMipmapNearestFilter;
+                texture.minFilter=THREE.LinearMipmapLinearFilter;texture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
                 ground.material.map=texture;
                 ground.material.needsUpdate=true;
                 grassTexture.dispose();
@@ -5111,7 +5136,7 @@ function init3D(){
 
         const mapRoadMaterial=
             new THREE.MeshLambertMaterial({
-                map:roadTexture
+                map:roadTexture,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1
             });
 
         function addMapRoad(width,depth,x,z){
@@ -5126,9 +5151,9 @@ function init3D(){
 
         addMapRoad(87,7,0,-45);
         addMapRoad(87,7,0,35);
-        addMapRoad(7,87,-40,-5);
-        addMapRoad(7,87,40,-5);
-        addMapRoad(7,87,0,-5);
+        addMapRoad(7,73,-40,-5);
+        addMapRoad(7,73,40,-5);
+        addMapRoad(7,73,0,-5);
 
         /* 실제로 이동 가능한 순환 길만 표시한다. */
 
@@ -6014,6 +6039,31 @@ function updateSwordIdle(){
    ★ 바깥쪽 → 안쪽으로 벤다
 ===================================================== */
 
+function meleeTargetInView(maxAngle){
+    if(!camera)return null;
+    camera.rotation.set(gyroViewPitch,gyroViewHeading,0,'YXZ');camera.updateMatrixWorld(true);
+    const forward=camera.getWorldDirection(new THREE.Vector3());
+    const list=[];if(monster&&!monsterDead)list.push({mesh:monster,index:monsterIndex,active:true});
+    wolfSentinels.forEach((mesh,index)=>{if(mesh&&!defeatedWolfIndices.has(index))list.push({mesh,index,active:false});});
+    let best=null;
+    for(const item of list){
+        const pos=item.mesh.position.clone(),delta=pos.clone().sub(camera.position),distance=delta.length();
+        if(Math.hypot(delta.x,delta.z)>MONSTER_ATTACK_DISTANCE+.35||distance<.001)continue;
+        const angle=Math.acos(Math.max(-1,Math.min(1,forward.dot(delta.normalize()))));
+        if(angle>maxAngle||treeBlocksShot(pos,distance))continue;
+        if(!best||angle<best.angle)best={...item,pos,angle};
+    }
+    return best;
+}
+function faceMeleeTarget(){
+    if(phoneRemoteActive&&Math.hypot((dualInput.gyro[0]-dualBias[0])/16,(dualInput.gyro[1]-dualBias[1])/16)>2.8)return;
+    const hit=meleeTargetInView(.42);if(!hit)return;
+    if(!hit.active){spawnMonster(hit.index);createWolfSentinels();}
+    const dx=hit.pos.x-camera.position.x,dy=hit.pos.y-camera.position.y,dz=hit.pos.z-camera.position.z;
+    gyroViewHeading=Math.atan2(-dx,-dz);gyroViewPitch=Math.atan2(dy,Math.hypot(dx,dz));
+    resetPhoneTurnReference();phoneAssistTarget=monster;
+    wolfAggroActive=true;wolfAggroFromShot=true;if(!battle)startBattle();
+}
 function attack(useSword=false){
 
     if(DUALSENSE_GUN_MODE&&!useSword){
@@ -6041,6 +6091,7 @@ function attack(useSword=false){
     }
 
 
+    if(useSword)faceMeleeTarget();
     swordAttacking=
         true;
 
@@ -6051,6 +6102,7 @@ function attack(useSword=false){
         clearTimeout(swordAttackReleaseTimer);
     }
 
+    const meleeAttackIndex=monsterIndex;
     const thisAttackStartedAt=
         swordAttackStartedAt;
 
@@ -6110,7 +6162,7 @@ function attack(useSword=false){
                     )<=MONSTER_ATTACK_DISTANCE+.35
                 ){
 
-                    damageMonster();
+                    if(!gamePaused&&!gameOver){const hit=useSword?meleeTargetInView(.18):null;if(!useSword||(hit&&hit.index===meleeAttackIndex&&hit.index===monsterIndex))damageMonster();}
 
                 }
 
@@ -8561,6 +8613,7 @@ function toggleGamePause(){
         }
     }
     else{
+        if(phoneRemoteActive)resetPhoneTurnReference();
         $("pauseButton").textContent="⏸";
         $("pauseOverlay").classList.remove("show");
         $("sword").style.animationPlayState="running";
@@ -8910,9 +8963,9 @@ let twinkleGroups=[];
 function updateForestStars(now){
     if(!twinkleGroups.length&&scene){
         for(let group=0;group<4;group++){
-            const positions=[];for(let i=0;i<65;i++){const a=Math.random()*Math.PI*2,y=.12+Math.random()*.85,r=Math.sqrt(1-y*y);positions.push(180*r*Math.cos(a),180*y,180*r*Math.sin(a));}
+            const positions=[];for(let i=0;i<100;i++){const a=Math.random()*Math.PI*2,y=.12+Math.random()*.85,r=Math.sqrt(1-y*y);positions.push(180*r*Math.cos(a),180*y,180*r*Math.sin(a));}
             const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
-            const material=new THREE.PointsMaterial({color:0xdceaff,size:.65,transparent:true,opacity:.8,depthWrite:false,fog:false});
+            const material=new THREE.PointsMaterial({color:0xdceaff,size:1.15,transparent:true,opacity:.8,depthWrite:false,fog:false});
             const points=new THREE.Points(geo,material);scene.add(points);twinkleGroups.push(points);
         }
     }
@@ -9239,21 +9292,7 @@ function loop(now){
             );
 
 
-        camera.position.y=
-
-            2.15 + dualJumpHeight +
-
-            Math.sin(
-                walkPhase
-            ) *
-
-            (
-                walking
-                ?
-                .045
-                :
-                .015
-            );
+        camera.position.y=2.15+dualJumpHeight;
 
         /* 원래처럼 항상 수직을 유지하며 플레이어를 바라본다. */
         uprightTreeBillboards.forEach(function(tree){
