@@ -1407,16 +1407,16 @@ html.ios-device #qrPanel{
 #phoneJoin{position:absolute;left:12px;top:10px}
 .phoneTool{width:46px;height:46px}
 #phoneMenu{position:absolute;right:12px;top:10px}
-#phoneCamera{position:absolute;left:50%;bottom:8px;transform:translateX(-50%)}
+#phoneCamera{position:absolute;left:52%;bottom:8px;transform:translateX(-50%)}
 #phoneStick{position:absolute;left:4%;top:50%;transform:translateY(-40%);width:min(27vw,57vh,210px);aspect-ratio:1;border:5px solid rgba(45,113,155,.85);border-radius:50%;background:radial-gradient(circle,rgba(35,91,128,.35) 0 30%,rgba(16,50,76,.24) 31% 67%,rgba(61,169,222,.25) 68% 70%,rgba(5,23,38,.18) 71%);box-shadow:inset 0 0 22px rgba(46,195,255,.38),0 7px 18px #0006;touch-action:none}
 #phoneKnob{position:absolute;left:50%;top:50%;width:39%;height:39%;transform:translate(-50%,-50%);border:4px solid #143e5b;border-radius:50%;background:radial-gradient(circle at 38% 30%,#75d9ff,#297db2 56%,#123d60 100%);box-shadow:inset 0 0 0 4px #b8edff4d,0 6px 13px #0008,0 0 13px #34c4ffa6;pointer-events:none}
-#phoneFace{position:absolute;right:3%;top:50%;transform:translateY(-45%);width:29%;height:76%;max-width:240px;max-height:270px}
+#phoneFace{position:absolute;right:3%;top:50%;transform:translateY(-50%);width:29%;height:auto;aspect-ratio:1;max-width:240px}
 #phoneFace button{position:absolute;width:32%;aspect-ratio:1}
 #phoneFace button:nth-child(1){left:34%;top:0;color:#6ae9b1}
 #phoneFace button:nth-child(2){left:0;top:34%;color:#efa4ed}
 #phoneFace button:nth-child(3){right:0;top:34%;color:#ffa6ac}
 #phoneFace button:nth-child(4){left:34%;bottom:0;color:#86c9ff}
-#phoneControllerUI #qrPanel{display:none;position:absolute;left:50%;top:50%;bottom:auto;right:auto;transform:translate(-50%,-50%);width:30%;height:auto;aspect-ratio:1;max-height:70%;border:3px solid #6c3b25;border-radius:12px;overflow:hidden;--qr-focus-size:72%;background:#08101b!important}
+#phoneControllerUI #qrPanel{display:none;position:absolute;left:52%;top:50%;bottom:auto;right:auto;transform:translate(-50%,-50%);width:30%;height:auto;aspect-ratio:1;max-height:70%;border:3px solid #6c3b25;border-radius:12px;overflow:hidden;--qr-focus-size:72%;background:#08101b!important}
 #phoneControllerUI #reader{width:100%;height:100%}
 #phoneControllerUI #reader video{object-fit:cover!important}
 @media(orientation:portrait){#phoneStick{width:min(27vh,57vw,210px)}}
@@ -2649,8 +2649,9 @@ function syncPhoneCameraOrientation(){
     if(!PHONE_CONTROLLER_PAGE)return;
     const transform=(innerHeight>innerWidth?'rotate(-90deg) ':'')+'scaleX(-1)';
     document.querySelectorAll('#phoneControllerUI #reader video,#phoneControllerUI #qrFocusVideo').forEach(video=>{
-        video.style.setProperty('transform',transform,'important');
-        video.style.setProperty('-webkit-transform',transform,'important');
+        const centeredTransform=(video.id==='qrFocusVideo'?'translate(-50%,-50%) ':'')+transform;
+        video.style.setProperty('transform',centeredTransform,'important');
+        video.style.setProperty('-webkit-transform',centeredTransform,'important');
         video.style.setProperty('transform-origin','50% 50%','important');
     });
 }
@@ -3083,7 +3084,7 @@ function showPhoneController(){
         const angle=Number(screen.orientation?.angle??window.orientation??0);
         const now=performance.now();if(now-last<10)return;last=now;
         // Rotate the sensor axes with the displayed controller; never close the channel on rotation.
-        const displayAngle=innerHeight>innerWidth?angle+90:angle;
+        const displayAngle=angle; // Sensor basis follows browser orientation, not the CSS-rotated controls.
         const rad=displayAngle*Math.PI/180,c=Math.cos(rad),sn=Math.sin(rad);
         connection.send({type:'motion',seq:seq++,r:[c*r.beta+sn*r.gamma,r.alpha,c*r.gamma-sn*r.beta],move:state.move,buttons:state.buttons});
     });
