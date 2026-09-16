@@ -2615,6 +2615,45 @@ function dualMedianGyroRate(axis,count){
         .sort(function(a,b){return a-b;});
     return values[Math.floor(values.length*.5)];
 }
+// Phone packets use the previously working pitch / alpha-yaw / roll order.
+// Screen pitch is an output, never a basis for transforming measured phone rates.
+function stepPhoneAim(pitch,yaw,pitchRate,yawRate,dt,sensitivity){
+    const step=Math.max(0,Math.min(.05,dt))*Math.PI/180*sensitivity;
+    return {pitch:Math.max(-1.50,Math.min(1.50,pitch+pitchRate*step*DUAL_PITCH_SENSITIVITY_RATIO)),yaw:normalizeAngle(yaw+yawRate*step)};
+}
+function updatePhoneAim(dt){
+    const now=performance.now();
+    if(now-phoneLastMotion>120){dualFilteredPitchRate=0;dualFilteredYawRate=0;return;}
+    if(dualStartupStabilizing){dualStartupStabilizing=false;dualStartupSamples=[];}
+    let pitch=dualMedianGyroRate(0,3),yaw=dualMedianGyroRate(1,3);
+    if(Math.abs(pitch)<.55)pitch=0;
+    if(Math.abs(yaw)<1.0)yaw=0;
+    const vibrating=now<dualHapticFilterUntil;
+    const alpha=1-Math.exp(-dt/(vibrating?.055:.018));
+    // Reverse input takes effect immediately, even at the sky/floor limits.
+    if(pitch*dualFilteredPitchRate<=0)dualFilteredPitchRate=0;
+    if(yaw*dualFilteredYawRate<=0)dualFilteredYawRate=0;
+    dualFilteredPitchRate+=(pitch-dualFilteredPitchRate)*alpha;
+    dualFilteredYawRate+=(yaw-dualFilteredYawRate)*alpha;
+    const sensitivity=Number($('dualSensitivity').value);
+    const next=stepPhoneAim(gyroViewPitch,gyroViewHeading,dualFilteredPitchRate,dualFilteredYawRate,dt,sensitivity);
+    aimManualPitchStep=next.pitch-gyroViewPitch;
+    aimManualYawStep=normalizeAngle(next.yaw-gyroViewHeading);
+    gyroViewPitch=next.pitch;gyroViewHeading=next.yaw;
+    if(Math.abs(gyroViewPitch)>=1.50&&gyroViewPitch*dualFilteredPitchRate>0)dualFilteredPitchRate=0;
+    if(Math.abs(pitch)>2.8||Math.abs(yaw)>2.8)dualAimAssistSuppressedUntil=now+340;
+    if(Math.abs(gyroViewPitch)<1.2)applyPassiveWolfAimAssist(dt);
+    $('dualReadout').textContent='폰 · 좌우 '+sensitivity+' · 상하 '+(sensitivity*DUAL_PITCH_SENSITIVITY_RATIO).toFixed(1);
+}
+function syncPhoneCameraOrientation(){
+    if(!PHONE_CONTROLLER_PAGE)return;
+    const transform=(innerHeight>innerWidth?'rotate(-90deg) ':'')+'scaleX(-1)';
+    document.querySelectorAll('#phoneControllerUI #reader video,#phoneControllerUI #qrFocusVideo').forEach(video=>{
+        video.style.setProperty('transform',transform,'important');
+        video.style.setProperty('-webkit-transform',transform,'important');
+        video.style.setProperty('transform-origin','50% 50%','important');
+    });
+}
 function updateDualSenseInput(dt){
     if(!dualConnected){updateDualJump(dt);return;}
     if(!dualCalibrated||dualCalibrating||(phoneRemoteActive&&!dualMotionReady)){return;}
@@ -2639,6 +2678,7 @@ function updateDualSenseInput(dt){
         dualOldCircle=circle;
         dualOldTriangle=triangle;
     }
+    if(phoneRemoteActive){updatePhoneAim(dt);updateDualJump(dt);return;}
     if(dualCalibrated&&!dualCalibrating){
         if(dualStartupStabilizing&&inputNow>=dualStartupUntil){
             finishDualStartupStabilization();
@@ -3006,7 +3046,7 @@ function showPhoneController(){
     const qrPanel=$('qrPanel');panel.appendChild(qrPanel);
     $('phoneCamera').onclick=async()=>{
         if(qrRunning||qrStarting){inputMode='off';await stopQR();qrPanel.style.display='none';return;}
-        inputMode='qr';qrPanel.style.display='block';await startQR();
+        inputMode='qr';qrPanel.style.display='block';await startQR();syncPhoneCameraOrientation();
         if(!qrRunning){qrPanel.style.display='none';$('phoneMessage').textContent='카메라 권한을 확인해주세요.';}
     };
 
@@ -3014,7 +3054,7 @@ function showPhoneController(){
         const w=window.innerWidth,h=window.innerHeight,portrait=h>w;
         Object.assign(panel.style,{inset:'auto',left:'50%',top:'50%',width:(portrait?h:w)+'px',height:(portrait?w:h)+'px',transform:'translate(-50%,-50%)'+(portrait?' rotate(90deg)':'')});
     }
-    layoutPhoneController();window.addEventListener('resize',layoutPhoneController);
+    layoutPhoneController();window.addEventListener('resize',()=>{layoutPhoneController();syncPhoneCameraOrientation();});
     const pairedCode=new URLSearchParams(location.hash.slice(1)).get('phone');
     if(pairedCode){$('phoneCode').value=pairedCode;$('phoneCode').readOnly=true;$('phoneMessage').textContent='센서 허용·연결을 눌러주세요. 세로로 들고 있어도 연결됩니다.';}
     const state={move:0,buttons:{}};
@@ -3045,7 +3085,7 @@ function showPhoneController(){
         // Rotate the sensor axes with the displayed controller; never close the channel on rotation.
         const displayAngle=innerHeight>innerWidth?angle+90:angle;
         const rad=displayAngle*Math.PI/180,c=Math.cos(rad),sn=Math.sin(rad);
-        connection.send({type:'motion',seq:seq++,r:[c*r.beta+sn*r.gamma,c*r.gamma-sn*r.beta,r.alpha],move:state.move,buttons:state.buttons});
+        connection.send({type:'motion',seq:seq++,r:[c*r.beta+sn*r.gamma,r.alpha,c*r.gamma-sn*r.beta],move:state.move,buttons:state.buttons});
     });
     document.addEventListener('visibilitychange',()=>{if(document.hidden){connection?.close();state.move=0;state.buttons={};}});
     $('phoneJoin').onclick=async()=>{
