@@ -1439,7 +1439,7 @@ html.ios-device #qrPanel{
 #phoneControllerUI #qrPanel{left:46%;width:30%}
 #phoneCamera{left:46%;width:92px;height:92px;bottom:2px}
 #phoneJoin{width:92px;height:92px;top:2px;left:2px}
-</style></head>
+</style><style>#phoneMenu{top:auto;bottom:10px;right:12px}#phonePauseTool{position:absolute;top:10px;right:12px}</style></head>
 
 
 <body>
@@ -2145,13 +2145,13 @@ let phoneLastMotion=0;
 let phoneTravelHeading=null;
 let phoneTurnDegrees=0,phoneAssistTarget=null;
 let phoneYawPending=0,phoneYawTotalLast=null;
-const PHONE_YAW_GAIN=240/45;
+const PHONE_YAW_GAIN=240/25;
 const pcWalkKeys=new Set();
 function resetPhoneTurnReference(){phoneTurnDegrees=0;phoneYawPending=0;const hint=$('phonePostureHint');if(hint)hint.hidden=true;}
 function showPhonePostureHint(){
     let hint=$('phonePostureHint');
     if(!hint){hint=document.createElement('div');hint.id='phonePostureHint';hint.style.cssText='position:fixed;bottom:45px;left:50%;transform:translateX(-50%);z-index:195;color:white;background:#071522b8;padding:7px 12px;border-radius:8px;font:13px sans-serif;pointer-events:none;text-align:center';hint.textContent='일시정지를 누른후 다시 자세를 잡아도 됩니다.';document.body.appendChild(hint);}
-    hint.hidden=Math.abs(phoneTurnDegrees)<=45;
+    hint.hidden=Math.abs(phoneTurnDegrees)<=25;
 }
 function headingToNearestRoad(x,z,current){
     const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -2352,6 +2352,20 @@ function stationaryBias(samples){
     return result;
 }
 let wolfPackActive=false,wolfPack=[],wolfPackFocus=null;
+let packPlayerPrevious=null;
+function enforcePackCollision(){
+    if(!wolfPackActive||!camera)return;
+    if(!packPlayerPrevious){packPlayerPrevious={x:camera.position.x,z:camera.position.z};return;}
+    const old=packPlayerPrevious;let x=camera.position.x,z=camera.position.z;
+    for(const w of wolfPack){if(w.hp<=0)continue;
+        const wx=w.mesh.position.x,wz=w.mesh.position.z,r=MONSTER_BLOCK_DISTANCE;
+        const oldDist=Math.hypot(old.x-wx,old.z-wz),newDist=Math.hypot(x-wx,z-wz);
+        const dx=x-old.x,dz=z-old.z,len=dx*dx+dz*dz,t=len?Math.max(0,Math.min(1,((wx-old.x)*dx+(wz-old.z)*dz)/len)):0;
+        if(oldDist>=r-.01&&Math.hypot(old.x+dx*t-wx,old.z+dz*t-wz)<r){x=old.x;z=old.z;}
+        else if(oldDist<r&&newDist<r&&newDist<=oldDist){const d=newDist||1;x=wx+(newDist?(x-wx)/d:1)*r;z=wz+(newDist?(z-wz)/d:0)*r;}
+    }
+    camera.position.x=x;camera.position.z=z;packPlayerPrevious={x,z};
+}
 function initWolfPack(){
     if(wolfPackActive||!scene||!started||!phoneRemoteActive)return;
     if(monster)scene.remove(monster);if(monsterShadow)scene.remove(monsterShadow);
@@ -2361,7 +2375,7 @@ function initWolfPack(){
         if(defeatedWolfIndices.has(index))return;
         const mesh=new THREE.Sprite(new THREE.SpriteMaterial({map:getWolfTextures().idle,transparent:true,alphaTest:.06,color:0x9282a5}));
         mesh.position.set(pos.x,WOLF_BASE_Y,pos.z);mesh.scale.set(WOLF_BASE_SIZE,WOLF_BASE_SIZE,1);scene.add(mesh);wolfSentinels[index]=mesh;
-        wolfPack.push({index,mesh,hp:CONFIG.MONSTER_HP,aggro:false,next:performance.now()+1200,windup:0,stun:0});
+        wolfPack.push({index,mesh,hp:CONFIG.MONSTER_HP,aggro:false,next:performance.now()+1200,windup:0,stun:0,attackUntil:0});
     });
 }
 function nearestPackWolf(){return wolfPack.filter(w=>w.hp>0).sort((a,b)=>a.mesh.position.distanceTo(camera.position)-b.mesh.position.distanceTo(camera.position))[0]||null;}
@@ -2377,10 +2391,17 @@ function updateWolfPack(dt,now){
         if(flat<MONSTER_AGGRO_DISTANCE)w.aggro=true;
         if(!w.aggro)continue;
         if(!battle)focusPackWolf(w);
-        if(now<w.stun)continue;
+        w.mesh.position.y=WOLF_BASE_Y;w.mesh.scale.set(WOLF_BASE_SIZE,WOLF_BASE_SIZE,1);
+        if(now<w.stun){w.mesh.material.map=getWolfTextures().hit;continue;}
+        if(now<w.attackUntil){
+            const phase=1-(w.attackUntil-now)/360;
+            w.mesh.material.map=getWolfTextures().attack;
+            w.mesh.scale.set(WOLF_BASE_SIZE*(1+.13*Math.sin(Math.PI*phase)),WOLF_BASE_SIZE*(1+.06*Math.sin(Math.PI*phase)),1);
+            w.mesh.position.y=WOLF_BASE_Y+.12*Math.sin(Math.PI*phase);continue;
+        }
         if(flat>MONSTER_ATTACK_DISTANCE){const step=Math.min(flat-MONSTER_ATTACK_DISTANCE,MONSTER_CHASE_SPEED*dt);w.mesh.position.x+=dx/flat*step;w.mesh.position.z+=dz/flat*step;w.mesh.material.map=Math.floor(now/170)%2?getWolfTextures().walk1:getWolfTextures().walk2;}
         else w.mesh.material.map=getWolfTextures().idle;
-        if(w.windup&&now>=w.windup){w.windup=0;w.next=now+1900;w.mesh.material.color.setHex(0x9282a5);if(flat<=MONSTER_ATTACK_DISTANCE+.35){focusPackWolf(w);damagePlayer();}}
+        if(w.windup&&now>=w.windup){w.windup=0;w.attackUntil=now+360;wolfAttackSound();w.mesh.material.map=getWolfTextures().attack;w.next=now+1900;w.mesh.material.color.setHex(0x9282a5);if(flat<=MONSTER_ATTACK_DISTANCE+.35){focusPackWolf(w);damagePlayer();}}
         else if(!w.windup&&flat<=MONSTER_ATTACK_DISTANCE+.35&&now>=w.next){w.windup=now+1000;w.mesh.material.color.setHex(0xffa080);}
     }
     if(!wolfPack.some(w=>w.hp>0&&w.aggro)){battle=false;$('game').classList.remove('in-battle');}
@@ -2403,17 +2424,21 @@ function lookAtNearestWolf(dt,snap){
     gyroViewPitch+=(Math.atan2(dy,Math.hypot(dx,dz))-gyroViewPitch)*t;
     return true;
 }
+let phoneViewTurn=null;
+function beginPhoneViewTurn(yaw,pitch){phoneViewTurn={fromYaw:gyroViewHeading,fromPitch:gyroViewPitch,yaw,pitch,elapsed:0};resetPhoneTurnReference();dualAimAssistSuppressedUntil=performance.now()+650;}
+function updatePhoneViewTurn(dt){
+    if(!phoneViewTurn)return false;
+    const t=phoneViewTurn;t.elapsed=Math.min(.5,t.elapsed+dt);const q=t.elapsed/.5,e=q*q*(3-2*q);
+    gyroViewHeading=normalizeAngle(t.fromYaw+normalizeAngle(t.yaw-t.fromYaw)*e);gyroViewPitch=t.fromPitch+(t.pitch-t.fromPitch)*e;
+    if(q>=1){phoneViewTurn=null;resetPhoneTurnReference();}return true;
+}
 function resetPhoneView(){
-    if(lookAtNearestWolf(0,true)){resetPhoneTurnReference();return;}
-
-    gyroViewHeading=headingToNearestRoad(camera.position.x,camera.position.z,gyroViewHeading);
-    resetPhoneTurnReference();phoneAssistTarget=null;
-    gyroViewPitch=0;mapHeading=gyroViewHeading;
-    dualFilteredPitchRate=0;dualFilteredYawRate=0;dualGyroHistory=[[],[],[]];
-    dualAimAssistSuppressedUntil=performance.now()+1200;
-    aimManualYawStep=0;aimManualPitchStep=0;
-    if(camera){camera.rotation.set(0,gyroViewHeading,0,'YXZ');camera.updateMatrixWorld(true);}
-    dualStatus('가까운 길 방향으로 정렬했습니다.');
+    const w=wolfPackActive?nearestPackWolf():null,target=w?w.mesh:monster;
+    if(target&&(battle||target.position.distanceTo(camera.position)<=MONSTER_AGGRO_DISTANCE)){
+        if(w)focusPackWolf(w);
+        const dx=target.position.x-camera.position.x,dy=target.position.y-camera.position.y,dz=target.position.z-camera.position.z;
+        beginPhoneViewTurn(Math.atan2(-dx,-dz),Math.atan2(dy,Math.hypot(dx,dz)));
+    }else beginPhoneViewTurn(headingToNearestRoad(camera.position.x,camera.position.z,gyroViewHeading),0);
 }
 function recenterDualSense(){
     /* 세모를 누른 순간의 화면 중앙과 컨트롤러 방향을 새 기준으로 삼는다.
@@ -2752,7 +2777,7 @@ function updatePhoneAim(dt){
     const latestPitch=(dualInput.gyro[0]-dualBias[0])/16,latestYaw=(dualInput.gyro[1]-dualBias[1])/16;
     if(Math.abs(physicalYawDelta)/Math.max(dt,.001)>2.8||Math.hypot(latestPitch,latestYaw)>2.8||Math.hypot(pitch,yaw)>2.8)dualAimAssistSuppressedUntil=now+450;
     if(Math.abs(gyroViewPitch)<1.2)applyPassiveWolfAimAssist(dt);
-    $('dualReadout').textContent='폰 · 좌우 5.33배 (45° → 240°) · 상하 기준 '+sensitivity+' · 상하 '+(sensitivity*DUAL_PITCH_SENSITIVITY_RATIO).toFixed(1);
+    $('dualReadout').textContent='폰 · 좌우 9.6배 (25° → 240°) · 상하 기준 '+sensitivity+' · 상하 '+(sensitivity*DUAL_PITCH_SENSITIVITY_RATIO).toFixed(1);
 }
 function syncPhoneCameraOrientation(){
     if(!PHONE_CONTROLLER_PAGE)return;
@@ -2788,7 +2813,7 @@ function updateDualSenseInput(dt){
         dualOldCircle=circle;
         dualOldTriangle=triangle;
     }
-    if(phoneRemoteActive){updatePhoneAim(dt);if(triangle)lookAtNearestWolf(dt,false);else turnTowardBattleTarget(dt);updateDualJump(dt);return;}
+    if(phoneRemoteActive){updatePhoneAim(dt);if(!updatePhoneViewTurn(dt)){if(triangle)lookAtNearestWolf(dt,false);else turnTowardBattleTarget(dt);}updateDualJump(dt);return;}
     if(dualCalibrated&&!dualCalibrating){
         if(dualStartupStabilizing&&inputNow>=dualStartupUntil){
             finishDualStartupStabilization();
@@ -2877,7 +2902,7 @@ function turnTowardBattleTarget(dt){
     gyroViewHeading=normalizeAngle(gyroViewHeading+normalizeAngle(Math.atan2(-dx,-dz)-gyroViewHeading)*blend);
     gyroViewPitch+=(Math.atan2(dy,Math.hypot(dx,dz))-gyroViewPitch)*blend;
 }
-let phoneOldCancel=false;
+let phoneOldCancel=false,phoneOldPauseToggle=false;
 function cancelPhoneUI(){
     if($('controllerPanel').classList.contains('show')){closeControllerPanel(true);return;}
     if($('dialogueBox').classList.contains('show')){$('dialogueBox').classList.remove('show');dialogueQueue=[];return;}
@@ -2885,6 +2910,8 @@ function cancelPhoneUI(){
 }
 function updateDualSensePauseButton(){
     if(!dualConnected){return;}
+    const pauseToggle=!!dualInput.buttons.pauseToggle;
+    if(phoneRemoteActive&&pauseToggle&&!phoneOldPauseToggle)toggleGamePause();phoneOldPauseToggle=pauseToggle;
     const cancel=!!dualInput.buttons.cross;
     if(phoneRemoteActive&&cancel&&!phoneOldCancel)cancelPhoneUI();phoneOldCancel=cancel;
     const square=!!dualInput.buttons.square;
@@ -3148,7 +3175,7 @@ async function hostPhoneController(){
                     phoneYawTotalLast=p.yawTotal;
                 }
                 dualInput.ly=Number.isFinite(p.move)?Math.max(-1,Math.min(1,p.move)):0;
-                const b=p.buttons||{};dualInput.buttons={cross:!!b.fire,circle:!!b.jump,triangle:!!b.center,square:!!b.pause,ps:!!b.menu};
+                const b=p.buttons||{};dualInput.buttons={cross:!!b.fire,circle:!!b.jump,triangle:!!b.center,square:!!b.pause,ps:!!b.menu,pauseToggle:!!b.pauseToggle};
                 dualInput.gyro.forEach((v,i)=>{dualGyroHistory[i].push(v);if(dualGyroHistory[i].length>31)dualGyroHistory[i].shift();});
                 dualMotionReady=true;if(dualCalibrating)dualSamples.push([...dualInput.gyro]);
                 if(dualStartupStabilizing)dualStartupSamples.push([...dualInput.gyro]);
@@ -3179,6 +3206,9 @@ function showPhoneController(){
     panel.style.cssText='position:fixed;inset:0;z-index:100000;background:#102030;color:white;padding:16px;overflow:auto;box-sizing:border-box;font:16px sans-serif;touch-action:none';
     panel.innerHTML=`<input id="phoneCode" hidden><button id="phoneJoin" aria-label="센서 허용 및 연결" class="phoneTool"><svg viewBox="0 0 48 48"><rect x="5" y="6" width="38" height="27" rx="2"/><path d="M24 33v9M14 42h20"/></svg></button><p id="phoneMessage" role="status">센서 연결 아이콘을 눌러주세요</p><div id="phoneStick"><div id="phoneKnob"></div></div><div id="phoneFace"><button data-action="center" aria-label="정면"><svg viewBox="0 0 48 48"><path d="M24 8 42 39H6Z"/></svg></button><button data-action="pause" aria-label="점프"><svg viewBox="0 0 48 48"><path d="M10 10h28v28H10Z"/></svg></button><button data-action="jump" aria-label="확인 또는 공격"><svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="16"/></svg></button><button data-action="fire" aria-label="취소 또는 닫기"><svg viewBox="0 0 48 48"><path d="m12 12 24 24m0-24L12 36"/></svg></button></div><button id="phoneCamera" class="phoneTool" aria-label="QR 카메라 켜기 또는 끄기"><svg viewBox="0 0 48 48"><path d="M5 14h10l4-6h10l4 6h10v27H5Z"/><circle cx="24" cy="27" r="9"/></svg></button><button data-action="menu" id="phoneMenu" class="phoneTool" aria-label="연결 메뉴"><svg viewBox="0 0 48 48"><path d="M8 12h32M8 24h32M8 36h32"/></svg></button>`;
     document.body.appendChild(panel);
+    const pauseTool=document.createElement('button');pauseTool.id='phonePauseTool';pauseTool.className='phoneTool';pauseTool.dataset.action='pauseToggle';pauseTool.setAttribute('aria-label','일시정지 또는 재개');pauseTool.innerHTML='<svg viewBox="0 0 48 48"><path d="M16 10v28M32 10v28"/></svg>';panel.appendChild(pauseTool);
+    const requestPhoneFullscreen=()=>{const request=document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen;if(request&&!document.fullscreenElement){try{Promise.resolve(request.call(document.documentElement)).catch(()=>{});}catch(e){}}};
+    requestPhoneFullscreen();panel.addEventListener('pointerdown',requestPhoneFullscreen,{once:true});
     ['contextmenu','selectstart','dragstart'].forEach(type=>panel.addEventListener(type,e=>e.preventDefault()));
     window.phoneSendEquipment=()=>{if(connection?.open)connection.send({type:'equipSword'});};
     const qrPanel=$('qrPanel');panel.appendChild(qrPanel);
@@ -5244,6 +5274,7 @@ function init3D(){
            위/아래 가로길 + 좌/중앙/우 세로길
         ============================================= */
 
+        roadTexture.repeat.set(1,1);roadTexture.minFilter=THREE.LinearMipmapLinearFilter;roadTexture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
         const mapRoadMaterial=
             new THREE.MeshLambertMaterial({
                 map:roadTexture,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1
@@ -5254,6 +5285,9 @@ function init3D(){
                 new THREE.PlaneGeometry(width,depth),
                 mapRoadMaterial
             );
+            const positions=mesh.geometry.attributes.position,uv=mesh.geometry.attributes.uv;
+            for(let i=0;i<uv.count;i++)uv.setXY(i,(positions.getX(i)+x)/3.5,(z-positions.getY(i))/3.5);
+            uv.needsUpdate=true;
             mesh.rotation.x=-Math.PI/2;
             mesh.position.set(x,.018,z);
             scene.add(mesh);
@@ -6162,7 +6196,7 @@ function meleeTargetInView(maxAngle){
         const pos=item.mesh.position.clone(),delta=pos.clone().sub(camera.position),distance=delta.length();
         if(Math.hypot(delta.x,delta.z)>MONSTER_ATTACK_DISTANCE+.35||distance<.001)continue;
         const angle=Math.acos(Math.max(-1,Math.min(1,forward.dot(delta.normalize()))));
-        if(angle>maxAngle||treeBlocksShot(pos,distance))continue;
+        if(angle>maxAngle)continue;
         if(!best||angle<best.angle)best={...item,pos,angle};
     }
     return best;
@@ -9847,6 +9881,7 @@ function loop(now){
     }
 
 
+    enforcePackCollision();
     renderer.render(
 
         scene,
